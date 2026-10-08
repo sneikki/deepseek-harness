@@ -192,6 +192,7 @@ interface BridgeClient {
   setSessionConfigOption: NonNullable<AcpAgent['setSessionConfigOption']>
   prompt: (params: PromptRequest, options?: SendRequestOptions) => Promise<PromptResponse>
   cancel: NonNullable<AcpAgent['cancel']>
+  steer: (params: PromptRequest) => Promise<Record<string, never>>
 }
 
 export interface BridgeHarness {
@@ -304,6 +305,7 @@ export async function makeBridgeHarness(options: {
     setSessionConfigOption: params => client.request(methods.agent.session.setConfigOption, params),
     prompt: (params, options) => client.request(methods.agent.session.prompt, params, options),
     cancel: params => client.notify(methods.agent.session.cancel, params),
+    steer: params => client.request(AcpPlugin.STEER_METHOD, params),
   }
   return harness
 }

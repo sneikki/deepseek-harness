@@ -11,7 +11,7 @@ import {
   type StopReason,
 } from '@agentclientprotocol/sdk'
 import type { Agent, AgentHandle, AgentOptions, ModelSelection } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, errorChain, type UserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, errorChain, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import { type Session, type SessionEvent, type SessionId, type TurnEndReason } from '@deepseek-ai/dsh-session'
 import { AcpContentError, admitAcpPrompt } from './content.ts'
 import { turnEndToStopReason } from './codec.ts'
@@ -272,7 +272,7 @@ export class AcpSession {
     if (requestSignal?.aborted === true) onRequestAbort()
     try {
       let admissionFailure: unknown
-      const promptSelection = this.modelControl.snapshot()
+      const promptSelection = await this.modelControl.snapshot()
       try {
         if (this.ctx.agents.get(this.agent.id) !== this.agent) {
           throw internalError('prompt was not queued: the agent was disposed outside the bridge')
@@ -328,6 +328,49 @@ export class AcpSession {
     } finally {
       requestSignal?.removeEventListener('abort', onRequestAbort)
     }
+  }
+
+  /**
+   * Steer the prompt in flight: the message joins the agent's nearest step instead of
+   * waiting for the turn to end. An automation client sends it for a user's mid-turn
+   * message (the `_dsh/session/steer` extension method). Nothing in flight is invalid
+   * params: the client sends `session/prompt` then.
+   * @param params - the steering content, shaped as a prompt request.
+   * @param imageEnabled - connection capability advertised at initialization.
+   * @param requestSignal - JSON-RPC request cancellation signal.
+   */
+  async steer(
+    params: PromptRequest,
+    imageEnabled: boolean,
+    requestSignal?: AbortSignal,
+  ): Promise<Record<string, never>> {
+    this.assertActive()
+    const inflight = this.inflight
+    if (inflight === undefined) throw invalidParams('no prompt is in flight to steer')
+    const open = (): boolean => inflight.messageQueued && !inflight.cancelRequested && inflight.endReason === undefined
+    if (!open()) throw invalidParams('no prompt is in flight to steer')
+    // Admission is cancelled with the prompt (cancelPrompt aborts admissionController) or with the request.
+    const signal = requestSignal === undefined
+      ? inflight.admissionController.signal
+      : AbortSignal.any([inflight.admissionController.signal, requestSignal])
+    let content: ContentBlock[]
+    try {
+      content = await admitAcpPrompt(this.ctx, await this.modelControl.snapshot(), params.prompt, imageEnabled, signal)
+    } catch (error: unknown) {
+      if (error instanceof AcpContentError) {
+        throw error.kind === 'invalid' ? invalidParams(error.message) : internalError(error.message)
+      }
+      if (error instanceof RequestError) throw error
+      throw internalError(`steering was not queued: ${(error as Error).message}`)
+    }
+    if (this.ctx.agents.get(this.agent.id) !== this.agent) {
+      throw internalError('steering was not queued: the agent was disposed outside the bridge')
+    }
+    // The prompt may have ended or been cancelled during admission: its inbox is then cleared or
+    // closing, and a steer queued now would latch onto a later turn.
+    if (this.inflight !== inflight || !open()) throw invalidParams('the prompt ended during admission')
+    this.agent.steer(createUserMessage({ content, source: { kind: 'user' } }))
+    return {}
   }
 
   /** Cancel the active prompt, or autonomous work when no ACP prompt exists. */

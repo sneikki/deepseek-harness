@@ -57,6 +57,25 @@ import { AcpSession } from './session.ts'
 
 const DEFAULT_SESSION_LIST_PAGE_SIZE = 100
 
+/**
+ * Extension method (ACP reserves the `_` prefix): steer the prompt in flight with a
+ * user's mid-turn message, shaped as a prompt request. See `AcpSession.steer`.
+ */
+export const STEER_METHOD = '_dsh/session/steer'
+
+function steerParams(params: unknown): PromptRequest {
+  const request = params as Partial<PromptRequest> | null
+  const blocks = request?.prompt
+  if (
+    typeof request?.sessionId !== 'string'
+    || !Array.isArray(blocks)
+    || !blocks.every(block => typeof block === 'object' && block !== null && typeof (block as { type?: unknown }).type === 'string')
+  ) {
+    throw invalidParams(`${STEER_METHOD} takes { sessionId, prompt: ContentBlock[] }`)
+  }
+  return request as PromptRequest
+}
+
 export const name = 'acp'
 /** Core services required by the standard automation controls. */
 export const inject = ['agents', 'llm', 'sessionPersistence', 'sessions']
@@ -364,6 +383,12 @@ export function apply(ctx: Context, config: AcpConfig): void {
       return record.prompt(params, imagePromptEnabled, requestSignal)
     },
 
+    async steer(params: PromptRequest, requestSignal: AbortSignal): Promise<Record<string, never>> {
+      assertOpen()
+      const record = requireSession(brandString<SessionId>(params.sessionId))
+      return record.steer(params, imagePromptEnabled, requestSignal)
+    },
+
     cancel(params: CancelNotification): Promise<void> {
       sessions.get(brandString<SessionId>(params.sessionId))?.cancel()
       return Promise.resolve()
@@ -387,6 +412,7 @@ export function apply(ctx: Context, config: AcpConfig): void {
     .onRequest(methods.agent.session.close, ({ params }) => implementation.closeSession(params))
     .onRequest(methods.agent.session.setConfigOption, ({ params, signal }) => implementation.setSessionConfigOption(params, signal))
     .onRequest(methods.agent.session.prompt, ({ params, signal }) => implementation.prompt(params, signal))
+    .onRequest(STEER_METHOD, steerParams, ({ params, signal }) => implementation.steer(params, signal))
     .onNotification(methods.agent.session.cancel, ({ params }) => implementation.cancel(params))
   const connection = app.connect(stream)
   const conn: AgentContext = connection.client

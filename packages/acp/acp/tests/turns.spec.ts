@@ -204,6 +204,44 @@ describe('ACP prompt lifecycle', () => {
     await vi.waitFor(() => { expect(messageText(harness!)).toBe('real answer') })
   })
 
+  it('steers the prompt in flight and refuses to steer an idle session', async () => {
+    harness = await makeBridgeHarness({ script: ['hang'] })
+    const sessionId = await newSession(harness)
+    await expect(harness.client.steer({ sessionId, prompt: [{ type: 'text', text: 'use blue' }] }))
+      .rejects.toMatchObject({ code: -32602 })
+
+    const agent = harness.ctx.agents.get(SessionId(sessionId))!
+    const steer = vi.spyOn(agent, 'steer')
+    const prompt = harness.client.prompt({ sessionId, prompt: [{ type: 'text', text: 'go' }] })
+    // Admission is asynchronous: until the prompt's message is queued, steering is refused.
+    await vi.waitFor(async () => {
+      await expect(harness!.client.steer({ sessionId, prompt: [{ type: 'text', text: 'use blue' }] })).resolves.toEqual({})
+    })
+    expect(steer).toHaveBeenCalledTimes(1)
+    expect(steer.mock.calls[0]![0].content).toEqual([{ type: 'text', text: 'use blue' }])
+    await expect(harness.client.steer({ sessionId: 's', prompt: 'x' } as never)).rejects.toMatchObject({ code: -32602 })
+    await expect(harness.client.steer({ sessionId, prompt: [null] } as never)).rejects.toMatchObject({ code: -32602 })
+
+    await harness.client.cancel({ sessionId })
+    expect((await prompt).stopReason).toBe('cancelled')
+    expect(steer).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses to steer a cancelled prompt before it settles', async () => {
+    harness = await makeBridgeHarness({ script: ['hang'] })
+    const sessionId = await newSession(harness)
+    const agent = harness.ctx.agents.get(SessionId(sessionId))!
+    const steer = vi.spyOn(agent, 'steer')
+    const prompt = harness.client.prompt({ sessionId, prompt: [{ type: 'text', text: 'go' }] })
+    await vi.waitFor(async () => {
+      await expect(harness!.client.steer({ sessionId, prompt: [{ type: 'text', text: 'first' }] })).resolves.toEqual({})
+    })
+    await harness.client.cancel({ sessionId })
+    await expect(harness.client.steer({ sessionId, prompt: [{ type: 'text', text: 'late' }] })).rejects.toMatchObject({ code: -32602 })
+    expect((await prompt).stopReason).toBe('cancelled')
+    expect(steer).toHaveBeenCalledTimes(1)
+  })
+
   it('ignores an autonomous message turn while correlating the client turn', async () => {
     harness = await makeBridgeHarness({ script: ['hang'] })
     const sessionId = await newSession(harness)
