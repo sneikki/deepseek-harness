@@ -65,8 +65,13 @@ export const STEER_METHOD = '_dsh/session/steer'
 
 function steerParams(params: unknown): PromptRequest {
   const request = params as Partial<PromptRequest> | null
-  if (typeof request?.sessionId !== 'string' || !Array.isArray(request.prompt)) {
-    throw invalidParams(`${STEER_METHOD} takes { sessionId, prompt }`)
+  const blocks = request?.prompt
+  if (
+    typeof request?.sessionId !== 'string'
+    || !Array.isArray(blocks)
+    || !blocks.every(block => typeof block === 'object' && block !== null && typeof (block as { type?: unknown }).type === 'string')
+  ) {
+    throw invalidParams(`${STEER_METHOD} takes { sessionId, prompt: ContentBlock[] }`)
   }
   return request as PromptRequest
 }

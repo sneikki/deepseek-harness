@@ -346,18 +346,16 @@ export class AcpSession {
   ): Promise<Record<string, never>> {
     this.assertActive()
     const inflight = this.inflight
-    if (inflight === undefined || !inflight.messageQueued || inflight.cancelRequested) {
-      throw invalidParams('no prompt is in flight to steer')
-    }
+    if (inflight === undefined) throw invalidParams('no prompt is in flight to steer')
+    const open = (): boolean => inflight.messageQueued && !inflight.cancelRequested && inflight.endReason === undefined
+    if (!open()) throw invalidParams('no prompt is in flight to steer')
+    // Admission is cancelled with the prompt (cancelPrompt aborts admissionController) or with the request.
+    const signal = requestSignal === undefined
+      ? inflight.admissionController.signal
+      : AbortSignal.any([inflight.admissionController.signal, requestSignal])
     let content: ContentBlock[]
     try {
-      content = await admitAcpPrompt(
-        this.ctx,
-        await this.modelControl.snapshot(),
-        params.prompt,
-        imageEnabled,
-        requestSignal ?? new AbortController().signal,
-      )
+      content = await admitAcpPrompt(this.ctx, await this.modelControl.snapshot(), params.prompt, imageEnabled, signal)
     } catch (error: unknown) {
       if (error instanceof AcpContentError) {
         throw error.kind === 'invalid' ? invalidParams(error.message) : internalError(error.message)
@@ -365,9 +363,12 @@ export class AcpSession {
       if (error instanceof RequestError) throw error
       throw internalError(`steering was not queued: ${(error as Error).message}`)
     }
-    if (this.ctx.agents.get(this.agent.id) !== this.agent || this.inflight !== inflight) {
-      throw internalError('steering was not queued: the prompt settled meanwhile')
+    if (this.ctx.agents.get(this.agent.id) !== this.agent) {
+      throw internalError('steering was not queued: the agent was disposed outside the bridge')
     }
+    // The prompt may have ended or been cancelled during admission: its inbox is then cleared or
+    // closing, and a steer queued now would latch onto a later turn.
+    if (this.inflight !== inflight || !open()) throw invalidParams('the prompt ended during admission')
     this.agent.steer(createUserMessage({ content, source: { kind: 'user' } }))
     return {}
   }
