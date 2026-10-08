@@ -11,7 +11,7 @@ import {
   type StopReason,
 } from '@agentclientprotocol/sdk'
 import type { Agent, AgentHandle, AgentOptions, ModelSelection } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, errorChain, type UserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, errorChain, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import { type Session, type SessionEvent, type SessionId, type TurnEndReason } from '@deepseek-ai/dsh-session'
 import { AcpContentError, admitAcpPrompt } from './content.ts'
 import { turnEndToStopReason } from './codec.ts'
@@ -328,6 +328,48 @@ export class AcpSession {
     } finally {
       requestSignal?.removeEventListener('abort', onRequestAbort)
     }
+  }
+
+  /**
+   * Steer the prompt in flight: the message joins the agent's nearest step instead of
+   * waiting for the turn to end. An automation client sends it for a user's mid-turn
+   * message (the `_dsh/session/steer` extension method). Nothing in flight is invalid
+   * params: the client sends `session/prompt` then.
+   * @param params - the steering content, shaped as a prompt request.
+   * @param imageEnabled - connection capability advertised at initialization.
+   * @param requestSignal - JSON-RPC request cancellation signal.
+   */
+  async steer(
+    params: PromptRequest,
+    imageEnabled: boolean,
+    requestSignal?: AbortSignal,
+  ): Promise<Record<string, never>> {
+    this.assertActive()
+    const inflight = this.inflight
+    if (inflight === undefined || !inflight.messageQueued || inflight.cancelRequested) {
+      throw invalidParams('no prompt is in flight to steer')
+    }
+    let content: ContentBlock[]
+    try {
+      content = await admitAcpPrompt(
+        this.ctx,
+        await this.modelControl.snapshot(),
+        params.prompt,
+        imageEnabled,
+        requestSignal ?? new AbortController().signal,
+      )
+    } catch (error: unknown) {
+      if (error instanceof AcpContentError) {
+        throw error.kind === 'invalid' ? invalidParams(error.message) : internalError(error.message)
+      }
+      if (error instanceof RequestError) throw error
+      throw internalError(`steering was not queued: ${(error as Error).message}`)
+    }
+    if (this.ctx.agents.get(this.agent.id) !== this.agent || this.inflight !== inflight) {
+      throw internalError('steering was not queued: the prompt settled meanwhile')
+    }
+    this.agent.steer(createUserMessage({ content, source: { kind: 'user' } }))
+    return {}
   }
 
   /** Cancel the active prompt, or autonomous work when no ACP prompt exists. */
