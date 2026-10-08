@@ -667,6 +667,28 @@ describe('automation-only ACP bridge', () => {
     expect(harness.adapter.requests[0]?.reasoningEffort).toBeUndefined()
   })
 
+  it('routes a prompt sent right after a model change to the changed model', async () => {
+    harness = await makeBridgeHarness({ script: [textResponse('plain')] })
+    await harness.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
+    const created = await harness.client.newSession({ cwd: process.cwd(), mcpServers: [] })
+    const model = created.configOptions?.find(option => option.id === 'model')
+    if (model?.type !== 'select') throw new Error('expected a model option')
+    const plain = model.options.flatMap(option => 'group' in option ? option.options : [option])
+      .find(option => option.name === 'Mock Plain')
+    if (plain === undefined) throw new Error('expected Mock Plain')
+
+    await Promise.all([
+      harness.client.setSessionConfigOption({
+        sessionId: created.sessionId,
+        configId: 'model',
+        value: plain.value,
+      }),
+      harness.client.prompt({ sessionId: created.sessionId, prompt: [{ type: 'text', text: 'go' }] }),
+    ])
+
+    expect(harness.adapter.requests[0]).toMatchObject({ provider: 'mock', model: 'plain' })
+  })
+
   it('pins image admission and request routing to one prompt selection', async () => {
     harness = await makeBridgeHarness({ imageCapable: true, script: [textResponse('image accepted')] })
     await harness.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })

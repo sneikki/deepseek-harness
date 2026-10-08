@@ -272,7 +272,7 @@ export class AcpSession {
     if (requestSignal?.aborted === true) onRequestAbort()
     try {
       let admissionFailure: unknown
-      const promptSelection = this.modelControl.snapshot()
+      const promptSelection = await this.modelControl.snapshot()
       try {
         if (this.ctx.agents.get(this.agent.id) !== this.agent) {
           throw internalError('prompt was not queued: the agent was disposed outside the bridge')

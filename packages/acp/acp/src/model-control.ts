@@ -33,6 +33,8 @@ export class AcpModelControl {
   /** Scoped selection reference consumed by Agent request assembly. */
   readonly selection: ModelSelectionRef
   private tail = Promise.resolve()
+  // Settles after the latest received set(); unlike `tail`, option reads do not extend it.
+  private changes = Promise.resolve()
   private selected: ModelSelection | undefined
   private turnSelection: { turn: number; selection: ModelSelection } | undefined
   private hasResolvedState = false
@@ -60,10 +62,12 @@ export class AcpModelControl {
   }
 
   /**
-   * Snapshot the selection attached to the next accepted ACP prompt.
+   * Snapshot the selection attached to the next accepted ACP prompt, once every
+   * config change received before it has settled.
    * @returns a detached future selection, or undefined when listeners supply the route.
    */
-  snapshot(): ModelSelection | undefined {
+  async snapshot(): Promise<ModelSelection | undefined> {
+    await this.changes
     return this.selected === undefined ? undefined : { ...this.selected }
   }
 
@@ -101,7 +105,7 @@ export class AcpModelControl {
    * @returns all standard options after the serialized mutation.
    */
   set(configId: string, value: unknown, signal?: AbortSignal): Promise<SessionConfigOption[]> {
-    return this.serialize(async () => {
+    const result = this.serialize(async () => {
       if (typeof value !== 'string') throw new AcpModelConfigError(`${configId} requires a select value`)
       const current = this.selected
       if (current === undefined) throw new AcpModelConfigError('this session has no model selection')
@@ -131,6 +135,8 @@ export class AcpModelControl {
       }
       return (await this.state(signal)).options
     })
+    this.changes = result.then(() => undefined, () => undefined)
+    return result
   }
 
   /** Keep concurrent client mutations in receive order without wedging after rejection. */

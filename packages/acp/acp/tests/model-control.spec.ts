@@ -34,7 +34,7 @@ describe('ACP model configuration control', () => {
   it('represents an absent route and validates value types before mutation', async () => {
     const control = new AcpModelControl(llmRuntime(), undefined)
 
-    expect(control.snapshot()).toBeUndefined()
+    await expect(control.snapshot()).resolves.toBeUndefined()
     await expect(control.options()).resolves.toEqual([])
     await expect(control.set('model', false)).rejects.toThrow(/requires a select value/)
     await expect(control.set('model', 'missing')).rejects.toThrow(/no model selection/)
@@ -70,6 +70,26 @@ describe('ACP model configuration control', () => {
     expect(control.selection.current).toEqual({ provider: 'turn', model: 'pinned' })
     control.releaseTurn(3)
     expect(control.selection.current).toEqual({ provider: 'private', model: 'unlisted' })
+  })
+
+  it('snapshots a model change that was received before the prompt but is still resolving', async () => {
+    let release = (): void => {}
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const runtime = llmRuntime({
+      listProviders: () => [{ id: 'mock', name: 'Mock' }, { id: 'other', name: 'Other' }],
+      listModels: async (provider: string) => {
+        await gate
+        return [{ provider, id: provider, name: provider }]
+      },
+    })
+    const control = new AcpModelControl(runtime, { provider: 'mock', model: 'mock' })
+
+    const change = control.set('model', JSON.stringify(['other', 'other']))
+    const selection = control.snapshot()
+    release()
+
+    await change
+    await expect(selection).resolves.toEqual({ provider: 'other', model: 'other' })
   })
 
   it('keeps the selected route when its provider catalog is temporarily unavailable', async () => {
