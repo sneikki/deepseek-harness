@@ -15,7 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import { loadExactProjection } from './projection-loader.ts'
+import { createChildProjectionReader, createProjectionLoader } from './projection-loader.ts'
 import { createTrajectoryDurationStore } from './duration-store.ts'
 import { createTrajectoryThinkingStore } from './thinking-store.ts'
 import { createTrajectoryStringWrappingStore } from './string-wrapping-store.ts'
@@ -88,6 +88,8 @@ export function apply(ctx: Context): void {
   const duration = createTrajectoryDurationStore()
   const thinking = createTrajectoryThinkingStore()
   const stringWrapping = createTrajectoryStringWrappingStore()
+  // One loader for the plugin: attempts per child survive Trajectory mounts and session switches.
+  const projectionLoader = createProjectionLoader(createChildProjectionReader(ctx.sessions))
   registerTrajectoryMessageDefinitions(ctx)
   registerTrajectoryRequestHeaderDefinition(ctx)
   registerTrajectoryAssistantDefinition(ctx)
@@ -128,14 +130,7 @@ export function apply(ctx: Context): void {
         ),
         setActualDuration: (value) => { duration.set(value) },
         setShowThinking: (value) => { thinking.set(value) },
-        loadProjection: (id) => {
-          const sessionId = id as SessionId
-          return loadExactProjection(
-            () => ctx.sessions.refreshProjections(sessionId),
-            () => ctx.sessions.list.getSnapshot().projectionsBySession[sessionId]?.state === 'ready',
-            () => ctx.sessions.using(sessionId, { source: 'trajectoryAgents' }, reference => reference.ready),
-          )
-        },
+        requestProjection: id => projectionLoader.request(id),
         openSession: (id) => {
           const sessionId = id as SessionId
           ctx.uiWorkspace.openSession(ctx.sessions.subagentAddress(sessionId) ?? sessionId)

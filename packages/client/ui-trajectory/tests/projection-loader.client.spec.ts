@@ -1,6 +1,8 @@
 /** Projection loader: dedupe, concurrency cap, single retry. */
 import { describe, expect, it, vi } from 'vitest'
-import { createProjectionLoader, loadExactProjection } from '../src/client/projection-loader.ts'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
+import { createChildProjectionReader, createProjectionLoader } from '../src/client/projection-loader.ts'
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -46,14 +48,36 @@ describe('createProjectionLoader', () => {
   })
 })
 
-describe('loadExactProjection', () => {
-  it('skips the history for a ready read and opens it for cache hints only', async () => {
-    const open = vi.fn(() => Promise.resolve())
-    expect(await loadExactProjection(() => Promise.resolve(), () => true, open)).toBe(true)
-    expect(open).not.toHaveBeenCalled()
-    let ready = false
-    open.mockImplementation(() => { ready = true; return Promise.resolve() })
-    expect(await loadExactProjection(() => Promise.resolve(), () => ready, open)).toBe(true)
-    expect(open).toHaveBeenCalledOnce()
+describe('createChildProjectionReader', () => {
+  type SubagentAddress = NonNullable<ReturnType<ISessions['subagentAddress']>>
+  const child = 'child' as SessionId
+  const parent = 'parent' as SessionId
+  /** Load state stays `migration-required` like a real historical-format child: only the values change. */
+  function fake(address: SubagentAddress | undefined) {
+    let values: Record<string, unknown> = {}
+    const using = vi.fn((_target: unknown, _options: unknown, operation: (reference: { ready: Promise<void> }) => unknown) => {
+      values = { subagentTiming: { settledMs: 1 } }
+      return Promise.resolve(operation({ ready: Promise.resolve() }))
+    })
+    const sessions = {
+      refreshProjections: vi.fn(() => Promise.resolve()),
+      subagentAddress: vi.fn(() => address),
+      list: { getSnapshot: () => ({ projectionsBySession: { [child]: { state: 'migration-required', values } } }) },
+      using,
+    }
+    return { sessions: sessions as unknown as Parameters<typeof createChildProjectionReader>[0], using }
+  }
+
+  it('opens a hints-only child once through its subagent address and reads timing without a ready state', async () => {
+    const address: SubagentAddress = { parentSessionId: parent, childSessionId: child, mode: 'continuable' }
+    const { sessions, using } = fake(address)
+    expect(await createChildProjectionReader(sessions)(child)).toBe(true)
+    expect(using).toHaveBeenCalledExactlyOnceWith(address, { source: 'trajectoryAgents' }, expect.any(Function))
+  })
+
+  it('never opens a child without a subagent address (a plain target would publish the migrated log)', async () => {
+    const { sessions, using } = fake(undefined)
+    expect(await createChildProjectionReader(sessions)(child)).toBe(false)
+    expect(using).not.toHaveBeenCalled()
   })
 })
