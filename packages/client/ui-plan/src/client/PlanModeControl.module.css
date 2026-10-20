@@ -13,22 +13,18 @@
   height: 28px;
   min-width: 34px;
   padding: 0 8px;
-  border: none;
-  border-radius: var(--dsw-radius-sm);
-  background: var(--dsw-alias-state-business-tertiary);
-  color: var(--dsw-alias-state-business-primary);
-  font-size: 13px;
+  border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+  font-size: 12px;
   font-weight: 500;
   line-height: 20px;
   cursor: pointer;
 }
 
 .chip:hover:not(:disabled) {
-  background: color-mix(
-    in srgb,
-    var(--dsw-alias-state-business-tertiary),
-    var(--dsw-alias-state-business-primary) 6%
-  );
+  background: color-mix(in srgb, var(--amv-accent) 16%, transparent);
 }
 
 .chip:focus-visible {

@@ -19,11 +19,10 @@
      so header and footer actions stay reachable on long batches. */
   max-height: min(60vh, 520px);
   padding: 0 0 10px;
-  border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2-darkmode-thin);
-  border-radius: var(--dsw-radius-xl);
-  background: var(--dsw-specific-input-major);
-  box-shadow: var(--dsw-elevation-panel);
+  border: 1px solid color-mix(in srgb, var(--amv-attention) 35%, transparent);
+  border-radius: 14px;
+  background: var(--amv-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-attention) 10%, transparent);
   color: var(--dsw-alias-label-primary);
   overflow: hidden;
   /* Elevated surface in dark, same as the menus: the body inside scrolls
@@ -91,9 +90,12 @@
 .eyebrow {
   /* Eyebrow-to-title gap widened from the figma 2px (user-tuned). */
   margin-bottom: 5px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-attention);
   font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
   line-height: 16px;
+  text-transform: uppercase;
 }
 
 .title {
@@ -190,21 +192,22 @@
   flex-shrink: 0;
   padding: 8px 12px 8px 8px;
   border: 1px solid transparent;
-  border-radius: var(--dsw-radius-md);
+  border-radius: 10px;
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  transition: background-color var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.option:hover:not(:disabled),
-.optionSelected {
-  background: var(--dsw-alias-interactive-bg-hover);
+.option:hover:not(:disabled) {
+  background: var(--amv-raised);
 }
 
-.optionSelected {
-  border-color: var(--dsw-alias-border-l2);
+.optionSelected,
+.option.optionSelected:hover:not(:disabled) {
+  background: var(--amv-accent-soft);
+  border-color: var(--amv-accent-ring);
 }
 
 .option:disabled {
@@ -223,10 +226,12 @@
   /* (24px first-line box − 20px indicator) / 2: centers the indicator against
      the first text line under the row's flex-start alignment. */
   margin-top: 2px;
-  border-radius: var(--dsw-radius-xs);
-  background: var(--dsw-alias-bg-overlay);
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
   font-weight: 500;
   line-height: 18px;
 }
@@ -249,8 +254,8 @@
   grid-area: 1 / 1;
   width: 14px;
   height: 14px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-xs);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 5px;
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
@@ -261,12 +266,12 @@
 /* Checked: label-primary fill with a primary-foreground check — the pair
    inverts with the theme (dark fill in light mode, light fill in dark mode). */
 .checkboxChecked {
-  color: var(--dsw-alias-label-primary-foreground);
+  color: var(--amv-bg-deep);
 }
 
 .checkboxChecked::before {
-  border-color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-label-primary);
+  border-color: var(--amv-accent);
+  background: var(--amv-accent);
 }
 
 .optionCopy {
@@ -289,9 +294,9 @@
 
 .badge {
   padding: 0 4px;
-  border-radius: var(--dsw-radius-xs);
-  background: var(--dsw-specific-sidebar-nav-item-active-accent);
-  color: var(--dsw-alias-button-info-fill);
+  border-radius: 6px;
+  background: var(--amv-accent-tint);
+  color: var(--amv-accent);
   font-size: 11px;
   line-height: 18px;
   font-weight: 600;
@@ -331,19 +336,18 @@
   flex-shrink: 0;
   padding: 8px 12px 8px 8px;
   border: 1px solid transparent;
-  border-radius: var(--dsw-radius-md);
-  transition: background-color 120ms ease, border-color 120ms ease;
+  border-radius: 10px;
+  transition: background-color var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.customRow:hover,
-.customRow:focus-within:not(.customRowYielded),
-.customRowActive {
-  background: var(--dsw-alias-interactive-bg-hover);
+.customRow:hover {
+  background: var(--amv-raised);
 }
 
 .customRow:focus-within:not(.customRowYielded),
 .customRowActive {
-  border-color: var(--dsw-alias-border-l2);
+  background: var(--amv-accent-soft);
+  border-color: var(--amv-accent-ring);
 }
 
 /* Auto-growing free-text answer (see AnswerField): mirror and textarea share
@@ -413,14 +417,14 @@
   min-height: 64px;
   flex-shrink: 0;
   margin: 0 12px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-bg-module-platform);
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-bg-deep);
   --dsh-answer-field-padding: 8px 12px;
 }
 
 .customBlock:focus-within {
-  border-color: var(--dsw-alias-state-business-primary);
+  border-color: var(--amv-accent);
 }
 
 .footer {
