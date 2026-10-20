@@ -47,9 +47,10 @@
 
 .pageTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 500;
-  line-height: 28px;
+  line-height: 30px;
+  font-family: var(--ds-font-family-code);
 }
 
 .pageIntro {
@@ -147,19 +148,23 @@
 .groupTitle {
   flex: 1;
   margin: 0;
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 .groupMore {
   flex: none;
   gap: 4px;
   padding-inline-end: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 22px;
-  font-weight: 400;
-  color: color-mix(in srgb, var(--dsw-alias-label-secondary) 60%, var(--dsw-alias-label-tertiary));
+  font-weight: 500;
+  color: var(--amv-text-2);
+  padding-inline: 10px;
 }
 
 .groupMore:hover,
@@ -216,6 +221,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
   .card[data-plugin-highlight] {
     animation: none;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 40%, transparent);
@@ -236,26 +245,29 @@
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
 }
 
 .card {
   min-width: 0;
   /* The hover surface reaches 8px past the content on both sides while the
      row's content stays aligned with the page header. */
-  margin: 0 -8px;
-  border-radius: var(--dsw-radius-xl);
+  margin: 0;
+  border-radius: 14px;
   /* The page itself scrolls on the base surface. Anything that scrolls inside
      a card draws the l2 thumb (ui-theme styles/scrollbar.css rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  border: 1px solid var(--amv-border);
+  background: var(--amv-surface);
+  transition: border-color var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
 }
 
 .cardHead {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 8px;
+  padding: 14px 16px;
 }
 
 .cardIcon {
@@ -266,9 +278,10 @@
   width: 48px;
   height: 48px;
   /* The same hairline frame as the component rows below. */
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-lg);
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
   color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
 }
 
 .packageImage {
@@ -298,6 +311,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--ds-font-family-code);
+  letter-spacing: -0.005em;
 }
 
 /*
@@ -310,7 +325,8 @@
 }
 
 .cardLink:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-surface);
+  border-color: var(--amv-border-strong);
 }
 
 .cardOpen {
@@ -326,13 +342,15 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  font-family: var(--ds-font-family-code);
+  letter-spacing: -0.005em;
 }
 
 .cardOpen::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--dsw-radius-xl);
+  border-radius: 14px;
 }
 
 .cardOpen:focus-visible {
@@ -347,7 +365,7 @@
 .cardDesc {
   font-size: 13px;
   line-height: 18px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-text-2);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
@@ -376,7 +394,9 @@
 .skeletonHeading { width: 48px; }
 .skeletonTitle { width: min(144px, 60%); }
 .skeletonDescription { width: min(280px, 85%); }
-.skeletonIcon { border-color: transparent; }
+.skeletonIcon {
+  border-color: transparent;
+}
 
 /* Keep text-column metrics while leaving the action area blank. */
 .skeletonActions {
@@ -590,19 +610,24 @@
 .installField input[type='text'] {
   height: 40px;
   padding: 0 14px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
+  border: 1px solid var(--amv-border-strong);
   border-radius: var(--dsw-radius-md);
   outline: none;
-  background: var(--dsw-alias-bg-layer-3);
+  background: var(--amv-raised);
   font: inherit;
   font-size: 13px;
   color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
 }
 
-.installField input[type='text']:focus,
 .registryCustomField:focus {
-  border-color: var(--dsw-alias-state-business-primary);
-  box-shadow: inset 0 0 0 0.5px var(--dsw-alias-state-business-primary);
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
+}
+
+.installField input[type='text']:focus {
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
 }
 
 .installField input[type='text'][aria-invalid='true'],
@@ -627,9 +652,10 @@
   border: 0;
   background: none;
   font: inherit;
-  font-size: 12.5px;
-  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  color: var(--amv-text-2);
   cursor: pointer;
+  font-weight: 500;
 }
 
 .guideToggle:hover {
@@ -649,9 +675,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 8px 14px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .guideHint {
@@ -668,11 +694,12 @@
   gap: 8px;
   margin: 0;
   padding: 10px 12px;
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-state-warn-tertiary);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
   font-size: 12px;
   line-height: 18px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
+  border: 1px solid color-mix(in srgb, var(--amv-warning) 35%, transparent);
 }
 
 .installSafetyText {
@@ -685,7 +712,7 @@
 .installSafety > svg {
   flex: none;
   margin-top: 2px;
-  color: var(--dsw-alias-state-warn-primary);
+  color: var(--amv-warning);
 }
 
 .guideList {
@@ -721,6 +748,7 @@
   font-weight: 500;
   line-height: 20px;
   color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
 }
 
 .guideExample {
@@ -754,13 +782,14 @@
   gap: 6px;
   height: 28px;
   padding: 0 8px 0 10px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 10px;
+  background: var(--amv-raised);
   font: inherit;
-  font-size: 12.5px;
-  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  color: var(--amv-text-2);
   cursor: pointer;
+  font-weight: 500;
 }
 
 .registryToggle:hover:not(:disabled) {
@@ -784,6 +813,7 @@
 .registryChosen {
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
 }
 
 /* The registry options float from their toggle over the dialog: pnpm's own, the configured mirrors, and a typed
@@ -988,6 +1018,7 @@ label.registryOption {
   font-size: 18px;
   line-height: 26px;
   font-weight: 600;
+  font-family: var(--ds-font-family-code);
 }
 
 .wizardSub {
@@ -1004,9 +1035,10 @@ label.registryOption {
   align-items: center;
   gap: 6px;
   padding: 16px;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-lg);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
   text-align: center;
+  background: var(--amv-surface);
 }
 
 .subjectName {
@@ -1015,6 +1047,7 @@ label.registryOption {
   line-height: 22px;
   font-weight: 600;
   overflow-wrap: anywhere;
+  font-family: var(--ds-font-family-code);
 }
 
 .subjectSpec {
@@ -1271,9 +1304,10 @@ label.registryOption {
 
 .detailTitle {
   margin: 0;
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 22px;
+  line-height: 30px;
   font-weight: 500;
+  font-family: var(--ds-font-family-code);
 }
 
 .versionTag {
@@ -1299,7 +1333,7 @@ label.registryOption {
 }
 
 .detailName code {
-  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code);
 }
 
 /* The unknown-package note under the name block. */
@@ -1313,8 +1347,8 @@ label.registryOption {
   max-width: 100%;
   max-height: 320px;
   margin-top: 24px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-lg);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
   object-fit: contain;
 }
 
@@ -1339,20 +1373,30 @@ label.registryOption {
 
 .sectionTitle {
   margin: 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 .sectionCount {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 18px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--amv-raised);
+  font-family: var(--ds-font-family-code);
 }
 
 /* A bundle's source facts: label at the start, value at the end, one ruled line each. */
 .facts {
   margin: 0;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .facts div {
@@ -1361,33 +1405,39 @@ label.registryOption {
   justify-content: space-between;
   gap: 16px;
   min-height: 44px;
-  padding: 8px 2px;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--amv-border);
 }
 
 .facts dt {
   flex: none;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 20px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .facts dd {
   min-width: 0;
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   text-align: end;
   overflow-wrap: anywhere;
+  font-family: var(--ds-font-family-code);
 }
 
 .facts code {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--dsw-alias-bg-module-platform);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--amv-raised);
   box-decoration-break: clone;
-  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code);
   font-size: 12px;
+  border: 1px solid var(--amv-border);
+  color: var(--amv-accent);
 }
 
 /* The way into a package's page. */
@@ -1403,11 +1453,14 @@ label.registryOption {
   margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .row {
-  padding: 12px 2px;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--amv-border);
 }
 
 .row:last-child {
@@ -1428,9 +1481,10 @@ label.registryOption {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-md);
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
   color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
 }
 
 .rowMain {
@@ -1442,11 +1496,12 @@ label.registryOption {
 }
 
 .rowId {
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 20px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
   overflow-wrap: anywhere;
+  font-family: var(--ds-font-family-code);
 }
 
 .row[data-state='off'] .rowId {
@@ -1454,10 +1509,10 @@ label.registryOption {
 }
 
 .rowModule {
-  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code);
   font-size: 11.5px;
   line-height: 16px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   overflow-wrap: anywhere;
 }
 
@@ -1494,14 +1549,28 @@ label.registryOption {
   flex: none;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--amv-accent);
   white-space: nowrap;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  font-weight: 500;
+}
+
+.row[data-state='off'] .rowState,
+.row[data-state='busy'] .rowState {
+  border-color: var(--amv-border-strong);
+  background: var(--amv-raised);
+  color: var(--amv-text-2);
 }
 
 .row[data-state='failed'] .rowState {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
+  border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-danger) 10%, transparent);
 }
 
 
@@ -1510,8 +1579,9 @@ label.registryOption {
   margin: 4px 0 0 56px;
   font-size: 12px;
   line-height: 18px;
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
   overflow-wrap: anywhere;
+  margin-inline-start: 56px;
 }
 
 .toolbar[hidden] {
@@ -1541,4 +1611,52 @@ label.registryOption {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+/* v2 canvas: enabled card ring and status pills. The [data-tone] and parent class lift these above Tag.module.css. */
+.card[data-plugin-status='running'] {
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, var(--amv-border));
+}
+
+.titleRow .statusTag[data-tone],
+.detailMain .statusTag[data-tone] {
+  height: auto;
+  padding: 2px 9px;
+  border: 1px solid var(--amv-border-strong);
+  background: var(--amv-raised);
+  font-size: 11.5px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--amv-text-2);
+}
+
+.titleRow .statusTag[data-tone='info'],
+.detailMain .statusTag[data-tone='info'] {
+  border-color: color-mix(in srgb, var(--amv-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+  color: var(--amv-warning);
+}
+
+.titleRow .statusTag[data-tone='danger'],
+.detailMain .statusTag[data-tone='danger'] {
+  border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-danger) 10%, transparent);
+  color: var(--amv-danger);
+}
+
+.detailMain .versionTag[data-tone] {
+  height: auto;
+  padding: 2px 9px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 6px;
+  background: var(--amv-raised);
+  font-family: var(--ds-font-family-code);
+  font-size: 11.5px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--amv-text-2);
+}
+
+.facts div:last-child {
+  border-bottom: 0;
 }

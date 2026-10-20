@@ -23,6 +23,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--ds-font-family-code);
 }
 
 .search {
@@ -37,12 +38,19 @@
   gap: 6px;
 }
 
-.muted,
+.muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .meta {
   margin: 0;
   font-size: 13px;
   line-height: 20px;
   color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code);
 }
 
 .meta {
@@ -56,6 +64,7 @@
   line-height: 20px;
   font-weight: 500;
   overflow-wrap: anywhere;
+  font-family: var(--ds-font-family-code);
 }
 
 .error {
@@ -80,23 +89,24 @@
   gap: 8px;
   margin: 0;
   padding: 10px 12px;
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-state-warn-tertiary);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-secondary);
+  border: 1px solid color-mix(in srgb, var(--amv-warning) 35%, transparent);
 }
 
 .notice > svg {
   flex: none;
   margin-top: 2px;
-  color: var(--dsw-alias-state-warn-primary);
+  color: var(--amv-warning);
 }
 
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -107,13 +117,17 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  margin: 0 -8px;
-  padding: 8px;
-  border-radius: var(--dsw-radius-xl);
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--amv-border);
+  background: var(--amv-surface);
+  transition: border-color var(--amv-dur-1) var(--amv-ease);
 }
 
 .card:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-surface);
+  border-color: var(--amv-border-strong);
 }
 
 .icon {
@@ -123,9 +137,10 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-lg);
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
   color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
 }
 
 .image {
@@ -164,13 +179,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--ds-font-family-code);
 }
 
 .cardOpen::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--dsw-radius-xl);
+  border-radius: 14px;
 }
 
 .cardOpen:focus-visible {
@@ -187,7 +203,7 @@
   overflow: hidden;
   font-size: 13px;
   line-height: 18px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-text-2);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
 }
@@ -217,6 +233,9 @@
   gap: 8px;
   padding: 64px 0;
   text-align: center;
+  margin-top: 8px;
+  border: 1px dashed var(--amv-border-strong);
+  border-radius: 14px;
 }
 
 .emptyTitle {
@@ -271,9 +290,10 @@
 
 .detailTitle {
   margin: 0;
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 22px;
+  line-height: 30px;
   font-weight: 500;
+  font-family: var(--ds-font-family-code);
 }
 
 .detailDescription {
@@ -293,13 +313,19 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 .facts {
   margin: 0;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .facts div {
@@ -308,15 +334,18 @@
   justify-content: space-between;
   gap: 16px;
   min-height: 44px;
-  padding: 8px 2px;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--amv-border);
 }
 
 .facts dt {
   flex: none;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--amv-muted);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .facts dd {
@@ -326,15 +355,18 @@
   line-height: 20px;
   text-align: end;
   overflow-wrap: anywhere;
+  font-family: var(--ds-font-family-code);
 }
 
 .facts code {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--dsw-alias-bg-module-platform);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--amv-raised);
   box-decoration-break: clone;
   font-family: var(--ds-font-family-code);
   font-size: 12px;
+  border: 1px solid var(--amv-border);
+  color: var(--amv-accent);
 }
 
 .tags {
@@ -363,13 +395,20 @@
   list-style: none;
 }
 
-.sourceRow,
 .versionRow {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.sourceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--amv-border);
 }
 
 .sourceError {
@@ -426,11 +465,54 @@
 }
 
 .link {
-  color: var(--dsw-alias-link);
+  color: var(--amv-accent);
   overflow-wrap: anywhere;
   text-decoration: none;
 }
 
 .link:hover {
   text-decoration: underline;
+}
+
+/* v2 canvas: label chips and version pills. The parent classes lift these above Tag.module.css. */
+.main .titleRow [data-tone],
+.facts .tags [data-tone] {
+  padding: 2px 8px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--amv-text-2);
+}
+
+.versionRow .titleRow [data-tone='info'],
+.versionRow .titleRow [data-tone='success'] {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.versionRow .titleRow [data-tone='warning'] {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--amv-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+  color: var(--amv-warning);
+}
+
+.versionRow .titleRow [data-tone='neutral'] {
+  background: var(--amv-raised);
+  color: var(--amv-muted);
+}
+
+.facts div:last-child {
+  border-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
 }
