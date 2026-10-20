@@ -120,6 +120,7 @@ export function apply(ctx: Context): void {
         ),
         setActualDuration: (value) => { duration.set(value) },
         setShowThinking: (value) => { thinking.set(value) },
+        loadProjection: (id) => { void ctx.sessions.refreshProjections(id as SessionId).catch(() => {}) },
         openSession: (id) => {
           const sessionId = id as SessionId
           ctx.uiWorkspace.openSession(ctx.sessions.subagentAddress(sessionId) ?? sessionId)

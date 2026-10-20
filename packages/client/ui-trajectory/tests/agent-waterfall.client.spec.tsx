@@ -39,6 +39,15 @@ describe('TrajectoryAgentWaterfall', () => {
     expect(item('d').querySelector('[class*="bar"]')).toBeNull() // untimed: label only
   })
 
+  it('counts rows without status instead of drawing them', () => {
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={0} domainDuration={1000} domainEnd={1000} toDomain={x => x}
+        rows={[row('a', 1), row('u1', 1, { status: 'unknown', endedAt: null }), row('u2', 1, { status: 'unknown', endedAt: null })]} />,
+    )
+    expect(screen.getByText('Agents · 1 · 2 without timing')).toBeTruthy()
+    expect(view.container.querySelectorAll('[data-agent-id]')).toHaveLength(1)
+  })
+
   it('collapses a subtree with its chevron', () => {
     const { item } = mount()
     fireEvent.click(item('a').querySelector('button')!)

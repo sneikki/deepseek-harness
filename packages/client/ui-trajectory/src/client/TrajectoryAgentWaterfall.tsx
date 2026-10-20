@@ -55,9 +55,12 @@ const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 
 /** Collapsible agent-tree waterfall, one 22px row per agent in depth-first order. */
 export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
-  t, rows, domainStart, domainDuration, domainEnd, toDomain, onRecordSelect, onOpenSession,
+  t, rows: allRows, domainStart, domainDuration, domainEnd, toDomain, onRecordSelect, onOpenSession,
   selectedIndex = null, searchMatchIndexes = null, activeRange = null,
 }: TrajectoryAgentWaterfallProps) {
+  // Rows with neither status nor interval would be empty lines: count them instead.
+  const rows = useMemo(() => allRows.filter(row => row.status !== 'unknown'), [allRows])
+  const untimed = allRows.length - rows.length
   const [open, setOpen] = useState(true)
   const rootRef = useRef<HTMLDivElement>(null)
   // The default (all vs depth <= 1) is decided once, when rows first appear.
@@ -84,7 +87,7 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
     }
     return result
   }, [rows, explicit])
-  if (rows.length === 0) return null
+  if (allRows.length === 0) return null
 
   const setExpanded = (id: string, value: boolean) => {
     setExplicit(previous => new Map(previous).set(id, value))
@@ -138,10 +141,12 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
         onClick={() => { setOpen(value => !value) }}
       >
         <span className={css.headerChevron} data-open={open || undefined} aria-hidden="true" />
-        {t('timeline.agentsSection', { count: rows.length })}
+        {untimed === 0
+          ? t('timeline.agentsSection', { count: rows.length })
+          : t('timeline.agentsSectionUntimed', { count: rows.length, untimed })}
       </button>
       {open && (
-        <div className={css.rows} role="tree" aria-label={t('timeline.agentsSection', { count: rows.length })}>
+        <div className={css.rows} role="tree" aria-label={t('timeline.agentsSection', { count: allRows.length })}>
           {visible.map((entry, index) => {
             const { row, ancestor } = entry
             const startedAt = row.startedAt

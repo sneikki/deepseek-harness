@@ -50,6 +50,10 @@ export interface AgentTreeRow {
   startIndex: number | null
 }
 
+const LIFECYCLE_STATUS = {
+  running: 'running', finished: 'done', failed: 'failed', interrupted: 'interrupted',
+} as const
+
 function endStatus(timing: TimingLike): AgentTreeStatus {
   const reason = timing.lastTurnEnd?.reason
   if (reason !== undefined) {
@@ -106,23 +110,29 @@ export function deriveAgentTree(
 ): readonly AgentTreeRow[] {
   const rows: AgentTreeRow[] = []
   const visited = new Set<string>([rootId])
+  const lifecycleById = new Map(lifecycles.map(lifecycle => [lifecycle.id, lifecycle]))
   const walk = (parentId: string, depth: number, links: ReadonlyMap<string, number>) => {
     for (const entry of projectionsBySession[parentId]?.values.subagentCatalog ?? []) {
       if (visited.has(entry.id)) continue
       visited.add(entry.id)
       const projection = projectionsBySession[entry.id]
       const timing = projection?.values.subagentTiming
+      // Unloaded child: fall back to the parent's start/settle records (depth 1 only).
+      const fallback = timing === undefined && depth === 1 ? lifecycleById.get(entry.id) : undefined
       // An open turn in the projection counts as running even before byId says so.
       const running = byId[entry.id]?.running === true || timing?.active !== undefined
+        || fallback?.status === 'running'
       const children = projection?.values.subagentCatalog ?? []
       rows.push({
         sessionId: entry.id,
         depth,
         label: entry.label ?? entry.id.slice(0, 8),
         shortId: entry.id.slice(0, 8),
-        status: running ? 'running' : timing === undefined ? 'unknown' : endStatus(timing),
-        startedAt: entry.createdAt,
-        endedAt: running ? null : timing?.lastTurnEnd?.at ?? null,
+        status: running
+          ? 'running'
+          : timing !== undefined ? endStatus(timing) : fallback === undefined ? 'unknown' : LIFECYCLE_STATUS[fallback.status],
+        startedAt: fallback?.startedAt ?? entry.createdAt,
+        endedAt: running ? null : timing?.lastTurnEnd?.at ?? fallback?.endedAt ?? null,
         activeMs: timing === undefined
           ? null
           : timing.settledMs + (timing.active === undefined ? 0 : Math.max(0, timing.active.through - timing.active.since)),

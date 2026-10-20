@@ -37,6 +37,20 @@ describe('deriveAgentTree', () => {
     expect(rows[2]).toMatchObject({ label: 'bbbbbbbb', startIndex: null })
   })
 
+  it('falls back to the parent lifecycle for an unloaded depth-1 child', () => {
+    const lifecycles = [
+      { ...life('l1', 1, true), status: 'finished' as const, startedAt: 100, endedAt: 400 },
+      { ...life('l2', 2, true), status: 'running' as const, startedAt: 200, endedAt: null },
+    ]
+    const rows = deriveAgentTree('root', {}, {
+      root: proj([entry('l1', 1), entry('l2', 2), entry('l3', 3)]),
+    }, lifecycles)
+    expect(rows.map(row => row.status)).toEqual(['done', 'running', 'unknown'])
+    expect(rows[0]).toMatchObject({ startedAt: 100, endedAt: 400 })
+    expect(rows[1]).toMatchObject({ startedAt: 200, endedAt: null })
+    expect(rows[2]).toMatchObject({ startedAt: 3, endedAt: null })
+  })
+
   it('maps every turn-end kind to a status', () => {
     const kinds = ['completed', 'forked', 'aborted', 'interrupted', 'blocked', 'error', 'max-tokens'] as const
     const rows = deriveAgentTree('root', {}, {

@@ -93,6 +93,8 @@ export interface TrajectoryViewInjected {
   setShowThinking: (showThinking: boolean) => void
   /** Open a subagent's own session. */
   openSession: (sessionId: string) => void
+  /** Read a session's projections (timing, catalog) without opening it. */
+  loadProjection: (sessionId: string) => void
 }
 
 interface UsageLike {
@@ -148,7 +150,7 @@ function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTree
 
 export function TrajectoryView({
   sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
-  setActualDuration, setShowThinking, openSession,
+  setActualDuration, setShowThinking, openSession, loadProjection,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
@@ -369,6 +371,15 @@ export function TrajectoryView({
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
   )
+  // Unloaded children carry no timing: read their projections once each (their own children follow).
+  const requestedProjections = useRef(new Set<string>())
+  useEffect(() => {
+    for (const row of agentRows) {
+      if (row.status !== 'unknown' || requestedProjections.current.has(row.sessionId)) continue
+      requestedProjections.current.add(row.sessionId)
+      loadProjection(row.sessionId)
+    }
+  }, [agentRows, loadProjection])
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
