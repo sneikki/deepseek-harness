@@ -176,6 +176,18 @@ export default defineConfig({
     rejectStandaloneServe(), clientDocumentTitle(), brandFontLicense(), katexWoff2Fonts(), react(), emitPreviewPage(),
     productWebBundleIsolation(src('../..'), src('.')),
   ],
+  css: {
+    postcss: {
+      plugins: [{
+        // Vite's CSS Modules hash animation names; global() keeps ui-theme's amv-* keyframes unhashed.
+        postcssPlugin: 'amv-global-keyframes',
+        Declaration(decl: { prop: string, value: string }): void {
+          if (decl.prop !== 'animation' && decl.prop !== 'animation-name') return
+          decl.value = decl.value.replace(/(?<![\w(-])amv-(?:pulse|fade-in|fade-up|scale-in)(?![\w-])/g, 'global($&)')
+        },
+      }],
+    },
+  },
   build: {
     // The worker bootstrap holds its page at top-level await; Vite's default
     // `modules` target (es2020-era) rejects that syntax.
