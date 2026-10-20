@@ -5,8 +5,8 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import clsx from 'clsx'
 import css from './Button.module.css'
 
-/** Visual variant, each backed by its --dsw-alias-button-* token family. */
-export type ButtonVariant = 'primary' | 'ghost' | 'outline' | 'toolbar'
+/** Visual variant: primary accent fill, raised ghost/outline (secondary), toolbar fill, or danger outline. */
+export type ButtonVariant = 'primary' | 'ghost' | 'outline' | 'toolbar' | 'danger'
 
 type ButtonProps = {
   variant?: ButtonVariant
