@@ -29,7 +29,7 @@
 /* Canvas status pill: neutral at rest, teal while any subagent runs. */
 .trigger {
   gap: 6px;
-  min-height: 0;
+  min-height: 28px;
   padding: 3px 10px;
   border: 1px solid var(--amv-border-strong);
   border-radius: 999px;
@@ -86,15 +86,6 @@
 
 .switcherTrigger svg {
   flex: none;
-}
-
-.activitySlot {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
 }
 
 .trigger:hover,
