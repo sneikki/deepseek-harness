@@ -101,11 +101,11 @@
   width: 20px;
   height: 1px;
   border-radius: 1px;
-  background: var(--amv-border);
+  background: var(--amv-border-strong);
   content: '';
   transform: translateY(-50%) scaleX(0.6);
   transform-origin: right center;
-  transition: transform 140ms ease, background-color 140ms ease;
+  transition: transform var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
 }
 
 /* Ordered before hover/active so those states keep their stronger tick. */

@@ -75,6 +75,7 @@
    so there is no separate :hover tint competing with the keyboard's. */
 .item.active {
   background: var(--amv-raised);
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
 
 /* Section label: 11px uppercase, tracked, muted. */

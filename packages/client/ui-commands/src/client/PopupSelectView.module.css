@@ -55,6 +55,7 @@
 
 .rowActive {
   background: var(--amv-raised);
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
 
 .label {
