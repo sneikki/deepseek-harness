@@ -1,7 +1,6 @@
-/** Pure noise reduction for the ledger: skipped rows, repeats, kind filter, tool-args line. */
+/** Pure noise reduction for the ledger: repeated context, kind filter, tool-args line. */
 
 import type { TrajectoryTurnModel } from './layout.ts'
-import type { TrajectoryTranslate } from './locales.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 
 /** Segmented ledger filter. */
@@ -19,18 +18,6 @@ const SHELL_TOOLS = new Set(['bash', 'shell'])
 
 function isToolCell(cell: TrajectoryCellProps): boolean {
   return cell.kind === 'tool' || cell.kind === 'subtool'
-}
-
-function isToolCallOnlyCell(
-  cell: TrajectoryCellProps,
-  t: TrajectoryTranslate,
-): boolean {
-  return (
-    cell.kind === 'message' &&
-    !cell.outputDetail &&
-    !cell.thinkingDetail &&
-    cell.text === t('layout.toolCallOnly')
-  )
 }
 
 /** 53-bit string hash (cyrb53): keeps the dedupe set small without storing full text. */
@@ -109,18 +96,13 @@ export function trajectoryRowMatchesFilter(
 }
 
 /**
- * Find rows whose own line is noise: tool-call-only assistants and repeated
- * context. The cells stay in the layout (fold anchor, step metrics, inspector);
- * only their rendered row is skipped.
+ * Find rows whose own line is noise: repeated context. The cells stay in the
+ * layout (fold anchor, step metrics, inspector); only their rendered row is skipped.
  * @param turns - Full layout.
- * @param t - Trajectory translator.
- * @param liveIndexes - Cells of the live partial: never hidden, their text is still arriving.
  * @returns Hidden cell indexes and per-chip counts of what remains.
  */
 export function analyzeTrajectoryNoise(
   turns: readonly TrajectoryTurnModel[],
-  t: TrajectoryTranslate,
-  liveIndexes: ReadonlySet<number>,
 ): { hidden: ReadonlySet<number>; counts: TrajectoryRowCounts } {
   const counts: TrajectoryRowCounts = { all: 0, messages: 0, tools: 0 }
   const hidden = new Set<number>()
@@ -128,15 +110,6 @@ export function analyzeTrajectoryNoise(
   for (const turn of turns) {
     for (const group of turn.groups) {
       for (const cell of group.cells) {
-        if (
-          isToolCallOnlyCell(cell, t)
-          && cell.isError !== true
-          && cell.assistantMetrics?.completedTime !== null
-          && !liveIndexes.has(cell.index)
-        ) {
-          hidden.add(cell.index)
-          continue
-        }
         if (cell.kind === 'context') {
           const key = contextKey(cell)
           if (key !== '') {

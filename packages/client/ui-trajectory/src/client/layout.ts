@@ -18,7 +18,7 @@ import type {
   TrajectorySourceBlock,
 } from './trajectory-record.ts'
 import type { TrajectoryPartialAssistant, TrajectorySnapshot } from './trajectory-contract.ts'
-import { formatElapsedSeconds } from './trajectory-record.ts'
+import { displayToolName, formatElapsedSeconds } from './trajectory-record.ts'
 import type { TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
 import { summarizeToolArgs } from './trajectory-noise.ts'
@@ -753,20 +753,34 @@ function expandAssistant(
     .filter(block => block.kind === 'reasoning' && (!streaming || block.text !== ''))
     .map(block => block.kind === 'reasoning' ? block.text : '')
     .join('\n\n')
+  const recordId = `assistant\u0000${node.turn}\u0000${node.step}`
+  // Reasoning is its own row before the output. Any reasoning block makes the
+  // row, even with empty text, so live, structural and finalised layouts share cell indexes.
+  if (node.blocks.some(block => block.kind === 'reasoning')) {
+    out.push({
+      absTime: null,
+      cell: {
+        index: ++index,
+        recordId: `thinking\u0000${node.turn}\u0000${node.step}`,
+        ownerRecordId: recordId,
+        kind: 'thinking',
+        text: '',
+        previewMarkdown: thinkingText,
+        thinkingDetail: thinkingText,
+        sourceSeq: node.seq,
+        timeSeconds: null,
+        startedAt: null,
+      },
+    })
+  }
   const message: TrajectoryCellProps = {
     index: ++index,
-    recordId: `assistant\u0000${node.turn}\u0000${node.step}`,
+    recordId,
     kind: 'message',
     sourceSeq: node.seq,
-    text: messageText !== '' || thinkingText !== ''
-      ? ''
-      : summarizeAssistantActivity(node.blocks, t),
-    ...(messageText !== ''
-      ? { previewMarkdown: messageText }
-      : thinkingText !== ''
-        ? { previewMarkdown: thinkingText }
-        : {}),
-    ...(messageText !== '' ? { outputDetail: messageText } : {}),
+    text: messageText !== '' ? '' : summarizeAssistantActivity(node.blocks, t),
+    ...callsBadgeProperty(node.blocks),
+    ...(messageText !== '' ? { previewMarkdown: messageText, outputDetail: messageText } : {}),
     ...(thinkingText !== '' ? { thinkingDetail: thinkingText } : {}),
     sourceBlocks: node.blocks.map(block => assistantSourceBlock(block)),
     ...(node.interrupted === true ? { isError: true } : {}),
@@ -820,18 +834,23 @@ function expandAssistant(
   return out
 }
 
+/** The tool calls a step chose, named once each with a repeat count. */
+function callsBadgeProperty(blocks: readonly AssistantBlock[]): { callsBadge?: string } {
+  const tools = new Map<string, number>()
+  for (const block of blocks) {
+    if (block.kind !== 'tool-call') continue
+    const name = displayToolName(block.name)
+    tools.set(name, (tools.get(name) ?? 0) + 1)
+  }
+  if (tools.size === 0) return {}
+  const names = [...tools].map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
+  return { callsBadge: `→ ${names.join(', ')}` }
+}
+
 function summarizeAssistantActivity(
   blocks: readonly AssistantBlock[],
   t: TrajectoryTranslate,
 ): string {
-  const tools = new Map<string, number>()
-  for (const block of blocks) {
-    if (block.kind !== 'tool-call') continue
-    tools.set(block.name, (tools.get(block.name) ?? 0) + 1)
-  }
-  if (tools.size > 0) {
-    return t('layout.toolCallOnly')
-  }
   const images = blocks.filter(block => block.kind === 'image').length
   if (images > 0) return t('layout.imageCount', { count: images })
   return ''

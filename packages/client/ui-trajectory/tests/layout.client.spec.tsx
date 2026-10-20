@@ -10,6 +10,7 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { PartialArguments } from '@deepseek-ai/dsh-util-values'
 import { TrajectoryGroupHeader } from '../src/client/TrajectoryGroupHeader.tsx'
+import { trajectoryRecordId } from '../src/client/trajectory-record.ts'
 import { TrajectoryTurn } from '../src/client/TrajectoryTurn.tsx'
 import { TrajectoryTurnHeader } from '../src/client/TrajectoryTurnHeader.tsx'
 import {
@@ -139,17 +140,58 @@ describe('deriveTrajectoryLayout', () => {
     expect(turns).toHaveLength(1)
     expect(turns[0]?.turn).toBe(1)
     const kinds = turns[0]?.groups.flatMap(g => g.cells.map(c => c.kind))
-    expect(kinds).toEqual(['user', 'message', 'tool'])
-    const message = turns[0]?.groups.flatMap(g => g.cells).find(c => c.kind === 'message')
+    expect(kinds).toEqual(['user', 'thinking', 'message', 'tool'])
+    const cells = turns[0]!.groups.flatMap(g => g.cells)
+    const thinking = cells.find(c => c.kind === 'thinking')
+    const message = cells.find(c => c.kind === 'message')
+    // Reasoning is its own row before the output; the output row never carries it as preview.
+    expect(thinking).toMatchObject({
+      text: '', previewMarkdown: 'thinking…', thinkingDetail: 'thinking…',
+      ownerRecordId: message?.recordId,
+    })
+    expect(thinking!.index).toBeLessThan(message!.index)
     expect(message).toMatchObject({
       input: 10, output: 20, think: 5, timeSeconds: 5,
+      previewMarkdown: 'I will run bash', outputDetail: 'I will run bash',
+      thinkingDetail: 'thinking…', callsBadge: '→ Bash',
     })
+    expect(trajectoryRecordId(thinking!)).not.toBe(trajectoryRecordId(message!))
     const tool = turns[0]?.groups.flatMap(g => g.cells).find(c => c.kind === 'tool')
     expect(tool).toMatchObject({
       text: 'bash',
       previewMarkdown: 'ls',
     })
     expect(tool?.timeSeconds).toBe(1.3)
+  })
+
+  it('lays a step with reasoning and tool calls only as thinking, assistant badge row, tools', () => {
+    const nodes = [{
+      kind: 'assistant', seq: 2, time: 6_000, turn: 1, step: 1,
+      blocks: [
+        { kind: 'reasoning', text: 'plan' },
+        { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' },
+        { kind: 'tool-call', callId: 'c2', name: 'mcp__moonshine__recall', argsRaw: '{}' },
+        { kind: 'tool-call', callId: 'c3', name: 'bash', argsRaw: '{}' },
+      ],
+    }] as unknown as LegacyConversationSlice['nodes']
+    const cells = deriveTrajectoryLayout({ nodes, partial: null, runningCalls: [] })[0]!.groups.flatMap(g => g.cells)
+    expect(cells.map(c => c.kind)).toEqual(['thinking', 'message', 'tool', 'tool', 'tool'])
+    expect(cells[1]).toMatchObject({ text: '', callsBadge: '→ Bash ×2, Moonshine recall' })
+    expect(cells[1]?.outputDetail).toBeUndefined()
+    expect(cells.map(c => c.index)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('keeps cell indexes equal whether empty reasoning is finalised or streaming', () => {
+    const blocks = [{ kind: 'reasoning', text: '' }, { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' }]
+    const finalised = deriveTrajectoryLayout({
+      nodes: [{ kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1, blocks }] as unknown as LegacyConversationSlice['nodes'],
+      partial: null, runningCalls: [],
+    })[0]!.groups.flatMap(g => g.cells)
+    const streaming = deriveTrajectoryLayout({
+      nodes: [], partial: { turn: 1, step: 1, blocks } as never, runningCalls: [],
+    })[0]!.groups.flatMap(g => g.cells)
+    expect(finalised.map(c => [c.index, c.kind])).toEqual([[1, 'thinking'], [2, 'message'], [3, 'tool']])
+    expect(streaming.map(c => [c.index, c.kind])).toEqual([[1, 'thinking'], [2, 'message'], [3, 'tool']])
   })
 
   it('adds runningCalls not already present and leaves their time blank', () => {
@@ -197,11 +239,16 @@ describe('deriveTrajectoryLayout', () => {
 
     expect(streamed[0]).toBe(base[0])
     expect(streamed).toHaveLength(2)
+    // Live reasoning shows in its own thinking row ahead of the assistant row.
     expect(streamed[1]?.groups[0]?.cells).toMatchObject([{
       index: 2,
+      kind: 'thinking',
+      previewMarkdown: 'streaming',
+      thinkingDetail: 'streaming',
+    }, {
+      index: 3,
       kind: 'message',
       text: '',
-      previewMarkdown: 'streaming',
       timeSeconds: null,
       startedAt: 3_000,
       assistantMetrics: {
@@ -211,7 +258,13 @@ describe('deriveTrajectoryLayout', () => {
         completedTime: null,
       },
     }])
-    expect(streamed[1]?.groups[0]?.cells[0]?.requestOnly).toBeUndefined()
+    expect(streamed[1]?.groups[0]?.cells[1]?.requestOnly).toBeUndefined()
+    // Text-stripped structural partial yields the same cell indexes as the live one.
+    const structural = appendTrajectoryPartialLayout(
+      base, { ...partial, blocks: [{ kind: 'reasoning', text: '' }] }, 1,
+    )
+    expect(structural[1]?.groups[0]?.cells.map(cell => [cell.index, cell.kind]))
+      .toEqual([[2, 'thinking'], [3, 'message']])
   })
 
   it('replaces a running-call placeholder with the matching streamed tool call', () => {
@@ -469,9 +522,9 @@ describe('deriveTrajectoryLayout', () => {
     ] as unknown as LegacyConversationSlice['nodes']
     const turns = deriveTrajectoryLayout({ nodes, partial: null, runningCalls: [] })
     const message = turns[0]?.groups.flatMap(g => g.cells).find(c => c.kind === 'message')
-    expect(message).toMatchObject({
-      text: '', previewMarkdown: '…', input: 11, output: 22, think: 3,
-    })
+    expect(message).toMatchObject({ text: '', input: 11, output: 22, think: 3 })
+    expect(message?.previewMarkdown).toBeUndefined()
+    expect(turns[0]?.groups.flatMap(g => g.cells).map(c => c.kind)).toEqual(['thinking', 'message'])
   })
 
   it('bounds a long Markdown-like thinking preview while retaining its full detail', () => {
@@ -484,11 +537,14 @@ describe('deriveTrajectoryLayout', () => {
     const turns = deriveTrajectoryLayout({
       nodes, partial: null, runningCalls: [],
     })
-    const message = turns[0]?.groups.flatMap(group => group.cells)
-      .find(cell => cell.kind === 'message')
+    const cells = turns[0]!.groups.flatMap(group => group.cells)
+    const row = cells.find(cell => cell.kind === 'thinking')
+    const message = cells.find(cell => cell.kind === 'message')
 
+    expect(row?.previewMarkdown).toBe(thinking)
+    expect(row?.thinkingDetail).toBe(thinking)
     expect(message?.text).toBe('')
-    expect(message?.previewMarkdown).toBe(thinking)
+    expect(message?.previewMarkdown).toBeUndefined()
     expect(message?.thinkingDetail).toBe(thinking)
   })
 
@@ -584,7 +640,7 @@ describe('run_code sub-dispatch cells', () => {
     const turns = deriveTrajectoryLayout({ nodes: withSubCalls(subCalls), partial: null, runningCalls: [] })
     const cells = turns[0]!.groups.flatMap(g => g.cells)
     expect(cells.map(c => c.kind)).toEqual(['message', 'tool', 'subtool', 'subtool'])
-    expect(cells[0]?.text).toBe('Tool call only')
+    expect(cells[0]).toMatchObject({ text: '', callsBadge: expect.stringMatching(/^→ /) })
     // Sequential indexes across the interleave; durations from the pair times.
     expect(cells.map(c => c.index)).toEqual([1, 2, 3, 4])
     expect(cells[2]).toMatchObject({

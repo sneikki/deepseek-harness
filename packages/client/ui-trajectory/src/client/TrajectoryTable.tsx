@@ -32,7 +32,7 @@ import type {
   AssistantMetricDetail, TrajectoryCellKind, TrajectoryCellProps, TrajectorySourceBlock,
 } from './trajectory-record.ts'
 import {
-  formatClock, formatElapsedSeconds, formatTurnDuration, trajectoryRecordId,
+  displayToolName, formatClock, formatElapsedSeconds, formatTurnDuration, trajectoryRecordId,
 } from './trajectory-record.ts'
 import {
   CONTENT_ROW_HEIGHT, groupTrajectoryVirtualRows, TURN_START_ROW_HEIGHT,
@@ -60,6 +60,7 @@ const KIND_LABEL_KEY: Record<TrajectoryCellKind, TrajectoryKey> = {
   user: 'kind.user',
   context: 'kind.context',
   compacted: 'kind.compacted',
+  thinking: 'kind.thinking',
   message: 'kind.assistant',
   tool: 'kind.tool',
   subtool: 'kind.subtool',
@@ -126,11 +127,33 @@ function CompactedIcon(): ReactNode {
   )
 }
 
+function ThinkingIcon(): ReactNode {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      data-role-icon="thinking"
+      aria-hidden="true"
+    >
+      <path d="M4.6 10.4a3.1 3.1 0 0 1-.4-6.1 3.7 3.7 0 0 1 7.1.4 2.9 2.9 0 0 1 .4 5.7H4.6Z" />
+      <circle cx="4.2" cy="13.2" r=".7" fill="currentColor" stroke="none" />
+      <circle cx="2.4" cy="15" r=".5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 const KIND_ICON: Record<TrajectoryCellKind, ReactNode> = {
   system: <IconSettingsOutlineRegular size={13} />,
   user: <IconUserOutlineRegular size={13} />,
   context: <InformationIcon />,
   compacted: <CompactedIcon />,
+  thinking: <ThinkingIcon />,
   message: <IconSparkleRegular size={13} />,
   tool: <ToolWrenchIcon />,
   subtool: <ToolWrenchIcon />,
@@ -759,12 +782,6 @@ function assistantToolCalls(
   return calls
 }
 
-/** `mcp__server__tool` reads as `server tool`. */
-function displayToolName(name: string): string {
-  const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
-  return mcp === null ? name : `${mcp[1]} ${mcp[2]}`
-}
-
 function summarizeAssistantTools(
   records: readonly TableRecord[],
   t: TrajectoryTranslate,
@@ -1045,6 +1062,16 @@ function isMarkdownRecord(record: TableRecord): boolean {
     || record.cell.kind === 'message'
 }
 
+/** The record whose inspector a row opens: itself, or the assistant a thinking row belongs to. */
+function ownerRecord(
+  records: readonly TableRecord[],
+  record: TableRecord | undefined,
+): TableRecord | undefined {
+  const owner = record?.cell.ownerRecordId
+  if (owner === undefined) return record
+  return records.find(candidate => trajectoryRecordId(candidate.cell) === owner) ?? record
+}
+
 function parentRecords(
   records: readonly TableRecord[],
   record: TableRecord,
@@ -1126,8 +1153,7 @@ function detailTabs(record: TableRecord): readonly DetailTabItem[] {
   ]
 }
 
-function recordDisplayText(cell: TrajectoryCellProps, t: TrajectoryTranslate): string {
-  if (isToolCallOnly(cell, t)) return ''
+function recordDisplayText(cell: TrajectoryCellProps): string {
   const program = codeProgram(cell)
   if (program !== undefined) return `${PTC_TOOL_NAME} · ${program.description.replace(/\s+/g, ' ')}`
   if (cell.previewMarkdown !== undefined) {
@@ -1139,7 +1165,7 @@ function recordDisplayText(cell: TrajectoryCellProps, t: TrajectoryTranslate): s
   const markdown = cell.kind === 'user' || cell.kind === 'context'
     ? cell.inputDetail
     : cell.kind === 'message'
-      ? cell.outputDetail ?? cell.thinkingDetail
+      ? cell.outputDetail
       : undefined
   return markdown === undefined ? '' : trajectoryPreviewText(markdown)
 }
@@ -1165,53 +1191,41 @@ function toolCallTextParts(
   }
 }
 
-function isToolCallOnly(cell: TrajectoryCellProps, t: TrajectoryTranslate): boolean {
-  return cell.kind === 'message'
-    && !cell.outputDetail
-    && !cell.thinkingDetail
-    && cell.text === t('layout.toolCallOnly')
-}
-
 interface RecordPresentationValue {
   displayText: string
   listDisplayText: string
   resultText: string | undefined
-  toolCallOnly: boolean
+  callsBadge: string | undefined
   toolCallText: ToolCallTextParts | undefined
 }
 
 function RecordPresentation({
   cell,
   children,
-  t,
 }: {
   cell: TrajectoryCellProps
   children: (value: RecordPresentationValue) => ReactNode
-  t: TrajectoryTranslate
 }) {
   const displayText = useMemo(
-    () => recordDisplayText(cell, t),
+    () => recordDisplayText(cell),
     [
       cell.kind, cell.text, cell.toolName, cell.previewMarkdown,
-      cell.inputDetail, cell.outputDetail, cell.thinkingDetail, t,
+      cell.inputDetail, cell.outputDetail, cell.thinkingDetail,
     ],
   )
   const resultText = useMemo(
     () => recordResultText(cell),
     [cell.result, cell.resultPreviewMarkdown],
   )
-  const toolCallOnly = isToolCallOnly(cell, t)
   const toolCallText = toolCallTextParts(cell, displayText)
-  const listDisplayText = toolCallOnly
-    ? t('record.toolCallOnly')
-    : toolCallText === undefined
-      ? displayText
-      : [toolCallText.name, toolCallText.args].filter(Boolean).join(' ')
+  const listDisplayText = toolCallText === undefined
+    ? [cell.callsBadge, displayText].filter(Boolean).join(' ')
+    : [toolCallText.name, toolCallText.args].filter(Boolean).join(' ')
   return children({
     displayText,
     listDisplayText,
     resultText,
-    toolCallOnly,
+    callsBadge: cell.callsBadge,
     toolCallText,
   })
 }
@@ -1270,16 +1284,29 @@ function TurnHeader({ turn, stats, active, t }: {
 
 function RecordListText({
   displayText,
-  toolCallOnly,
+  callsBadge,
   toolCallText,
+  emptyMessage,
   t,
-}: Pick<RecordPresentationValue, 'displayText' | 'toolCallOnly' | 'toolCallText'> & {
+}: Pick<RecordPresentationValue, 'displayText' | 'callsBadge' | 'toolCallText'> & {
+  /** An assistant row with no output and no tool calls. */
+  emptyMessage: boolean
   t: TrajectoryTranslate
 }) {
-  if (toolCallOnly) {
-    return <span className={css.toolCallOnly}>{t('record.toolCallOnly')}</span>
+  if (toolCallText === undefined) {
+    if (callsBadge === undefined) {
+      if (displayText === '' && emptyMessage) {
+        return <span className={css.noOutputText}>{t('record.noOutput')}</span>
+      }
+      return displayText || '—'
+    }
+    return (
+      <>
+        <span className={css.callsBadge}>{callsBadge}</span>
+        {displayText !== '' && <span className={css.callsText}>{displayText}</span>}
+      </>
+    )
   }
-  if (toolCallText === undefined) return displayText || '—'
   return (
     <>
       {toolCallText.program && <IconCodeOutlineRegular className={css.programIcon} size={12} />}
@@ -1751,6 +1778,7 @@ function MarkdownRecordContent({
         </div>
         {record.cell.outputDetail && (
           <div className={css.assistantOutput}>
+            <div className={css.outputLabel}>{t('record.output')}</div>
             <MarkdownFragment
               text={record.cell.outputDetail}
               rendered={rendered}
@@ -1780,9 +1808,7 @@ function MarkdownRecordContent({
   const hasToolCalls = record.cell.kind === 'message'
     && record.cell.sourceBlocks?.some(block => block.type === 'tool-call') === true
   if (!source && !hasAttachments && !hasToolCalls) {
-    const emptyLabel = isToolCallOnly(record.cell, t)
-      ? t('record.toolCallOnly')
-      : record.cell.text || t('record.noContent')
+    const emptyLabel = record.cell.text || t('record.noContent')
     return <p className={css.noPayload}>{emptyLabel}</p>
   }
   if (!rendered || (!hasAttachments && !hasToolCalls)) {
@@ -2305,6 +2331,9 @@ export function TrajectoryTable({
     const cell = streamingCellsByIndex.get(record.cell.index)
     return cell === undefined ? record : { ...record, cell }
   }, [streamingCellsByIndex])
+  // A thinking row shows the running/error state of its step's assistant record.
+  const currentOwner = (record: TableRecord): TableRecord =>
+    currentRecord(ownerRecord(allRecords, record) ?? record)
   const selectedTemplate = useMemo(() => selectedRecordId === null
     ? undefined
     : allRecords.find(record => trajectoryRecordId(record.cell) === selectedRecordId),
@@ -2560,7 +2589,9 @@ export function TrajectoryTable({
 
   const selectRecord = useCallback((index: number) => {
     setCodeWrappingOnOpen(stringWrapping?.getDefault() ?? false)
-    const record = allRecords.find(candidate => candidate.cell.index === index)
+    const row = allRecords.find(candidate => candidate.cell.index === index)
+    // A thinking row is a view of its step's assistant record.
+    const record = ownerRecord(allRecords, row)
     onRecordSelect?.(index)
     setSelectedRequest(null)
     setSelectedRecordId(record === undefined ? null : trajectoryRecordId(record.cell))
@@ -2873,9 +2904,8 @@ export function TrajectoryTable({
               <RecordPresentation
                 key={trajectoryVirtualRecordKey(record)}
                 cell={record.cell}
-                t={t}
               >
-                {({ displayText, listDisplayText, resultText, toolCallOnly, toolCallText }) => {
+                {({ displayText, listDisplayText, resultText, callsBadge, toolCallText }) => {
                   const isCollapsedSummary = record.collapsedSummary !== undefined
                   const isRequestOnly = record.cell.requestOnly === true
                   const key = requestKey(record.turn, record.group)
@@ -2902,6 +2932,9 @@ export function TrajectoryTable({
                   const sectionActive = record.turn === null
                     ? activeSection === record.section
                     : activeTurn === record.turn
+                  const rowSelected = selectedIndex === record.cell.index
+                    || (record.cell.ownerRecordId !== undefined
+                      && record.cell.ownerRecordId === selectedRecordId)
                   const singleToolNotice = record.cell.kind === 'context'
                     && record.cell.sourceBlocks?.length === 1
                     && record.cell.sourceBlocks.every(block => block.type === 'tool-addition' || block.type === 'tool-removal')
@@ -2923,7 +2956,7 @@ export function TrajectoryTable({
                             kind: t(KIND_LABEL_KEY[record.cell.kind]),
                             content: listDisplayText || t('request.noContent'),
                           })}
-                      aria-selected={!isCollapsedSummary && !isRequestOnly && selectedIndex === record.cell.index}
+                      aria-selected={!isCollapsedSummary && !isRequestOnly && rowSelected}
                       data-kind={record.cell.kind}
                       data-trajectory-row-key={trajectoryVirtualRecordKey(record)}
                       data-virtual-position={virtualizationEnabled ? position : undefined}
@@ -2939,10 +2972,10 @@ export function TrajectoryTable({
                       data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
                         ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
                         : undefined}
-                      data-running={stateOf(record) === 'running' || undefined}
+                      data-running={stateOf(currentOwner(record)) === 'running' || undefined}
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}
-                      data-selected={!isCollapsedSummary && selectedIndex === record.cell.index || undefined}
+                      data-selected={!isCollapsedSummary && rowSelected || undefined}
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
                         : timelineFocusIndexes.has(record.cell.index) ? 'inside' : 'outside'}
@@ -2962,12 +2995,13 @@ export function TrajectoryTable({
                           onToggleTurn(record.turn)
                           return
                         }
+                        const foldOwner = ownerRecord(allRecords, record)
                         if (
-                          record.cell.kind === 'message'
-                      && assistantToolCalls(allRecords, record.cell.index).length > 0
+                          foldOwner?.cell.kind === 'message'
+                      && assistantToolCalls(allRecords, foldOwner.cell.index).length > 0
                         ) {
                           event.preventDefault()
-                          onToggleAssistant(trajectoryRecordId(record.cell))
+                          onToggleAssistant(trajectoryRecordId(foldOwner.cell))
                           return
                         }
                         if (!record.turnStart) return
@@ -3014,7 +3048,7 @@ export function TrajectoryTable({
                             onDoubleClick={(event) => { event.stopPropagation() }}
                           />
                         )}
-                        {!isCollapsedSummary && selectedIndex === record.cell.index && (
+                        {!isCollapsedSummary && rowSelected && (
                           <span className={css.selectionRail} aria-hidden="true" />
                         )}
                         {!isCollapsedSummary && !isRequestOnly && (
@@ -3055,7 +3089,10 @@ export function TrajectoryTable({
                                   className={css.label}
                                   title={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                 >
-                                  {displayToolName(toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind]))}
+                                  <span className={css.labelBadge}>
+                                    {displayToolName(toolCallText?.name
+                                      || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
+                                  </span>
                                 </span>
                                 <span
                                   className={resultText === undefined ? css.contentText : css.resultPreview}
@@ -3066,8 +3103,9 @@ export function TrajectoryTable({
                                   <span className={resultText === undefined ? css.body : css.resultRequest}>
                                     <RecordListText
                                       displayText={displayText}
-                                      toolCallOnly={toolCallOnly}
+                                      callsBadge={callsBadge}
                                       toolCallText={toolCallText}
+                                      emptyMessage={record.cell.kind === 'message'}
                                       t={t}
                                     />
                                   </span>

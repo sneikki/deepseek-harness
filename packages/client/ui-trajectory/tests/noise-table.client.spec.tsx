@@ -12,7 +12,6 @@ import { t } from './locale.client.ts'
 afterEach(cleanup)
 
 const loadImage: MessageImageLoader = async () => 'blob:x'
-const only = t('layout.toolCallOnly')
 
 function turns(assistant: Partial<TrajectoryTurnModel['groups'][number]['cells'][number]> = {}): readonly TrajectoryTurnModel[] {
   return [{
@@ -21,7 +20,7 @@ function turns(assistant: Partial<TrajectoryTurnModel['groups'][number]['cells']
       title: 'Step 1',
       cells: [
         {
-          index: 1, kind: 'message', text: only, timeSeconds: 1, sourceSeq: 1,
+          index: 1, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: 1,
           input: 111, output: 222, ...assistant,
         },
         { index: 2, kind: 'tool', text: 'bash', previewMarkdown: 'ls', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 2, outputDetail: 'a' },
@@ -62,7 +61,7 @@ describe('TrajectoryTable with hidden rows', () => {
     const id = trajectoryRecordId(layout[0]!.groups[0]!.cells[0]!)
     render(ledger({ collapsedAssistants: new Set([id]) }, layout))
     expect(screen.queryAllByRole('row', { name: /TOOL/ })).toHaveLength(0)
-    expect(screen.getByText('2 tool calls · bash, edit')).toBeTruthy()
+    expect(screen.getByText('2 tool calls · Bash, Edit')).toBeTruthy()
     // the summary line carries the request label and inspector button
     expect(screen.getByRole('button', { name: 'Request #1' })).toBeTruthy()
   })
@@ -71,7 +70,7 @@ describe('TrajectoryTable with hidden rows', () => {
     const step = (n: number, base: number, tool: string): TrajectoryTurnModel['groups'][number] => ({
       title: `Step ${n}`,
       cells: [
-        { index: base, kind: 'message', text: only, timeSeconds: 1, sourceSeq: base },
+        { index: base, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: base },
         { index: base + 1, kind: 'tool', text: tool, toolName: tool, timeSeconds: 0.1, sourceSeq: base + 1, outputDetail: 'x' },
       ],
     })
@@ -87,7 +86,7 @@ describe('TrajectoryTable with hidden rows', () => {
       hiddenIndexes: new Set([1, 3, 5]),
       requestNumbers: [1, 2, 3].map(n => ({ turn: 1, step: n, group: `Step ${n}`, number: n })),
     }, layout))
-    const line = screen.getByText('3 tool calls · bash ×2, moonshine store')
+    const line = screen.getByText('3 tool calls · Bash ×2, Moonshine store')
     fireEvent.click(line)
     expect(toggled).toEqual(ids)
   })
@@ -101,7 +100,7 @@ describe('TrajectoryTable with hidden rows', () => {
           { index: 2, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 2, outputDetail: 'x' },
         ] },
         { title: 'Step 2', cells: [
-          { index: 3, kind: 'message', text: only, timeSeconds: 1, sourceSeq: 3 },
+          { index: 3, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: 3 },
           { index: 4, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 4, outputDetail: 'x' },
         ] },
       ],
@@ -111,7 +110,7 @@ describe('TrajectoryTable with hidden rows', () => {
       collapsedAssistants: new Set(ids),
       hiddenIndexes: new Set([3]),
     }, layout))
-    expect(screen.getByText('2 tool calls · bash ×2')).toBeTruthy()
+    expect(screen.getByText('2 tool calls · Bash ×2')).toBeTruthy()
   })
 
   it('counts only shown rows in a folded turn summary', () => {

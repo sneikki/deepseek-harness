@@ -89,6 +89,7 @@ function timelineKindLabel(kind: TrajectoryCellKind, t: TrajectoryTranslate): st
     case 'user': return t('kind.user')
     case 'context': return t('kind.context')
     case 'compacted': return t('kind.compacted')
+    case 'thinking': return t('kind.thinking')
     case 'message': return t('kind.assistant')
     case 'tool': return t('kind.tool')
     case 'subtool': return t('kind.subtool')

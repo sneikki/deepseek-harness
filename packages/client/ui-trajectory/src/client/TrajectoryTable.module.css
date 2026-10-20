@@ -189,9 +189,11 @@
   --trajectory-tone: var(--amv-accent);
   --trajectory-tone-text: var(--amv-accent-text);
 }
+.table tbody tr[data-kind='thinking'],
 .table tbody tr[data-kind='context'],
 .table tbody tr[data-kind='system'],
 .table tbody tr[data-kind='compacted'],
+.tone[data-kind='thinking'],
 .tone[data-kind='context'],
 .tone[data-kind='system'],
 .tone[data-kind='compacted'] {
@@ -533,13 +535,22 @@
 }
 
 .label {
-  flex: 0 0 124px;
+  display: flex;
+  flex: 0 0 156px;
   min-width: 0;
+}
+
+/* Kind or tool name as a pill tinted in the row tone: sans, humanised text. */
+.labelBadge {
+  min-width: 0;
+  padding: 0 8px;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 35%, transparent);
+  border-radius: 999px;
   color: var(--trajectory-tone-text);
-  font: 500 12px/18px var(--ds-font-family-code);
+  background: color-mix(in srgb, var(--trajectory-tone) 14%, transparent);
+  font: 500 12px/16px var(--dsw-font-family);
   text-overflow: ellipsis;
-  text-transform: lowercase;
   white-space: nowrap;
 }
 
@@ -560,6 +571,10 @@
 
 .table tbody tr[data-turn-start='true'] .line > .contentText {
   font-size: 14px;
+}
+
+.table tbody tr[data-kind='thinking'] .contentText {
+  font-style: italic;
 }
 
 .table tbody tr[data-kind='subtool'] .line {
@@ -643,8 +658,23 @@
   white-space: nowrap;
 }
 
-.toolCallOnly {
-  color: var(--dsw-alias-label-tertiary);
+/* The tools an assistant step chose: a pill, never prose; output text follows it. */
+.callsBadge {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  color: var(--amv-accent-text);
+  background: var(--amv-accent-tint);
+  font: 500 12px/18px var(--dsw-font-family);
+  text-overflow: ellipsis;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.callsText {
+  margin-left: 8px;
 }
 
 .table tbody tr[data-collapsed-summary='turn'] td,
@@ -1392,8 +1422,9 @@
   --dsh-content-font-delta-secondary: 0px;
   margin: 6px 14px 0 12px;
   padding-left: 6px;
-  border-left: 2px solid var(--dsw-alias-markdown-citation);
-  color: var(--dsw-alias-label-secondary);
+  border-left: 2px solid var(--amv-border, var(--dsw-alias-markdown-citation));
+  color: var(--amv-muted);
+  font-style: italic;
   background: transparent;
 }
 
@@ -1412,7 +1443,7 @@
   height: 18px;
   padding: 0;
   border: 0;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   background: transparent;
   cursor: pointer;
   font: 600 12px/18px var(--dsw-font-family);
@@ -1443,12 +1474,19 @@
 .thinkingQuote .payload {
   min-height: 0;
   padding: 2px 0;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
   background: transparent;
 }
 
 .assistantOutput {
   background: var(--dsw-alias-bg-layer-1);
+}
+
+.outputLabel {
+  padding: 14px 14px 0;
+  color: var(--amv-text-2);
+  font: 600 12px/18px var(--dsw-font-family);
+  user-select: none;
 }
 
 .markdownPreview {
