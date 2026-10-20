@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-subagent/projection-types
  */
 
-import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionId, SessionSeq, TurnEndReason } from '@deepseek-ai/dsh-session/types'
 
 /** One current direct-child discovery row materialized from parent facts. */
 export type SubagentCatalogEntry =
@@ -35,6 +35,16 @@ export interface SubagentTimingProjection {
    * normally; absent while a turn is open or before one closes.
    */
   lastTurnCompleted?: boolean
+  /**
+   * Wall-clock end of the latest `turn/end` after the child's own descriptor,
+   * with its reason kind; absent before one such turn closes.
+   */
+  lastTurnEnd?: {
+    /** Event time of that `turn/end`. */
+    at: number
+    /** Kind of the reason that closed it. */
+    reason: TurnEndReason['kind']
+  }
 }
 
 /**

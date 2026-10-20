@@ -8,7 +8,7 @@
 import { z } from 'zod'
 import { SessionSeq } from '@deepseek-ai/dsh-session'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session'
 import { foldSubagentDescriptor } from './descriptor.ts'
 import type { SubagentDescriptorData } from './descriptor.ts'
 import type { SubagentIdentityProjection, SubagentTimingProjection } from './projection-types.ts'
@@ -25,6 +25,8 @@ export interface TimingState {
   descriptorSeen: boolean
   /** Whether the latest closed post-descriptor turn completed normally; absent while a turn is open or before one closes. */
   lastTurnCompleted?: boolean | undefined
+  /** Wall-clock end of the latest post-descriptor `turn/end`; kept across turn starts and reset by a descriptor. */
+  lastTurnEnd?: { at: number; reason: TurnEndReason['kind'] } | undefined
 }
 
 const activeIntervalSchema = z.object({
@@ -32,14 +34,21 @@ const activeIntervalSchema = z.object({
   through: z.number().int().nonnegative(),
 }).strict()
 
+const lastTurnEndSchema = z.object({
+  at: z.number().int().nonnegative(),
+  reason: z.string().transform(kind => kind as TurnEndReason['kind']),
+}).strict()
+
 const projectionSchema: z.ZodType<SubagentTimingProjection> = z.object({
   settledMs: z.number().int().nonnegative(),
   active: activeIntervalSchema.optional(),
   lastTurnCompleted: z.boolean().optional(),
-}).strict().transform(({ settledMs, active, lastTurnCompleted }) => ({
+  lastTurnEnd: lastTurnEndSchema.optional(),
+}).strict().transform(({ settledMs, active, lastTurnCompleted, lastTurnEnd }) => ({
   settledMs,
   ...active === undefined ? {} : { active },
   ...lastTurnCompleted === undefined ? {} : { lastTurnCompleted },
+  ...lastTurnEnd === undefined ? {} : { lastTurnEnd },
 }))
 
 const timingStateSchema: z.ZodType<TimingState> = z.object({
@@ -48,6 +57,7 @@ const timingStateSchema: z.ZodType<TimingState> = z.object({
   pendingTurnStart: z.number().int().nonnegative().optional(),
   descriptorSeen: z.boolean(),
   lastTurnCompleted: z.boolean().optional(),
+  lastTurnEnd: lastTurnEndSchema.optional(),
 }).strict()
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
@@ -92,12 +102,14 @@ export const subagentTimingProjectionDefinition = {
         const { pendingTurnStart: _closed, ...next } = state
         return next
       }
-      if (state.active === undefined) return state
+      const lastTurnEnd = { at: event.time, reason: event.data.reason.kind }
+      if (state.active === undefined) return { ...state, lastTurnEnd }
       const { active, ...rest } = state
       return {
         ...rest,
         settledMs: state.settledMs + Math.max(0, event.time - active.since),
         lastTurnCompleted: event.data.reason.kind === 'completed',
+        lastTurnEnd,
       }
     }
     if (state.active === undefined) return state
@@ -109,9 +121,10 @@ export const subagentTimingProjectionDefinition = {
       settledMs: state.settledMs,
       ...(state.active === undefined ? {} : { active: state.active }),
       ...(state.lastTurnCompleted === undefined ? {} : { lastTurnCompleted: state.lastTurnCompleted }),
+      ...(state.lastTurnEnd === undefined ? {} : { lastTurnEnd: state.lastTurnEnd }),
     }),
   },
-  stateVersion: 3,
+  stateVersion: 4,
 } satisfies ProjectionDefinition<'subagentTiming', TimingState>
 
 interface IdentityState {
