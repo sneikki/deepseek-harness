@@ -57,7 +57,7 @@ describe('TrajectoryAgentWaterfall', () => {
 
   it('opens the child session without selecting the row', () => {
     const { item, onRecordSelect, onOpenSession } = mount()
-    fireEvent.click(item('b').querySelector('button[aria-label="Open agent session"]')!)
+    fireEvent.click(item('b').querySelector('button[aria-label="Open agent-b"]')!)
     expect(onOpenSession).toHaveBeenCalledWith('b')
     expect(onRecordSelect).not.toHaveBeenCalled()
   })
@@ -75,5 +75,46 @@ describe('TrajectoryAgentWaterfall', () => {
     expect(at('d').dataset.searchMatch).toBe('true')
     expect(at('b').dataset.selected).toBe('false') // ends at 500, before the brush
     expect(at('c').dataset.selected).toBe('true') // running: open-ended
+  })
+
+  it('keeps a running bar open-ended in domain units under a non-identity toDomain', () => {
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} rows={[row('r', 1, { status: 'running', startedAt: 1000, endedAt: null })]}
+        domainStart={0} domainDuration={100} domainEnd={100} toDomain={x => x / 10} />,
+    )
+    // Starts at the window's right edge: nothing to draw.
+    expect(view.container.querySelector('[class*="bar"]')).toBeNull()
+    const grow = render(
+      <TrajectoryAgentWaterfall t={t} rows={[row('r', 1, { status: 'running', startedAt: 200, endedAt: null })]}
+        domainStart={0} domainDuration={100} domainEnd={100} toDomain={x => x / 10} />,
+    )
+    const open = grow.container.querySelector<HTMLElement>('[class*="bar"]')!
+    expect(open.style.getPropertyValue('--agent-left')).toBe('20%')
+    expect(open.style.getPropertyValue('--agent-width')).toBe('80%')
+  })
+
+  it('expands only depth <= 1 by default beyond 12 rows', () => {
+    const many = [
+      row('p', 1, { hasChildren: true }), row('q', 2, { hasChildren: true }), row('deep', 3),
+      ...Array.from({ length: 11 }, (_, index) => row(`s${index}`, 1)),
+    ]
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} rows={many} domainStart={0} domainDuration={1000} domainEnd={1000} toDomain={x => x} />,
+    )
+    expect(view.container.querySelector('[data-agent-id="q"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-agent-id="deep"]')).toBeNull()
+  })
+
+  it('supports keyboard select and arrow collapse', () => {
+    const { item, onRecordSelect } = mount()
+    item('a').focus()
+    fireEvent.keyDown(item('a'), { key: 'Enter' })
+    expect(onRecordSelect).toHaveBeenCalledWith(7)
+    fireEvent.keyDown(item('a'), { key: 'ArrowLeft' })
+    expect(item('b')).toBeNull()
+    fireEvent.keyDown(item('a'), { key: 'ArrowRight' })
+    expect(item('b')).not.toBeNull()
+    fireEvent.keyDown(item('a'), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(item('b'))
   })
 })

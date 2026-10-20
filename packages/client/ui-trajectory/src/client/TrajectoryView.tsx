@@ -18,7 +18,7 @@ import {
   analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
-import { deriveAgentTree } from './trajectory-agent-tree.ts'
+import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
@@ -137,6 +137,13 @@ function addUsage(
       ? {}
       : { reasoning: (total?.reasoning ?? 0) + (usage.reasoning ?? 0) }),
   }
+}
+
+function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTreeRow[]): boolean {
+  return left.length === right.length && left.every((row, index) => {
+    const other = right[index]
+    return other !== undefined && (Object.keys(row) as (keyof AgentTreeRow)[]).every(key => row[key] === other[key])
+  })
 }
 
 export function TrajectoryView({
@@ -357,11 +364,10 @@ export function TrajectoryView({
     () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
     [finalized, timelinePartial, t],
   )
-  const sessionsById = useSessions(state => state.byId)
-  const sessionProjections = useSessions(state => state.projectionsBySession)
-  const agentRows = useMemo(
-    () => deriveAgentTree(sessionId, sessionsById, sessionProjections, trajectorySubagentLifecycles(timelineTurns)),
-    [sessionId, sessionsById, sessionProjections, timelineTurns],
+  const timelineLifecycles = useMemo(() => trajectorySubagentLifecycles(timelineTurns), [timelineTurns])
+  const agentRows = useSessions(
+    state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
+    equalAgentRows,
   )
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
