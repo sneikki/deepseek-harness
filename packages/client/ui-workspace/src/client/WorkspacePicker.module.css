@@ -12,9 +12,9 @@
 }
 
 .modalError {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
 .menuStatus {
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
 }
