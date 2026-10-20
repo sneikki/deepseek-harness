@@ -66,7 +66,6 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
       if (row.hasChildren && !isExpanded(row)) hideDepth = row.depth
     }
     return result
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, flipped, expandAll])
   if (rows.length === 0) return null
 
