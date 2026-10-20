@@ -76,7 +76,7 @@
 }
 
 .detail::placeholder {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .detail:focus {

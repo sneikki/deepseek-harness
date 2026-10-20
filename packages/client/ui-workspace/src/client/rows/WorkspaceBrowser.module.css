@@ -26,7 +26,7 @@
   padding: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
 }
 

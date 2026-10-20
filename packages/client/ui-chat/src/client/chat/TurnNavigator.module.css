@@ -188,7 +188,7 @@
 
 .previewResponse {
   margin-top: 4px;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   font: var(--dsw-font-xxs-12);
   -webkit-line-clamp: 3;
 }

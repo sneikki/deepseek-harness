@@ -1585,7 +1585,7 @@
 .rowGlyph {
   align-self: center;
   margin-top: 0;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .endedRow .rowGlyph {
@@ -1611,7 +1611,7 @@
 
 .metadata + .metadata::before {
   padding: 0 4px 0 0;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 /* Status pill: neutral by default (ended), teal when the task is enabled. */
@@ -1646,7 +1646,7 @@
 }
 
 .pillActive .pillDot {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   animation: amv-pulse 2s var(--amv-ease) infinite;
 }
 
@@ -1676,7 +1676,7 @@
   border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
   border-radius: 12px;
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .notice,

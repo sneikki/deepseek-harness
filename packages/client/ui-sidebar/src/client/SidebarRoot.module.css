@@ -561,7 +561,7 @@
 }
 
 .panelRow.panelActive .panelGlyph {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .panelRow:focus-visible {

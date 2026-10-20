@@ -366,7 +366,7 @@
   font-family: var(--ds-font-family-code);
   font-size: 12px;
   border: 1px solid var(--amv-border);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .tags {
@@ -465,7 +465,7 @@
 }
 
 .link {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   overflow-wrap: anywhere;
   text-decoration: none;
 }
@@ -492,7 +492,7 @@
   border-radius: 999px;
   border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .versionRow .titleRow [data-tone='warning'] {

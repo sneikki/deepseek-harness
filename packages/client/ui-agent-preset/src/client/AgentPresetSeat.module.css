@@ -43,7 +43,7 @@
 
 .seat:disabled {
   cursor: default;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .seatIcon {

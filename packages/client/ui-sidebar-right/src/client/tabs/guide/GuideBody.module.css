@@ -130,7 +130,7 @@
 }
 
 .hero {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .entry {
@@ -154,7 +154,7 @@
 }
 
 .entryIcon {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   /* The plugins' coloured artwork reads muted: colour is for state here. */
   filter: grayscale(1);
   opacity: 0.8;

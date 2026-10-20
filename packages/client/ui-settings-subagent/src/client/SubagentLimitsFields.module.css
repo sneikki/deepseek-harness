@@ -43,7 +43,7 @@
 /* v2 canvas: limits read as value chips, depth table as an r12 panel. */
 .limit input {
   font-family: var(--ds-font-family-code);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 .depthTable {
   border: 1px solid var(--amv-border);

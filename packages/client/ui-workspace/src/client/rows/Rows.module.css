@@ -139,7 +139,7 @@
 }
 
 .folderActive {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .projectRow .folder { color: var(--amv-muted); }
@@ -258,7 +258,7 @@
 }
 .sessionRow[data-tone='running'] .slot { color: var(--amv-accent); }
 .sessionRow[data-tone='running'] .slot::before { animation: amv-pulse 1.4s ease-in-out infinite; }
-.sessionRow:not(.archived) .slot:not(:has(svg, [data-state])) { color: var(--amv-faint); }
+.sessionRow:not(.archived) .slot:not(:has(svg, [data-state])) { color: var(--amv-muted); }
 @media (prefers-reduced-motion: reduce) {
   .sessionRow[data-tone='running'] .slot::before { animation: none; }
 }

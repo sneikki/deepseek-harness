@@ -30,7 +30,7 @@
 }
 
 .trigger:disabled {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   cursor: default;
 }
 

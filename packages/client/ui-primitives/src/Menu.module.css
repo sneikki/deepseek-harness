@@ -180,7 +180,7 @@
 }
 
 .item:disabled {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -228,7 +228,7 @@
 
 .check {
   flex: none;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 /* Selected cell keeps the plain fill (marker is the trailing check); the

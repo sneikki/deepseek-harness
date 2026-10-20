@@ -45,7 +45,7 @@
 .goalGlyph {
   display: inline-flex;
   flex: none;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 /* Matches the Todo/Queue panel titles (13/24 medium, primary) so the three

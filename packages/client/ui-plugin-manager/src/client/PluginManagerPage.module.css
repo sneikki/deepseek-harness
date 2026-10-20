@@ -1437,7 +1437,7 @@ label.registryOption {
   font-family: var(--ds-font-family-code);
   font-size: 12px;
   border: 1px solid var(--amv-border);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 /* The way into a package's page. */
@@ -1551,7 +1551,7 @@ label.registryOption {
   gap: 6px;
   font-size: 12px;
   line-height: 16px;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   white-space: nowrap;
   padding: 3px 10px;
   border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);

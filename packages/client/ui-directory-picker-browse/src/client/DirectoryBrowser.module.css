@@ -170,7 +170,7 @@
 }
 
 .crumbEditZone:disabled .crumbEditGlyph {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 /* Chrome-free: the bar around it draws the box (border, radius, padding). */
@@ -270,7 +270,7 @@
 
 .rowIconSelected {
   flex: none;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .rowName {
@@ -365,7 +365,7 @@
 }
 
 .showHiddenToggle:disabled {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   cursor: default;
 }
 
@@ -425,7 +425,7 @@
 }
 
 .createInput::placeholder {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .createActions {

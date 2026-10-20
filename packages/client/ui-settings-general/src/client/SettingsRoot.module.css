@@ -182,7 +182,7 @@
 }
 
 .navCell.active .navIcon {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .navLabel {

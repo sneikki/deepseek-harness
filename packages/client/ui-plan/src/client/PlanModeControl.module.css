@@ -16,7 +16,7 @@
   border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font-size: 12px;
   font-weight: 500;
   line-height: 20px;

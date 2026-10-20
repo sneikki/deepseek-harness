@@ -101,7 +101,7 @@
 .card .cardIdentity .presetTagDefault {
   border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 /* Mode selection is off, not the preset itself: mute only the selectable

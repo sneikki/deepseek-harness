@@ -25,6 +25,7 @@
 body {
   --amv-accent: #1d8086;
   --amv-accent-hover: #166a6f;
+  --amv-accent-text: #16696f;
   --amv-accent-tint: rgba(29, 128, 134, 0.12);
   /* AMV semantic tokens (light): ramp, states, activities. */
   --amv-bg-deep: #e6e9eb;
@@ -136,6 +137,7 @@ body {
 body[data-ds-dark-theme] {
   --amv-accent: #5ed5dc;
   --amv-accent-hover: #8fe3e8;
+  --amv-accent-text: var(--amv-accent);
   --amv-accent-tint: rgba(94, 213, 220, 0.12);
   /* AMV semantic tokens (dark): ramp, states, activities. */
   --amv-bg-deep: #0b0e10;
