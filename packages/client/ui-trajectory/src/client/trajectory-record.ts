@@ -11,6 +11,7 @@ export type TrajectoryCellKind =
   | 'user'
   | 'context'
   | 'compacted'
+  | 'thinking'
   | 'message'
   | 'tool'
   | 'subtool'
@@ -47,6 +48,10 @@ export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
   text: string
   /** Raw Markdown source converted into the single-line summary at its consumer. */
   previewMarkdown?: string
+  /** Assistant-only badge naming the tool calls the step chose, e.g. `→ bash, edit ×2`. */
+  callsBadge?: string
+  /** Record whose inspector a row opens when it is a view of another record (a step's thinking row). */
+  ownerRecordId?: string
   /** Whether this user record opens a new model turn. */
   opensTurn?: boolean
   /** Source session-event seq for cross-record navigation. */
@@ -114,6 +119,12 @@ export function trajectoryRecordId(cell: TrajectoryCellProps): string {
   if (cell.callId !== undefined) return `${cell.kind}\u0000call\u0000${cell.callId}`
   if (cell.sourceSeq !== undefined) return `${cell.kind}\u0000seq\u0000${cell.sourceSeq}`
   return `${cell.kind}\u0000index\u0000${cell.index}`
+}
+
+/** `mcp__server__tool` reads as `server tool`. */
+export function displayToolName(name: string): string {
+  const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
+  return mcp === null ? name : `${mcp[1]} ${mcp[2]}`
 }
 
 /**

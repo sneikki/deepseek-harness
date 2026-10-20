@@ -12,7 +12,6 @@ import { t } from './locale.client.ts'
 afterEach(cleanup)
 
 const loadImage: MessageImageLoader = async () => 'blob:x'
-const only = t('layout.toolCallOnly')
 
 function turns(assistant: Partial<TrajectoryTurnModel['groups'][number]['cells'][number]> = {}): readonly TrajectoryTurnModel[] {
   return [{
@@ -21,7 +20,7 @@ function turns(assistant: Partial<TrajectoryTurnModel['groups'][number]['cells']
       title: 'Step 1',
       cells: [
         {
-          index: 1, kind: 'message', text: only, timeSeconds: 1, sourceSeq: 1,
+          index: 1, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: 1,
           input: 111, output: 222, ...assistant,
         },
         { index: 2, kind: 'tool', text: 'bash', previewMarkdown: 'ls', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 2, outputDetail: 'a' },
@@ -71,7 +70,7 @@ describe('TrajectoryTable with hidden rows', () => {
     const step = (n: number, base: number, tool: string): TrajectoryTurnModel['groups'][number] => ({
       title: `Step ${n}`,
       cells: [
-        { index: base, kind: 'message', text: only, timeSeconds: 1, sourceSeq: base },
+        { index: base, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: base },
         { index: base + 1, kind: 'tool', text: tool, toolName: tool, timeSeconds: 0.1, sourceSeq: base + 1, outputDetail: 'x' },
       ],
     })
@@ -101,7 +100,7 @@ describe('TrajectoryTable with hidden rows', () => {
           { index: 2, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 2, outputDetail: 'x' },
         ] },
         { title: 'Step 2', cells: [
-          { index: 3, kind: 'message', text: only, timeSeconds: 1, sourceSeq: 3 },
+          { index: 3, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 1, sourceSeq: 3 },
           { index: 4, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 4, outputDetail: 'x' },
         ] },
       ],

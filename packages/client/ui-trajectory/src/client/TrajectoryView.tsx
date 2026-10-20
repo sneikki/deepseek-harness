@@ -387,14 +387,7 @@ export function TrajectoryView({
     [partialSearchTurns],
   )
   const [rowFilter, setRowFilter] = useState<TrajectoryRowFilter>('all')
-  // Decided on the full layout, never on the text-stripped timeline partial:
-  // live cells (their text is still arriving) are exempt from hiding.
-  const noise = useMemo(
-    () => analyzeTrajectoryNoise(
-      timelineTurns, t, new Set(streamingCells.map(cell => cell.index)),
-    ),
-    [timelineTurns, streamingCells, t],
-  )
+  const noise = useMemo(() => analyzeTrajectoryNoise(timelineTurns), [timelineTurns])
   const searchMatchRecordIds = useMemo(
     () => searchIndex.search(searchQuery),
     [searchIndex, searchIndexRevision, searchQuery],

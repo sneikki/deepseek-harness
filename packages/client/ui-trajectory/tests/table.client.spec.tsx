@@ -174,26 +174,63 @@ describe('TrajectoryTable', () => {
     expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['System Prompt'])
   })
 
-  it('shows a muted placeholder for an assistant response containing only tool calls', () => {
-    const turns: readonly TrajectoryTurnModel[] = [{
-      turn: 1,
-      groups: [{
-        title: 'Step 1',
-        cells: [{
-          index: 1,
-          kind: 'message',
-          text: 'Tool call only',
-          sourceBlocks: [{
-            type: 'tool-call', content: '{}', callId: 'call-1', toolName: 'read',
-          }],
-          timeSeconds: 1,
-        }],
-      }],
-    }]
+  const stepNodes = (text: string) => [
+    { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'go' }], source: null },
+    {
+      kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
+      blocks: [
+        { kind: 'reasoning', text: 'weigh the options' },
+        ...(text === '' ? [] : [{ kind: 'text', text }]),
+        { kind: 'tool-call', callId: 'c1', name: 'read', argsRaw: '{}' },
+      ],
+    },
+  ] as unknown as Parameters<typeof deriveTrajectoryLayout>[0]['nodes']
 
+  it('shows a badge, never prose, for an assistant response containing only tool calls', () => {
+    const turns = deriveTrajectoryLayout({ nodes: stepNodes(''), partial: null, runningCalls: [] }, t)
     render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
-    expect(screen.getByText('(tool call only)')).toBeTruthy()
+    expect(screen.queryByText('(tool call only)')).toBeNull()
+    const row = screen.getByRole('row', { name: /ASSISTANT/ })
+    expect(within(row).getByText('→ read')).toBeTruthy()
+    expect(screen.getByRole('row', { name: /THINKING/ })).toBeTruthy()
+  })
+
+  it('puts the badge first and the output text after it on the same line', () => {
+    const turns = deriveTrajectoryLayout({ nodes: stepNodes('Reading now'), partial: null, runningCalls: [] }, t)
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+
+    const row = screen.getByRole('row', { name: /ASSISTANT/ })
+    const badge = within(row).getByText('→ read')
+    const text = within(row).getByText('Reading now')
+    expect(badge.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('opens the step inspector from the thinking row, labelling thinking and output apart', () => {
+    const turns = deriveTrajectoryLayout({ nodes: stepNodes('Reading now'), partial: null, runningCalls: [] }, t)
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+
+    const thinkingRow = screen.getByRole('row', { name: /THINKING/ })
+    fireEvent.click(thinkingRow)
+    expect(thinkingRow.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('row', { name: /ASSISTANT/ }).getAttribute('aria-selected')).toBe('true')
+    const detail = within(screen.getByRole('complementary'))
+    fireEvent.click(detail.getByRole('tab', { name: 'Preview' }))
+    expect(detail.getByRole('button', { name: 'Thinking' })).toBeTruthy()
+    expect(detail.getByText('Output')).toBeTruthy()
+    expect(detail.getByText('weigh the options')).toBeTruthy()
+  })
+
+  it('shows live reasoning in the thinking row', () => {
+    const turns = deriveTrajectoryLayout({ nodes: stepNodes('x'), partial: null, runningCalls: [] }, t)
+    const thinking = turns[0]!.groups.flatMap(g => g.cells).find(c => c.kind === 'thinking')!
+    render(<TrajectoryTable
+      turns={turns}
+      streamingCells={[{ ...thinking, previewMarkdown: 'still thinking', thinkingDetail: 'still thinking' }]}
+      {...FOLD_PROPS}
+    />)
+
+    expect(within(screen.getByRole('row', { name: /THINKING/ })).getByText('still thinking')).toBeTruthy()
   })
 
   it('localizes the summary for folded Assistant tool calls', () => {

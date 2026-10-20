@@ -51,7 +51,7 @@ export function formatTimelineOffset(
 
 function laneFor(kind: TrajectoryCellKind): number {
   if (kind === 'tool' || kind === 'subtool') return 2
-  if (kind === 'message' || kind === 'compacted') return 1
+  if (kind === 'thinking' || kind === 'message' || kind === 'compacted') return 1
   return 0
 }
 

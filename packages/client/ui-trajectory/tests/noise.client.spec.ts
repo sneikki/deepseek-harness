@@ -6,7 +6,6 @@ import {
   analyzeTrajectoryNoise, summarizeToolArgs, trajectoryRowMatchesFilter,
 } from '../src/client/trajectory-noise.ts'
 import type { TrajectoryCellProps } from '../src/client/trajectory-record.ts'
-import { t } from './locale.client.ts'
 
 const HOOK = 'moonshine: if this prompt starts or changes a task'
 
@@ -19,23 +18,23 @@ function turn(...cells: TrajectoryCellProps[]): TrajectoryTurnModel {
 }
 
 describe('analyzeTrajectoryNoise', () => {
-  const none = new Set<number>()
   const layout = [
     turn(
       cell(1, { kind: 'user', previewMarkdown: 'go' }),
       cell(2, { kind: 'context', previewMarkdown: HOOK }),
-      cell(3, { text: t('layout.toolCallOnly') }),
+      cell(3, { text: '', callsBadge: '→ bash' }),
       cell(4, { kind: 'tool', text: 'bash', previewMarkdown: 'ls' }),
       cell(5, { requestOnly: true }),
     ),
     turn(
       cell(6, { kind: 'context', previewMarkdown: HOOK }),
       cell(7, { kind: 'context', previewMarkdown: 'Agent a sent a message:' }),
-      cell(8, { text: t('layout.toolCallOnly'), thinkingDetail: 'hm' }),
+      cell(8, { text: '', callsBadge: '→ bash', thinkingDetail: 'hm' }),
+      cell(10, { kind: 'thinking', previewMarkdown: 'hm', thinkingDetail: 'hm' }),
       cell(9, { previewMarkdown: 'done', outputDetail: 'done' }),
     ),
   ]
-  const hidden = (turns = layout, live = none) => [...analyzeTrajectoryNoise(turns, t, live).hidden]
+  const hidden = (turns = layout) => [...analyzeTrajectoryNoise(turns).hidden]
 
   it('keeps the first repeated context, hides repeats, keeps different context', () => {
     expect(hidden()).toContain(6)
@@ -43,24 +42,8 @@ describe('analyzeTrajectoryNoise', () => {
     expect(hidden()).not.toContain(7)
   })
 
-  it('hides tool-call-only assistants but keeps ones with thinking or output', () => {
-    expect(hidden()).toContain(3)
-    expect(hidden()).not.toContain(8)
-  })
-
-  it('never hides a failed, still-running or live assistant', () => {
-    const only = { text: t('layout.toolCallOnly') }
-    const running = {
-      timingRecorded: true, stepStartTime: 1, firstTokenTime: null,
-      completedTime: null, usageProvided: false, outputTokens: 0,
-    }
-    const turns = [turn(
-      cell(1, { ...only, isError: true }),
-      cell(2, { ...only, assistantMetrics: running }),
-      cell(3, only),
-      cell(4, only),
-    )]
-    expect(hidden(turns, new Set([3]))).toEqual([4])
+  it('never hides an assistant row, with or without output', () => {
+    expect(hidden()).toEqual([6])
   })
 
   it('keeps context that differs only in source and tool-change notices', () => {
@@ -75,16 +58,20 @@ describe('analyzeTrajectoryNoise', () => {
   })
 
   it('counts what remains, ignoring boundary markers', () => {
-    expect(analyzeTrajectoryNoise(layout, t, none).counts).toEqual({ all: 6, messages: 5, tools: 1 })
+    expect(analyzeTrajectoryNoise(layout).counts).toEqual({ all: 8, messages: 7, tools: 1 })
   })
 
   it('matches chips by kind and shows boundary markers only under All', () => {
     const tool = cell(1, { kind: 'tool' })
     const message = cell(2, {})
+    const thinking = cell(4, { kind: 'thinking' })
     const marker = cell(3, { requestOnly: true })
     expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'all'))).toEqual([true, true, true])
     expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'tools'))).toEqual([true, false, false])
     expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'messages'))).toEqual([false, true, false])
+    // thinking rows count as messages
+    expect(trajectoryRowMatchesFilter(thinking, 'messages')).toBe(true)
+    expect(trajectoryRowMatchesFilter(thinking, 'tools')).toBe(false)
   })
 })
 
