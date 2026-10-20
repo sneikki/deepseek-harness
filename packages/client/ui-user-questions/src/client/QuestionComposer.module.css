@@ -256,7 +256,7 @@
   height: 14px;
   border: 1px solid var(--amv-border-strong);
   border-radius: 5px;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  transition: background-color var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
 }
 
 .checkbox > svg {
@@ -345,7 +345,8 @@
 }
 
 .customRow:focus-within:not(.customRowYielded),
-.customRowActive {
+.customRowActive,
+.customRowActive:hover {
   background: var(--amv-accent-soft);
   border-color: var(--amv-accent-ring);
 }
