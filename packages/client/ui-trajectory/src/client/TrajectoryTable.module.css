@@ -207,6 +207,10 @@
   --trajectory-tone-text: var(--trajectory-act, var(--amv-text-2));
   --trajectory-body: var(--amv-text-2);
 }
+.table tbody tr[data-collapsed-summary][data-collapsed-summary] {
+  --trajectory-tone: var(--amv-muted);
+  --trajectory-tone-text: var(--amv-muted);
+}
 
 /* A turn's first row = turn header above its content line; the table sets
    --trajectory-head and --trajectory-row-height from trajectory-virtual-rows.ts. */
@@ -401,6 +405,10 @@
   height: 30px;
   margin-top: var(--trajectory-head, 0px);
   padding-right: 1px;
+}
+
+.table tbody tr[data-collapsed-summary] .glyphSlot {
+  height: 20px;
 }
 
 .glyph {
@@ -662,17 +670,10 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  padding: 0 8px 0 4px;
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
   line-height: 16px;
-}
-
-.collapsedTurnEllipsis {
-  flex: none;
-  margin-right: 6px;
-  color: var(--dsw-alias-label-tertiary);
-  font-weight: 600;
-  user-select: none;
 }
 
 .collapsedTurnText {

@@ -1216,10 +1216,14 @@ function RecordPresentation({
   })
 }
 
-/** `mcp__server__tool` reads as `server tool`; other names are unchanged. */
-function toolLabel(name: string): string {
-  const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
-  return mcp === null ? name : `${mcp[1]} ${mcp[2]}`
+function SummaryDotsIcon(): ReactNode {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+      <circle cx="2" cy="5" r="1" />
+      <circle cx="5" cy="5" r="1" />
+      <circle cx="8" cy="5" r="1" />
+    </svg>
+  )
 }
 
 /** 16px tinted circle with the kind's glyph; tone comes from the enclosing `data-kind` scope. */
@@ -3018,6 +3022,13 @@ export function TrajectoryTable({
                             <KindGlyph kind={record.cell.kind} t={t} />
                           </span>
                         )}
+                        {isCollapsedSummary && (
+                          <span className={css.glyphSlot}>
+                            <span className={css.glyph} aria-hidden="true">
+                              <SummaryDotsIcon />
+                            </span>
+                          </span>
+                        )}
                       </td>
                       <td className={css.content}>
                         {!isCollapsedSummary
@@ -3035,7 +3046,6 @@ export function TrajectoryTable({
                           : record.collapsedSummary !== undefined
                             ? (
                               <span className={css.collapsedTurnContent} title={record.collapsedSummary}>
-                                <span className={css.collapsedTurnEllipsis}>…</span>
                                 <span className={css.collapsedTurnText}>{record.collapsedSummary}</span>
                               </span>
                             )
@@ -3045,7 +3055,7 @@ export function TrajectoryTable({
                                   className={css.label}
                                   title={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                 >
-                                  {toolLabel(toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind]))}
+                                  {displayToolName(toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind]))}
                                 </span>
                                 <span
                                   className={resultText === undefined ? css.contentText : css.resultPreview}
@@ -3216,7 +3226,7 @@ export function TrajectoryTable({
                         <span className={css.toneLabel}>
                           {selected.cell.toolName === undefined
                             ? t(KIND_LABEL_KEY[selected.cell.kind])
-                            : toolLabel(selected.cell.toolName)}
+                            : displayToolName(selected.cell.toolName)}
                         </span>
                       </span>
                       <span className={css.detailsLocation}>
