@@ -385,9 +385,8 @@
   border-radius: 999px;
   corner-shape: round;
   background: var(--amv-accent);
-  /* Static white, not the foreground token: the arrow stays white on the blue
-     fill in both themes (design 34:10465). */
-  color: #fff;
+  /* Brand invert, not white: the dark-theme teal fill is too light for a white arrow. */
+  color: var(--dsw-alias-brand-primary-invert);
   cursor: pointer;
   transition: background-color 100ms ease;
   /* Opts out of the row's 2px downward shift (.row top pad): the send circle
