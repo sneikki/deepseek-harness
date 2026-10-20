@@ -100,6 +100,8 @@
 }
 
 .cell[data-run] {
+  flex: none;
+  white-space: nowrap;
   gap: 3px;
   padding: 0 5px;
 }

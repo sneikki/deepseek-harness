@@ -84,11 +84,11 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
         </span>
         {node.data.activity.length > 0 && (
           <span className={css.strip} aria-hidden>
-            {groupActivityRuns(node.data.activity).map(({ kind, count }, index) => {
+            {groupActivityRuns(node.data.activity).map(({ kind, count, start }) => {
               const Icon = ACTIVITY_ICON[kind]
               const label = t(`message.turnProcess.activity.${kind}`)
               return (
-                <span key={index} className={css.cell} data-activity={kind} data-run={count > 1 ? '' : undefined} title={count > 1 ? `${count} × ${label}` : label}>
+                <span key={`${kind}:${start}`} className={css.cell} data-activity={kind} data-run={count > 1 ? '' : undefined} title={count > 1 ? t('message.turnProcess.activity.run', { count, label }) : label}>
                   <Icon className={css.cellIcon} />
                   {count > 1 && <span className={css.cellCount}>{count}×</span>}
                 </span>
