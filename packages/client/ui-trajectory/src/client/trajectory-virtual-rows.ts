@@ -3,9 +3,9 @@
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import { trajectoryRecordId } from './trajectory-record.ts'
 
-const CONTENT_ROW_HEIGHT = 30
-/** A turn's first row carries the turn header above its content line; CSS `--trajectory-head` + row = this. */
-const TURN_START_ROW_HEIGHT = 72
+export const CONTENT_ROW_HEIGHT = 30
+/** A turn's first row carries the turn header above its content line; the table feeds this to CSS. */
+export const TURN_START_ROW_HEIGHT = 72
 const COLLAPSED_SUMMARY_HEIGHT = 20
 const TERMINAL_BOUNDARY_HEIGHT = 9
 

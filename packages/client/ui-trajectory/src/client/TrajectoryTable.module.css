@@ -170,44 +170,48 @@
 }
 
 /* Tool rows carry their activity bucket; pill, name and timeline bars read it. */
-.table tbody tr[data-activity='code'] { --trajectory-act: var(--amv-act-code); }
-.table tbody tr[data-activity='review'] { --trajectory-act: var(--amv-act-review); }
-.table tbody tr[data-activity='deploy'] { --trajectory-act: var(--amv-act-deploy); }
-.table tbody tr[data-activity='proof'] { --trajectory-act: var(--amv-act-proof); }
-.table tbody tr[data-activity='other'] { --trajectory-act: color-mix(in srgb, var(--amv-act-wait) 45%, var(--amv-text-2)); }
-.table tbody tr[data-activity='error'] { --trajectory-act: var(--amv-danger); }
+.table tbody tr[data-activity='code'], .tone[data-activity='code'] { --trajectory-act: var(--amv-act-code); }
+.table tbody tr[data-activity='review'], .tone[data-activity='review'] { --trajectory-act: var(--amv-act-review); }
+.table tbody tr[data-activity='deploy'], .tone[data-activity='deploy'] { --trajectory-act: var(--amv-act-deploy); }
+.table tbody tr[data-activity='proof'], .tone[data-activity='proof'] { --trajectory-act: var(--amv-act-proof); }
+.table tbody tr[data-activity='other'], .tone[data-activity='other'] { --trajectory-act: color-mix(in srgb, var(--amv-act-wait) 45%, var(--amv-text-2)); }
+.table tbody tr[data-activity='error'], .tone[data-activity='error'] { --trajectory-act: var(--amv-danger); }
 
 /* Row tone: glyph, line label. assistant neutral, user accent, context muted, tool = activity. */
-.table tbody tr {
+.table tbody tr,
+.tone {
   --trajectory-tone: var(--amv-text-2);
   --trajectory-tone-text: var(--amv-text-2);
   --trajectory-body: var(--amv-text);
 }
-.table tbody tr[data-kind='user'] {
+.table tbody tr[data-kind='user'],
+.tone[data-kind='user'] {
   --trajectory-tone: var(--amv-accent);
   --trajectory-tone-text: var(--amv-accent-text);
 }
 .table tbody tr[data-kind='context'],
 .table tbody tr[data-kind='system'],
-.table tbody tr[data-kind='compacted'] {
+.table tbody tr[data-kind='compacted'],
+.tone[data-kind='context'],
+.tone[data-kind='system'],
+.tone[data-kind='compacted'] {
   --trajectory-tone: var(--amv-muted);
   --trajectory-tone-text: var(--amv-muted);
   --trajectory-body: var(--amv-muted);
 }
 .table tbody tr[data-kind='tool'],
-.table tbody tr[data-kind='subtool'] {
+.table tbody tr[data-kind='subtool'],
+.tone[data-kind='tool'],
+.tone[data-kind='subtool'] {
   --trajectory-tone: var(--trajectory-act, var(--amv-text-2));
   --trajectory-tone-text: var(--trajectory-act, var(--amv-text-2));
   --trajectory-body: var(--amv-text-2);
 }
 
-/* A turn's first row = turn header (--trajectory-head) above its 30px content line.
-   Keep 42 + 30 equal to TURN_START_ROW_HEIGHT in trajectory-virtual-rows.ts. */
-.table tbody tr[data-turn-start='true'] {
-  --trajectory-head: 42px;
-}
+/* A turn's first row = turn header above its content line; the table sets
+   --trajectory-head and --trajectory-row-height from trajectory-virtual-rows.ts. */
 .table tbody tr[data-turn-start='true'] td {
-  height: 72px;
+  height: var(--trajectory-row-height);
 }
 
 .table tbody tr[data-timeline-focus='outside'] {
@@ -272,6 +276,7 @@
 }
 
 .requestBoundaryControl::before {
+  opacity: 0;
   position: absolute;
   top: 5.5px;
   left: 5.5px;
@@ -310,6 +315,13 @@
     transform 120ms var(--ds-ease-in-out);
   user-select: none;
   white-space: nowrap;
+}
+
+.requestBoundaryControl:hover::before,
+.requestBoundaryControl:focus-visible::before,
+.requestBoundaryControlActive::before,
+.requestBoundaryControl[data-request-status='error']::before {
+  opacity: 1;
 }
 
 .requestBoundaryControl:hover::before,
@@ -494,8 +506,26 @@
   transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
 
+.tone {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  margin-right: 6px;
+}
+
+.toneLabel {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--trajectory-tone-text);
+  font: 500 12px/18px var(--ds-font-family-code);
+  text-overflow: ellipsis;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
 .label {
-  flex: 0 0 112px;
+  flex: 0 0 124px;
   min-width: 0;
   overflow: hidden;
   color: var(--trajectory-tone-text);
@@ -526,49 +556,6 @@
 
 .table tbody tr[data-kind='subtool'] .line {
   padding-left: 18px;
-}
-
-.kindTag {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  box-sizing: border-box;
-  height: 20px;
-  padding: 0 8px;
-  border: 1px solid var(--trajectory-pill-border, var(--amv-border-strong));
-  border-radius: 999px;
-  color: var(--trajectory-pill-fg, var(--amv-text-2));
-  background: var(--trajectory-pill-bg, var(--amv-raised));
-  font: 500 11px/16px var(--ds-font-family-code);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  user-select: none;
-}
-
-/* Role pills: tinted status pills. user = teal, assistant/system = neutral,
-   context = faint, tool = its activity colour. */
-.user {
-  --trajectory-pill-fg: var(--amv-accent);
-  --trajectory-pill-bg: color-mix(in srgb, var(--amv-accent) 12%, transparent);
-  --trajectory-pill-border: color-mix(in srgb, var(--amv-accent) 35%, transparent);
-}
-
-.systemNeutral {
-  --trajectory-pill-fg: var(--amv-text-2);
-  --trajectory-pill-bg: var(--amv-raised);
-  --trajectory-pill-border: var(--amv-border-strong);
-}
-
-.contextGreen {
-  --trajectory-pill-fg: var(--amv-muted);
-  --trajectory-pill-bg: transparent;
-  --trajectory-pill-border: var(--amv-border);
-}
-
-.compacted {
-  --trajectory-pill-fg: var(--amv-text-2);
-  --trajectory-pill-bg: var(--amv-raised);
-  --trajectory-pill-border: var(--amv-border-strong);
 }
 
 .compactedSummary {
@@ -638,23 +625,6 @@
     var(--dsw-alias-state-error-primary) 12%,
     var(--dsw-alias-bg-layer-1)
   );
-}
-
-.assistantVioletBright {
-  --trajectory-pill-fg: var(--amv-text-2);
-  --trajectory-pill-bg: var(--amv-raised);
-  --trajectory-pill-border: var(--amv-border-strong);
-}
-
-.toolAmber,
-.subtoolAmber {
-  --trajectory-pill-fg: var(--trajectory-act, var(--amv-act-wait));
-  --trajectory-pill-bg: color-mix(in srgb, var(--trajectory-act, var(--amv-act-wait)) 12%, transparent);
-  --trajectory-pill-border: color-mix(in srgb, var(--trajectory-act, var(--amv-act-wait)) 35%, transparent);
-}
-
-.subtoolAmber {
-  opacity: 0.8;
 }
 
 .contentText {
