@@ -50,9 +50,13 @@ describe('analyzeTrajectoryNoise', () => {
 
   it('never hides a failed, still-running or live assistant', () => {
     const only = { text: t('layout.toolCallOnly') }
+    const running = {
+      timingRecorded: true, stepStartTime: 1, firstTokenTime: null,
+      completedTime: null, usageProvided: false, outputTokens: 0,
+    }
     const turns = [turn(
       cell(1, { ...only, isError: true }),
-      cell(2, { ...only, assistantMetrics: { timingRecorded: true, completedTime: null, usageProvided: false } }),
+      cell(2, { ...only, assistantMetrics: running }),
       cell(3, only),
       cell(4, only),
     )]
