@@ -21,6 +21,7 @@ import type { TrajectoryPartialAssistant, TrajectorySnapshot } from './trajector
 import { formatElapsedSeconds } from './trajectory-record.ts'
 import type { TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
+import { summarizeToolArgs } from './trajectory-noise.ts'
 
 /** One Message or Step group inside a turn. */
 export interface TrajectoryGroupModel {
@@ -1094,10 +1095,11 @@ function summarizeCall(
   name: string,
   argsRaw: string,
 ): Pick<TrajectoryCellProps, 'text' | 'previewMarkdown' | 'toolName'> {
+  const summary = summarizeToolArgs(name, argsRaw)
   return {
     toolName: name,
     text: name,
-    ...(argsRaw === '' ? {} : { previewMarkdown: argsRaw }),
+    ...(summary === '' ? {} : { previewMarkdown: summary }),
   }
 }
 

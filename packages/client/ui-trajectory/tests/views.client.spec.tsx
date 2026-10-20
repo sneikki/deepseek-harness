@@ -632,6 +632,61 @@ describe('tab switching in ConversationRoot', () => {
     expect(within(detail()).queryByText('已压缩')).toBeNull()
   })
 
+  it('keeps a streaming Assistant with text visible next to its tool call', async () => {
+    const nodes: LegacyConversationSlice['nodes'] = [
+      { kind: 'user', seq: 1, time: 1_000, content: [], source: null },
+    ]
+    const requests: RequestView[] = [{
+      purpose: 'assistant', startSeq: 2, turn: 1, step: 1,
+      startedAt: 2_000, completedAt: null, status: 'running',
+    }]
+    const b = await bench(historySnapshot(nodes, {
+      requests,
+      partial: {
+        turn: 1, step: 1,
+        blocks: [
+          { kind: 'text', text: 'live words' },
+          { kind: 'tool-call', callId: 'live-call', name: 'bash', argsRaw: '{"command":"ls"}' },
+        ],
+      },
+    }))
+    mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Trajectory' }))
+    expect(screen.getByRole('row', { name: /live words/ })).toBeTruthy()
+  })
+
+  it('hides a finished tool-call-only Assistant row yet still folds its step', async () => {
+    const nodes: LegacyConversationSlice['nodes'] = [
+      { kind: 'user', seq: 1, time: 1_000, content: [], source: null },
+      {
+        kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
+        blocks: [{ kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{"command":"ls"}' }],
+      },
+      {
+        kind: 'tool-result', seq: 3, time: 3_000, callId: 'c1',
+        name: 'bash', args: PartialArguments.fromText('{"command":"ls"}'),
+        call: { name: 'bash', argsRaw: '{"command":"ls"}' }, callTime: 2_100,
+        content: [{ type: 'text', text: 'a.txt' }], isError: false, subCalls: [],
+      },
+    ]
+    const requests: RequestView[] = [{
+      purpose: 'assistant', startSeq: 1, resultSeq: 2, startedAt: 1_500, completedAt: 2_000,
+      status: 'complete', turn: 1, step: 1, usage: { inputTokens: 1, outputTokens: 7 },
+    }]
+    const b = await bench(historySnapshot(nodes, { requests }))
+    const view = mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Trajectory' }))
+    expect(view.container.textContent).not.toContain('仅工具调用')
+    expect(screen.getAllByRole('row', { name: /bash/ }).length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('button', { name: '收起所有调用' }))
+    expect(screen.getByText('1 个工具调用 · bash')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '请求 #1' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /^工具/ }))
+    expect((screen.getByRole('button', { name: '展开所有调用' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('activates only the selected standalone compaction section', async () => {
     const nodes: LegacyConversationSlice['nodes'] = [
       { kind: 'user', seq: 1, time: 1_000, content: [], source: null },
