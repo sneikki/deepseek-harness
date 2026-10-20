@@ -19,8 +19,8 @@
 
 .sessionRow.selected,
 .sessionRow.selected:hover {
-  background: var(--amv-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
+  background: var(--amv-surface);
+  box-shadow: inset 0 0 0 1px var(--amv-accent), 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
 }
 
 .searchResultRow {
@@ -173,9 +173,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--ds-font-family-code);
   font-size: 13px;
   line-height: 20px;
 }
+
+.projectRow .title { font-weight: 500; }
 
 .renameInput {
   min-width: 0;
@@ -237,9 +240,28 @@
 
 /* State at a glance: running teal, waiting-for-user violet, error red. */
 .sessionRow[data-tone='running'] .time { color: var(--amv-accent); }
-.sessionRow[data-tone='attention'] .time { color: var(--amv-attention); }
+.sessionRow[data-tone='attention'] .time { color: var(--amv-warning); }
 .sessionRow[data-tone='error'] .time { color: var(--amv-danger); }
-.sessionRow[data-tone='attention'] .slot { color: var(--amv-attention); }
+
+/* Canvas state icons: needs-user amber, running a pulsing teal dot (replaces
+   the spinner), idle (empty slot) a neutral dot. Presentation only. */
+.sessionRow .slot [data-state='warning'] { color: var(--amv-warning); }
+.sessionRow[data-tone='running'] .slot > svg { display: none; }
+.sessionRow[data-tone='running'] .slot::before,
+.sessionRow:not(.archived) .slot:not(:has(svg, [data-state]))::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: currentColor;
+}
+.sessionRow[data-tone='running'] .slot { color: var(--amv-accent); }
+.sessionRow[data-tone='running'] .slot::before { animation: amv-pulse 1.4s ease-in-out infinite; }
+.sessionRow:not(.archived) .slot:not(:has(svg, [data-state])) { color: var(--amv-faint); }
+@media (prefers-reduced-motion: reduce) {
+  .sessionRow[data-tone='running'] .slot::before { animation: none; }
+}
 
 .pinIndicator {
   display: inline-flex;

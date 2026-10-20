@@ -8,7 +8,7 @@ import type {} from '@deepseek-ai/dsh-tools/types'
 import { hasAssistantReplyContent } from '../contract/assistant-content.ts'
 import type { AssistantChatData, ChatNode, FinalAssistantChatData } from '../contract/chat-nodes.ts'
 import {
-  isSubagentDelegationTool, sameTurnProcessSpec, type TurnProcessSpec,
+  isSubagentDelegationTool, sameTurnProcessSpec, turnActivityOf, type TurnActivity, type TurnProcessSpec,
 } from '../contract/turn-process.ts'
 import { CHAT_SYNTHETIC_SEQ_OFFSETS, chatNode } from './common.ts'
 import { toAssistantBlocks } from './event-projection.ts'
@@ -36,6 +36,13 @@ interface TurnProcessState {
   readonly messageCount: number
   readonly toolCallCount: number
   readonly subagentCount: number
+  readonly callIds: readonly string[]
+  /** Step of each call, parallel to `callIds`. */
+  readonly callSteps: readonly number[]
+  /** Calls that received any result. */
+  readonly answeredIds: ReadonlySet<string>
+  /** Raw per-call class; only real error results mark 'error' here. */
+  readonly activity: readonly TurnActivity[]
 }
 
 type ConversationEvent = Parameters<ConversationNodeDefinition['match']>[0]
@@ -103,6 +110,10 @@ function fallbackState(context: ConversationNodeContext<TurnProcessState>): Turn
     messageCount: 0,
     toolCallCount: 0,
     subagentCount: 0,
+    callIds: [],
+    callSteps: [],
+    answeredIds: new Set(),
+    activity: [],
   }
   for (const match of context.matches) state = updateProcessState(state, match.event)
   return state
@@ -121,7 +132,36 @@ function latestAnswer(turn: TurnLocation): Readonly<FinalAssistantChatData> | nu
   return data.blocks.some(block => block.kind === 'tool-call') ? null : data
 }
 
-function processSpec(state: TurnProcessState, turn: TurnLocation): TurnProcessSpec | null {
+/**
+ * Class per call, counting an unanswered call of a closed step or turn as 'error'
+ * (the tool card synthesizes an Interrupted result under the same condition).
+ * Returns `state.activity` itself when nothing changes.
+ */
+function effectiveActivity(state: TurnProcessState, turn: TurnLocation): readonly TurnActivity[] {
+  const closedSteps = new Set(turn.steps.filter(step => step.status === 'closed').map(step => step.step))
+  if (turn.status !== 'closed' && closedSteps.size === 0) return state.activity
+  let result: TurnActivity[] | undefined
+  state.activity.forEach((kind, index) => {
+    const callId = state.callIds[index]
+    const step = state.callSteps[index]
+    if (kind === 'error' || callId === undefined || step === undefined || state.answeredIds.has(callId)) return
+    if (turn.status === 'closed' || closedSteps.has(step)) {
+      result ??= [...state.activity]
+      result[index] = 'error'
+    }
+  })
+  return result ?? state.activity
+}
+
+function sameActivity(left: readonly TurnActivity[], right: readonly TurnActivity[]): boolean {
+  return left === right || (left.length === right.length && left.every((kind, index) => kind === right[index]))
+}
+
+function processSpec(
+  state: TurnProcessState,
+  turn: TurnLocation,
+  activity: readonly TurnActivity[],
+): TurnProcessSpec | null {
   const controlAnchorSeq = state.controlAnchorSeq ?? turn.start?.seq
   if (controlAnchorSeq === undefined) return null
   const answer = latestAnswer(turn)
@@ -133,6 +173,7 @@ function processSpec(state: TurnProcessState, turn: TurnLocation): TurnProcessSp
         .reduce((total, [, count]) => total + count, 0),
     toolCallCount: state.toolCallCount,
     subagentCount: state.subagentCount,
+    activity,
   }
   if (answer === null) {
     return {
@@ -182,6 +223,17 @@ function updateProcessState(state: TurnProcessState, event: ConversationEvent): 
       ...current,
       toolCallCount: current.toolCallCount + (subagent ? 0 : 1),
       subagentCount: current.subagentCount + (subagent ? 1 : 0),
+      callIds: [...current.callIds, event.data.callId],
+      callSteps: [...current.callSteps, event.data.step],
+      activity: [...current.activity, turnActivityOf(event.data.name)],
+    }
+  }
+  if (event.type === 'tool/result') {
+    const callId = String(event.data.message.source.callId)
+    if (!current.answeredIds.has(callId)) current = { ...current, answeredIds: new Set(current.answeredIds).add(callId) }
+    const index = current.callIds.indexOf(callId)
+    if (event.data.message.isError === true && index >= 0 && current.activity[index] !== 'error') {
+      current = { ...current, activity: current.activity.with(index, 'error') }
     }
   }
   const evidence = processEvidence(event)
@@ -234,6 +286,10 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       messageCount: 0,
       toolCallCount: 0,
       subagentCount: 0,
+      callIds: [],
+      callSteps: [],
+      answeredIds: new Set(),
+      activity: [],
     }
   },
   update: (context, match) => updateProcessState(context.state, match.event),
@@ -252,6 +308,7 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
     if (turn === undefined) return null
     const current = context.current.get('chat') as ChatNode | null | undefined
     const latestStep = turn.steps.at(-1)
+    const activity = effectiveActivity(state, turn)
     if (previous?.kind === 'turn'
       && previous.key === 'turn-process'
       && current?.kind === 'turn-process'
@@ -260,9 +317,10 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       && current.data.messageCount === state.messageCount
       && current.data.toolCallCount === state.toolCallCount
       && current.data.subagentCount === state.subagentCount
+      && sameActivity(current.data.activity, activity)
       && turn.status !== 'closed'
       && latestStep?.status !== 'closed') return previous
-    const spec = processSpec(state, turn)
+    const spec = processSpec(state, turn, activity)
     if (spec === null) return null
     if (previous?.kind === 'turn'
       && previous.turn === spec.turn
@@ -288,6 +346,7 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       && current.data.messageCount === state.messageCount
       && current.data.toolCallCount === state.toolCallCount
       && current.data.subagentCount === state.subagentCount
+      && current.data.activity === data.activity
       && turn.status !== 'closed'
       && turn.steps.at(-1)?.status !== 'closed'
       && current.location === (context.start?.location ?? context.matches[0]?.location)) return current

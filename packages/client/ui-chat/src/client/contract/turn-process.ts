@@ -1,5 +1,21 @@
 import type { ChatNode } from './chat-nodes.ts'
 
+/** Activity class of one Tool call; drives the turn row's activity strip. */
+export type TurnActivity = 'code' | 'review' | 'deploy' | 'proof' | 'other' | 'error'
+
+/**
+ * Classify a Tool call name by what it does to the workspace.
+ * @param name - durable Tool-call name.
+ * @returns activity class; unknown tools are 'other'.
+ */
+export function turnActivityOf(name: string): TurnActivity {
+  if (['write', 'edit', 'apply_patch'].includes(name)) return 'code'
+  if (['read', 'read_image', 'grep', 'glob', 'web_search', 'web_fetch'].includes(name) || name.endsWith('_inspect')) return 'review'
+  if (['bash', 'pwsh', 'exec_command', 'write_stdin', 'run_code'].includes(name) || name.startsWith('terminal_')) return 'deploy'
+  if (name === 'subagent' || name.startsWith('subagent_')) return 'proof'
+  return 'other'
+}
+
 /** Current process range and finalized answer boundary derived from one Turn. */
 export interface TurnProcessSpec {
   readonly turn: number
@@ -15,6 +31,8 @@ export interface TurnProcessSpec {
   readonly toolCallCount: number
   /** Tool calls whose configured name identifies a subagent delegation. */
   readonly subagentCount: number
+  /** One class per Tool call in call order, delegations included; failed calls are 'error'. */
+  readonly activity: readonly TurnActivity[]
 }
 
 /**
@@ -33,6 +51,8 @@ export function sameTurnProcessSpec(left: TurnProcessSpec, right: TurnProcessSpe
     && left.messageCount === right.messageCount
     && left.toolCallCount === right.toolCallCount
     && left.subagentCount === right.subagentCount
+    && left.activity.length === right.activity.length
+    && left.activity.every((kind, index) => kind === right.activity[index])
 }
 
 /**

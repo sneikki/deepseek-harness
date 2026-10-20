@@ -40,11 +40,12 @@ describe('ToolRow.module.css summary line', () => {
     // The header supplies tertiary at rest and secondary on hover; a tool sheet
     // that restates a row text color, or brightens the row text on hover, would
     // pin one state against the shared process-row colors. The Inspect button
-    // keeps its own solid hover fill and is not row text.
+    // keeps its own solid hover fill and is not row text. The tool name (.title)
+    // alone is coloured by activity (canvas timeline), so it is not pinned here.
     const sheet = readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    expect(sheet).not.toMatch(/\.(title|summary|summarySuffix)\s*\{[^{}]*\bcolor:/)
-    expect(sheet).not.toMatch(/:hover\s+\.(title|summary|summarySuffix)\b/)
+    expect(sheet).not.toMatch(/\.(summary|summarySuffix)\s*\{[^{}]*\bcolor:/)
+    expect(sheet).not.toMatch(/:hover\s+\.(summary|summarySuffix)\b/)
   })
 
   it('keeps the summary suffix on one line and unshrunk', () => {
@@ -72,7 +73,9 @@ describe('ToolRow.module.css summary line', () => {
     // The Settings font-size preference must reach tool-call rows, not only
     // the narration body: summary, suffix, and file link read the secondary
     // tier (one step under the body), matching think text.
-    for (const selector of ['.summary', '.summarySuffix', '.fileLink']) {
+    // .fileLink is a mono tile one px under the tier, with a 20px line inside its border.
+    expect(declarations('.fileLink')).toContain('font-size: calc(var(--dsh-content-font-size-secondary, 13px) - 1px)')
+    for (const selector of ['.summary', '.summarySuffix']) {
       expect(declarations(selector)).toEqual(expect.arrayContaining([
         'font-size: var(--dsh-content-font-size-secondary, 13px)',
         'line-height: calc(24px + var(--dsh-content-font-delta, 0px))',

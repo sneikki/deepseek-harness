@@ -1,5 +1,5 @@
-/* Composer statistics use compact controls; their click-open panels share
-   stat-dialog.module.css. */
+/* Composer statistics as compact KPI chips: section-label caption, mono
+   value (teal for live readings); click-open panels share stat-dialog.module.css. */
 
 /* Entry root and dialog anchor: shrink-wraps its pill so the panel clamp
    measures the pill. */
@@ -13,37 +13,42 @@
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
   max-width: 100%;
-  padding: 1px 8px;
-  border: none;
+  padding: 3px 10px;
+  border: 1px solid var(--amv-border);
   border-radius: var(--dsw-radius-sm);
   background: transparent;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-accent);
   font: inherit;
   font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
   line-height: inherit;
   white-space: nowrap;
+  transition: background var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.pill svg {
-  width: 14px;
-  height: 14px;
+.pill::before {
+  content: attr(data-caption);
   flex: none;
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-base, inherit);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
-/* Only the button form (a pill with dialog rows to open) invites interaction;
-   the static span form keeps the resting tertiary reading. */
+/* Only the button form (a pill with dialog rows to open) invites interaction. */
 button.pill {
   cursor: pointer;
 }
 
 button.pill:hover,
 button.pill[aria-expanded='true'] {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
+  border-color: var(--amv-border-strong);
 }
 
 .label {
@@ -53,6 +58,12 @@ button.pill[aria-expanded='true'] {
 }
 
 .sep {
-  color: var(--dsw-alias-separator-primary);
+  color: var(--amv-faint);
   margin: 0 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill {
+    transition: none;
+  }
 }

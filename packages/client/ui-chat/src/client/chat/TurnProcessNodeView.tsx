@@ -50,12 +50,22 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
           turnProcess.setOpen(!open)
         }}
       >
-        <span className={css.label}>
-          {label}
-          {duration?.map((part, index) => (
-            <span key={index} className={part.numeric ? css.durationNumber : undefined}>{part.text}</span>
-          ))}
+        <span className={css.pill}>
+          <span className={css.dot} aria-hidden />
+          <span className={css.label}>
+            {label}
+            {duration?.map((part, index) => (
+              <span key={index} className={part.numeric ? css.durationNumber : undefined}>{part.text}</span>
+            ))}
+          </span>
         </span>
+        {node.data.activity.length > 0 && (
+          <span className={css.strip} aria-hidden>
+            {node.data.activity.map((kind, index) => (
+              <span key={index} className={css.cell} data-activity={kind} />
+            ))}
+          </span>
+        )}
         {canCollapse && <IconChevronDownOutlineRegular className={css.chevron} />}
       </button>
     </>

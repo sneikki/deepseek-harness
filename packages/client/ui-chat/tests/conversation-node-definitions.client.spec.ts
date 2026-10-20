@@ -536,7 +536,76 @@ describe('built-in conversation node Definitions', () => {
       messageCount: 1,
       toolCallCount: 1,
       subagentCount: 1,
+      activity: ['review', 'proof'],
     })
+  })
+
+  const activityOf = (value: ConversationNodeAssembler) => {
+    value.flush()
+    return snapshot(value).timeline.turns.get(1)?.data.get('turn-process')?.activity
+  }
+  const callAt = (seq: number, callId: string, name: string) =>
+    at(seq, 'tool/call', { turn: 1, step: 1, callId, name, arguments: '{}' })
+  const resultAt = (seq: number, callId: string, isError = false) =>
+    at(seq, 'tool/result', { turn: 1, step: 1, message: toolResult(callId, 'out', isError) }, { surfaceOp: 'append' })
+
+  it.each([
+    ['write', 'code'], ['read', 'review'], ['bash', 'deploy'], ['subagent_fork', 'proof'], ['mystery', 'other'],
+  ])('classifies a successful %s call as %s', (name, kind) => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }),
+      callAt(3, 'c', name), resultAt(4, 'c'),
+    ])
+    expect(activityOf(value)).toEqual([kind])
+  })
+
+  it('classifies a failed call as error', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }),
+      callAt(3, 'c', 'subagent_fork'), resultAt(4, 'c', true),
+    ])
+    expect(activityOf(value)).toEqual(['error'])
+  })
+
+  it('republishes the process node as error when an error result arrives after the call', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }), callAt(3, 'c', 'read'),
+    ])
+    const before = node(snapshot(value), 'turn-process')
+    expect(activityOf(value)).toEqual(['review'])
+    value.append(resultAt(4, 'c', true))
+    expect(activityOf(value)).toEqual(['error'])
+    value.flush()
+    expect(node(snapshot(value), 'turn-process')).not.toBe(before)
+  })
+
+  it('marks an unanswered call error once its turn is interrupted, but not an answered one', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }),
+      callAt(3, 'done', 'read'), resultAt(4, 'done'), callAt(5, 'hung', 'bash'),
+    ])
+    expect(activityOf(value)).toEqual(['review', 'deploy'])
+    value.append(at(6, 'step/end', { turn: 1, step: 1 }))
+    value.append(at(7, 'turn/end', { turn: 1, reason: { kind: 'interrupted' } }))
+    expect(activityOf(value)).toEqual(['review', 'error'])
+  })
+
+  it('has empty activity for a turn without calls', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }),
+      at(3, 'assistant/message', { turn: 1, step: 1, message: assistantMessage('m', 'hi') }, { surfaceOp: 'append' }),
+    ])
+    expect(activityOf(value)).toEqual([])
+  })
+
+  it('keeps the process node reference when activity is unchanged', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }), at(2, 'step/start', { turn: 1, step: 1 }), callAt(3, 'c', 'read'),
+    ])
+    const before = node(snapshot(value), 'turn-process')
+    value.append(at(4, 'assistant/live-chunk', { turn: 1, step: 1, chunk: { type: 'usage' } }))
+    value.flush()
+    expect(node(snapshot(value), 'turn-process')).toBe(before)
   })
 
   it('orders the opening User before its process control and later steering', () => {

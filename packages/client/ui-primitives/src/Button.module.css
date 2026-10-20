@@ -8,8 +8,9 @@
   border: 1px solid transparent;
   border-radius: var(--dsw-radius-md);
   cursor: pointer;
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
   color: var(--dsw-alias-label-primary);
   background: transparent;
   padding: 0 14px;
@@ -30,7 +31,8 @@
 }
 
 .md {
-  height: 36px;
+  min-height: 34px;
+  height: 34px;
 }
 
 /* Compact controls retain their dimensions across filled and outlined variants. */
@@ -52,27 +54,33 @@
   background: var(--amv-accent-hover);
 }
 
-/* Secondary and ghost sit raised with a strong stroke, so they read as controls on any surface. */
-.ghost,
+/* Outline (default): canvas button, raised fill and a 1px stroke. */
 .outline {
   background: var(--amv-raised);
   border-color: var(--amv-border-strong);
 }
 
-.ghost:hover:not(:disabled),
 .outline:hover:not(:disabled) {
   background: var(--amv-border);
 }
 
-.ghost:active:not(:disabled),
 .outline:active:not(:disabled) {
   background: var(--amv-border-strong);
+}
+
+/* Ghost: borderless, fills only on hover. */
+.ghost:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ghost:active:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-active);
 }
 
 /* Danger: red outline and label, tinted fill on hover. */
 .danger {
   background: transparent;
-  border-color: var(--amv-danger);
+  border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
   color: var(--amv-danger);
 }
 
