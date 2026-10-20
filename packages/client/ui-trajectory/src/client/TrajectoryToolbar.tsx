@@ -30,6 +30,10 @@ export interface TrajectoryToolbarProps {
   onRowFilterChange: (filter: TrajectoryRowFilter) => void
   /** Rows behind each chip. */
   rowCounts: TrajectoryRowCounts
+  /** Whether thinking rows are shown. */
+  showThinking: boolean
+  /** Show or hide thinking rows. */
+  onShowThinkingChange: (showThinking: boolean) => void
   /** Current live ledger search query. */
   searchQuery: string
   /** Update the live ledger search query. */
@@ -55,6 +59,8 @@ export function TrajectoryToolbar({
   rowFilter,
   onRowFilterChange,
   rowCounts,
+  showThinking,
+  onShowThinkingChange,
   searchQuery,
   onSearchQueryChange,
   t,
@@ -125,6 +131,26 @@ export function TrajectoryToolbar({
               {allAssistantsCollapsed ? '⊞' : '⊟'}
             </span>
             {t('toolbar.calls')}
+          </button>
+          <button
+            type="button"
+            className={css.toggle}
+            aria-label={t('toolbar.thinking')}
+            aria-pressed={showThinking}
+            title={showThinking ? t('toolbar.hideThinking') : t('toolbar.showThinking')}
+            onClick={() => { onShowThinkingChange(!showThinking) }}
+          >
+            <svg
+              className={css.toggleIcon}
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path d="M1.5 8S4 3.75 8 3.75 14.5 8 14.5 8 12 12.25 8 12.25 1.5 8 1.5 8Z" />
+              <circle cx="8" cy="8" r="1.75" />
+              {showThinking ? null : <path d="M2.5 13.5l11-11" />}
+            </svg>
+            {t('toolbar.thinking')}
           </button>
         </div>
         <div className={css.search}>

@@ -99,10 +99,12 @@ export function trajectoryRowMatchesFilter(
  * Find rows whose own line is noise: repeated context. The cells stay in the
  * layout (fold anchor, step metrics, inspector); only their rendered row is skipped.
  * @param turns - Full layout.
+ * @param hideThinking - Also hide thinking rows; they leave the chip counts.
  * @returns Hidden cell indexes and per-chip counts of what remains.
  */
 export function analyzeTrajectoryNoise(
   turns: readonly TrajectoryTurnModel[],
+  hideThinking = false,
 ): { hidden: ReadonlySet<number>; counts: TrajectoryRowCounts } {
   const counts: TrajectoryRowCounts = { all: 0, messages: 0, tools: 0 }
   const hidden = new Set<number>()
@@ -110,6 +112,10 @@ export function analyzeTrajectoryNoise(
   for (const turn of turns) {
     for (const group of turn.groups) {
       for (const cell of group.cells) {
+        if (hideThinking && cell.kind === 'thinking') {
+          hidden.add(cell.index)
+          continue
+        }
         if (cell.kind === 'context') {
           const key = contextKey(cell)
           if (key !== '') {

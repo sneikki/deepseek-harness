@@ -82,10 +82,13 @@ export interface TrajectoryViewInjected {
   jsonStringWrapping?: Omit<NonNullable<JsonTreeProps['stringWrapping']>, 'label'>
   hooks: {
     duration: SnapshotStore<boolean>
+    /** Whether thinking rows are shown. */
+    thinking: SnapshotStore<boolean>
   }
   loadOlder: () => Promise<boolean>
   loadImage: MessageImageLoader
   setActualDuration: (actualDuration: boolean) => void
+  setShowThinking: (showThinking: boolean) => void
 }
 
 interface UsageLike {
@@ -133,7 +136,8 @@ function addUsage(
 }
 
 export function TrajectoryView({
-  useSession, useTrajectory, useDuration, loadOlder, loadImage, setActualDuration,
+  useSession, useTrajectory, useDuration, useThinking, loadOlder, loadImage, setActualDuration,
+  setShowThinking,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
@@ -144,6 +148,7 @@ export function TrajectoryView({
     useState<ReadonlySet<string>>(EMPTY_RECORD_IDS)
   const [timelineSelection, setTimelineSelection] = useState<TrajectoryTimeRange | null>(null)
   const actualDuration = useDuration(value => value)
+  const showThinking = useThinking(value => value)
   const [actualTime, setActualTime] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchIndex] = useState(() => new TrajectorySearchIndex())
@@ -387,7 +392,8 @@ export function TrajectoryView({
     [partialSearchTurns],
   )
   const [rowFilter, setRowFilter] = useState<TrajectoryRowFilter>('all')
-  const noise = useMemo(() => analyzeTrajectoryNoise(timelineTurns), [timelineTurns])
+  const noise = useMemo(() => analyzeTrajectoryNoise(timelineTurns, !showThinking),
+    [timelineTurns, showThinking])
   const searchMatchRecordIds = useMemo(
     () => searchIndex.search(searchQuery),
     [searchIndex, searchIndexRevision, searchQuery],
@@ -539,6 +545,8 @@ export function TrajectoryView({
         rowFilter={rowFilter}
         onRowFilterChange={setRowFilter}
         rowCounts={noise.counts}
+        showThinking={showThinking}
+        onShowThinkingChange={setShowThinking}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         t={t}
