@@ -336,11 +336,27 @@
   animation: subagent-pulse 1.6s ease-in-out infinite;
 }
 
+.subagent[data-selected='false'] {
+  opacity: 0.2;
+}
+
+.subagent[data-search-match='false'] {
+  opacity: 0.14;
+}
+
 .subagent[data-hovered='true'] {
   opacity: 1;
   box-shadow:
     0 0 0 1px var(--amv-bg-deep),
     0 0 0 2px color-mix(in srgb, var(--amv-accent) 80%, transparent);
+}
+
+.subagent[data-current='true'] {
+  z-index: 1;
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--amv-bg-deep),
+    0 0 0 2px var(--amv-accent);
 }
 
 @keyframes subagent-pulse {

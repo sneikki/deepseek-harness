@@ -317,8 +317,10 @@ export interface TrajectoryTimelineLanes {
  * @returns Track per record plus lane tops/heights; a one-track lane keeps the roomy 10px bar.
  */
 export function layoutTimelineLanes(model: TrajectoryTimelineModel): TrajectoryTimelineLanes {
+  // A subagent start call is drawn as its Agents bar, so it takes no Tools-lane span or track.
+  const subagentStarts = new Set(model.subagents.map(bar => bar.lifecycle.startIndex))
   const groups: { items: readonly TrajectoryTimeRange[] }[] = [0, 1, 2].map(lane => ({
-    items: model.spans.filter(span => span.lane === lane),
+    items: model.spans.filter(span => span.lane === lane && !subagentStarts.has(span.index)),
   }))
   if (model.subagents.length > 0) groups.push({ items: model.subagents })
   const spanTrack = new Map<TrajectoryTimelineSpan, number>()
