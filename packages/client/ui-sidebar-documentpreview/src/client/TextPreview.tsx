@@ -263,6 +263,7 @@ export function TextPreview({
           </p>
         )}
       <div className={css.header}>
+        <FileTypeIcon kind={classifyFileType(name)} size={16} className={css.fileIcon} />
         <PathLabel path={displayPath} className={css.path} data-textpreview-path />
         {candidates.length > 1
           && (

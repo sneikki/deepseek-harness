@@ -10,3 +10,10 @@
 .trigger svg { width: 14px; height: 14px; color: var(--dsw-alias-label-tertiary); }
 .menu { display: flex; flex: none; pointer-events: auto; }
 .shortcut { position: relative; pointer-events: none; }
+
+/* v2 canvas: the terminal door is a panel like the start tab's. */
+.entry { --dsl-guide-entry-radius: 12px; border: 1px solid var(--amv-border); background: var(--amv-surface); transition: border-color var(--amv-dur-1) var(--amv-ease); }
+.entry:hover { border-color: color-mix(in srgb, var(--amv-accent) 35%, var(--amv-border)); }
+.icon { color: var(--amv-accent); filter: grayscale(1); opacity: 0.8; }
+.title { color: var(--amv-text); font-family: var(--ds-font-family-code); font-size: 13px; font-weight: 500; }
+.description { color: var(--amv-muted); font-size: 12px; }

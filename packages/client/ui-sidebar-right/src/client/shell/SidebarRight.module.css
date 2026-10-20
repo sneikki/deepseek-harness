@@ -173,3 +173,27 @@
   min-width: 0;
   overflow: hidden;
 }
+
+/* v2 canvas: the strip-end controls are outline icon buttons (radius 8). */
+.iconButton {
+  width: 30px;
+  height: 30px;
+  color: var(--amv-text-2);
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
+}
+
+.iconButton:hover {
+  color: var(--amv-text);
+  background: var(--amv-raised);
+}
+
+.iconButton:active {
+  transform: scale(0.96);
+}
+
+.unavailable {
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
+}

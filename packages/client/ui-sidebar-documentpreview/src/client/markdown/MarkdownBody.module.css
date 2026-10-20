@@ -29,3 +29,11 @@
   font-family: var(--ds-font-family-code);
   white-space: inherit;
 }
+
+/* v2 canvas: the frontmatter is a panel (surface, hairline, radius 12) with mono source. */
+.frontmatter {
+  padding: 12px 14px;
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+}

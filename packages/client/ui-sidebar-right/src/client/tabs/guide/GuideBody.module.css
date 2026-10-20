@@ -121,3 +121,56 @@
 }
 
 .entryCell { width: 380px; max-width: 100%; }
+
+/* v2 canvas: the doors are panels (surface, hairline, radius 12) with a mono
+   title and an accent glyph; hover lifts the border toward the accent. */
+.guide {
+  --dsl-guide-entry-radius: 12px;
+  gap: 10px;
+}
+
+.hero {
+  color: var(--amv-faint);
+}
+
+.entry {
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  transition:
+    border-color var(--amv-dur-1) var(--amv-ease),
+    background var(--amv-dur-1) var(--amv-ease),
+    box-shadow var(--amv-dur-1) var(--amv-ease);
+}
+
+.entry:hover {
+  background: var(--amv-surface);
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, var(--amv-border));
+}
+
+.entry:focus-visible {
+  outline: none;
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
+}
+
+.entryIcon {
+  color: var(--amv-accent);
+  /* The plugins' coloured artwork reads muted: colour is for state here. */
+  filter: grayscale(1);
+  opacity: 0.8;
+}
+
+.entryTitle {
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.entryDescription {
+  color: var(--amv-muted);
+  font-size: 12px;
+}
+
+.titleIcon {
+  color: var(--amv-muted);
+}

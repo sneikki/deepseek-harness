@@ -289,3 +289,94 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/*
+ * v2 canvas: the header is a file tile (icon + mono path in a 1px, radius-8
+ * box) over a 44px row on a hairline, controls as outline icon buttons.
+ */
+.header {
+  gap: 6px;
+  height: 44px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.fileIcon {
+  flex: none;
+}
+
+.header .path {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding: 4px 10px;
+  margin-right: auto;
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+}
+
+.header .path > span {
+  margin-right: 0;
+}
+
+.header .path > span > span:first-child:not(:last-child) {
+  color: var(--amv-muted);
+}
+
+.header .path > span > span:last-child {
+  color: var(--amv-text);
+}
+
+.tool {
+  width: 30px;
+  height: 30px;
+  color: var(--amv-text-2);
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
+}
+
+.tool:hover,
+.tool[data-textpreview-tool='auto-refresh'][aria-pressed='true'] {
+  color: var(--amv-text);
+  background: var(--amv-raised);
+}
+
+.tool:active {
+  transform: scale(0.96);
+}
+
+.viewerTool {
+  width: auto;
+  padding: 0 10px;
+  font-family: var(--ds-font-family-code);
+}
+
+.changed {
+  color: var(--amv-text-2);
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--amv-warning) 35%, transparent);
+}
+
+.action,
+.more,
+.retry {
+  color: var(--amv-text);
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+  transition: background var(--amv-dur-1) var(--amv-ease);
+}
+
+.action:hover,
+.more:hover:not(:disabled),
+.retry:hover {
+  background: var(--amv-raised);
+}
+
+.lineTarget {
+  background: var(--amv-accent-soft);
+}
