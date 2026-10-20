@@ -86,20 +86,21 @@
   position: relative;
   z-index: 1;
   display: flex;
-  width: 800px;
+  width: 840px;
   height: min(800px, calc(100vh - 2 * max(24px, var(--dsh-frame-overlay-top, 24px))));
   max-width: calc(100vw - 48px);
-  border-radius: var(--dsw-radius-panel);
   overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2);
-  box-shadow: var(--dsw-elevation-prominent);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 14px;
+  background: var(--amv-surface);
+  box-shadow: var(--amv-shadow-pop);
   /* Elevated surface: the scrollbar thumb takes the l2 elevation tokens.
      Declared on the panel rather than the scrolling `.options` child so the
      elevation choice sits with the surface; the custom properties inherit
      down to whichever descendant scrolls (see ui-theme
      styles/scrollbar.css for the rebinding contract). */
-  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
-  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  --dsh-scrollbar-thumb: var(--amv-border-strong);
+  --dsh-scrollbar-thumb-hover: var(--amv-faint);
 }
 
 .panel:focus {
@@ -121,10 +122,13 @@
 /* Title row (figma 501:29959): 16/500 lh24, 12px side padding. */
 .navTitle {
   padding: 0 12px;
-  font-size: 16px;
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
   line-height: 24px;
   font-weight: 500;
-  color: var(--dsw-alias-label-primary);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 /* Cell stack (figma 501:29961): gap 4. */
@@ -145,27 +149,40 @@
   padding: 9px 16px 9px 12px;
   box-sizing: border-box;
   border: none;
-  border-radius: var(--dsw-radius-md);
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 22px;
-  font-weight: 400;
-  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+  color: var(--amv-text-2);
   text-align: left;
+  transition: background var(--amv-dur-1) var(--amv-ease);
 }
 
 .navCell:hover {
-  background: var(--dsw-specific-sidebar-nav-item-hover);
+  background: var(--amv-raised);
+  color: var(--amv-text);
 }
 
 .navCell.active {
-  background: var(--dsw-specific-sidebar-nav-item-active);
+  background: var(--amv-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
+  color: var(--amv-text);
+}
+
+.navCell:focus-visible {
+  outline: 2px solid var(--amv-accent);
+  outline-offset: -2px;
 }
 
 .navIcon {
   flex: none;
+}
+
+.navCell.active .navIcon {
+  color: var(--amv-accent);
 }
 
 .navLabel {
@@ -214,14 +231,15 @@
   height: 28px;
   padding: 0;
   border: none;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text-2);
 }
 
 .close:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
+  color: var(--amv-text);
 }
 
 /* Options area (figma Options 501:29983): pad (24,0,24,24), scrolls. */

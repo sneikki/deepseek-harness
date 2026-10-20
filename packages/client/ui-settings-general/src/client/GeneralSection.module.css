@@ -10,3 +10,17 @@
 .section > :global([data-slot='settings.general.item']) > :last-child {
   border-bottom: none;
 }
+
+/* Rows are feature-owned; the section frames them as one canvas panel and
+   recolours their hairlines. */
+.section {
+  overflow: hidden;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+
+.section > :global([data-slot='settings.general.item']) > * {
+  padding-inline: 16px;
+  border-bottom-color: var(--amv-border);
+}

@@ -129,7 +129,7 @@ export function AgentPresetSection({
                     {row.broken === undefined ? null : <span className={css.brokenBadge}>
                       {t('brokenBadge')}<span className={css.brokenTip} aria-hidden="true">{row.broken}</span>
                     </span>}
-                    <Tag tone={row.isDefault ? 'solid' : 'outline'}>
+                    <Tag tone={row.isDefault ? 'solid' : 'outline'} className={row.isDefault ? `${css.presetTag} ${css.presetTagDefault}` : css.presetTag}>
                       {row.isDefault ? t('inUse') : t(builtIn ? 'builtInGroup' : 'customGroup')}
                     </Tag>
                   </span>

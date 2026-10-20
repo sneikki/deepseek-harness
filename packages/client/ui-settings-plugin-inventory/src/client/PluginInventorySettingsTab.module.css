@@ -6,7 +6,7 @@
   gap: 14px;
   width: 100%;
   max-width: 760px;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .status,
@@ -18,14 +18,14 @@
 .failure {
   font-size: 13px;
   line-height: 20px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
 }
 
 .failure {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
 .statusWithDot {
@@ -35,11 +35,11 @@
 }
 
 .failure button {
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-sm);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 8px;
   padding: 4px 10px;
   background: transparent;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
   font: inherit;
   cursor: pointer;
 }
@@ -55,7 +55,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
 }
 
 .search > svg {
@@ -67,23 +67,23 @@
 .search input {
   width: 100%;
   height: 36px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-md);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 10px;
   padding: 0 34px 0 36px;
   outline: none;
-  background: var(--dsw-alias-bg-layer-1);
-  color: var(--dsw-alias-label-primary);
+  background: var(--amv-raised);
+  color: var(--amv-text);
   font: inherit;
   font-size: 13px;
 }
 
 .search input::placeholder {
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
 }
 
 .search input:focus-visible {
-  border-color: var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 18%, transparent);
+  border-color: var(--dsw-focus-ring-color, var(--amv-accent));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-focus-ring-color, var(--amv-accent)) 18%, transparent);
 }
 
 .cards {
@@ -103,13 +103,14 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  border: 0.5px solid var(--dsw-alias-settings-card-stroke);
-  border-radius: var(--dsw-radius-xl);
-  background: var(--dsw-alias-settings-card-fill);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .card[data-open='true'] {
-  border-color: var(--dsw-alias-border-l3);
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
 }
 
 /* The other card in an expanded card's row keeps its own height instead of
@@ -141,11 +142,11 @@
 
 .cardContent:hover,
 .card[data-open='true'] > .cardContent {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 .cardContent:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -2px;
 }
 
@@ -167,7 +168,8 @@
 .cardTitle {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
   line-height: 20px;
   font-weight: 500;
 }
@@ -176,7 +178,7 @@
 .cardDescription {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 12px;
   line-height: 18px;
   text-wrap: pretty;
@@ -210,10 +212,11 @@
   display: block;
   box-sizing: border-box;
   max-width: 100%;
-  border-radius: var(--dsw-radius-xs);
-  padding: 1px 6px;
-  background: var(--dsw-alias-bg-module-platform);
-  color: var(--dsw-alias-label-secondary);
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: var(--amv-raised);
+  color: var(--amv-accent);
 }
 
 .cardTrailing {
@@ -221,7 +224,7 @@
   flex: none;
   align-items: center;
   gap: 8px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
 }
 
 /* Accessible-name and layout wrapper: StateDot is aria-hidden and carries no
@@ -247,7 +250,7 @@
 }
 
 .group + .group {
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  border-top: 1px solid var(--amv-border);
   padding-top: 14px;
 }
 
@@ -270,7 +273,7 @@
 }
 
 .groupToggle:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: 2px;
 }
 
@@ -283,10 +286,12 @@
 }
 
 .groupTitle {
-  font-size: 14px;
+  font-size: 11px;
   line-height: 22px;
-  font-weight: 400;
-  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-text);
 }
 
 .groupSub {
@@ -294,7 +299,7 @@
   flex-wrap: wrap;
   row-gap: 4px;
   margin: -6px 0 0 20px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 12px;
   line-height: 18px;
   font-variant-numeric: tabular-nums;
@@ -305,26 +310,27 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   height: 36px;
   white-space: nowrap;
-  border: none;
-  border-radius: var(--dsw-radius-md);
-  padding: 0 14px;
-  background: var(--dsw-alias-bg-module-platform);
-  color: var(--dsw-alias-label-primary);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--amv-raised);
+  color: var(--amv-text);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 22px;
   cursor: pointer;
 }
 
 .switcher:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-border);
 }
 
 .switcher:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: 2px;
 }
 
@@ -348,10 +354,10 @@
 
 .brokenNote {
   margin: 0;
-  border-radius: var(--dsw-radius-lg);
+  border-radius: 12px;
   padding: 8px 10px;
-  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent);
-  color: var(--dsw-alias-state-error-primary);
+  background: color-mix(in srgb, var(--amv-danger) 8%, transparent);
+  color: var(--amv-danger);
   font-size: 12px;
   line-height: 18px;
   overflow-wrap: anywhere;
@@ -364,7 +370,7 @@
   align-items: baseline;
   gap: 4px 8px;
   margin: 0;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -373,7 +379,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--dsw-alias-state-business-primary);
+  color: var(--amv-accent);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -386,16 +392,16 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 0.5px solid var(--dsw-alias-settings-card-stroke);
-  border-radius: var(--dsw-radius-xl);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
   padding: 15px 14px;
-  background: var(--dsw-alias-settings-card-fill);
+  background: var(--amv-surface);
 }
 
 .skeletonBar {
   width: 40%;
   height: 14px;
-  border-radius: var(--dsw-radius-xs);
+  border-radius: 6px;
   background: var(--dsw-alias-bg-skeleton);
 }
 
@@ -405,12 +411,12 @@
 }
 
 .card[data-failed='true'] {
-  border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent);
+  border-color: color-mix(in srgb, var(--amv-danger) 45%, transparent);
 }
 
 .chevron {
   flex: none;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
 }
 
 .card[data-open='true'] .chevron {
@@ -418,15 +424,15 @@
 }
 
 .cardDetails {
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  border-top: 1px solid var(--amv-border);
   padding: 10px 14px 12px;
-  background: var(--dsw-alias-bg-module-platform);
+  background: var(--amv-raised);
 }
 
 .entryValue {
   display: block;
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .details {
@@ -441,7 +447,7 @@
 }
 
 .details dt {
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 11px;
   line-height: 17px;
 }
@@ -450,7 +456,7 @@
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
   font-size: 12px;
   line-height: 17px;
 }

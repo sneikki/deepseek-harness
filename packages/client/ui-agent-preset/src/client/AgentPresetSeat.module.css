@@ -24,9 +24,9 @@
   min-height: 28px;
   padding: 0 8px;
   border: none;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 8px;
   background: transparent;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
   font-size: 13px;
   line-height: 20px;
   font-weight: 500;
@@ -36,17 +36,17 @@
 
 .seat:not(:disabled):hover,
 .seat[aria-expanded='true'] {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 .seat:disabled {
   cursor: default;
-  color: var(--dsw-alias-label-quaternary);
+  color: var(--amv-faint);
 }
 
 .seatIcon {
   flex: none;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .seatLabel {
@@ -113,7 +113,7 @@
 
 .chevron {
   flex: none;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-muted);
 }
 
 /* Menu rows carry the name over its description: the id alone never said what
@@ -128,12 +128,12 @@
 .itemName {
   font-size: 13px;
   line-height: 20px;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .itemDesc {
   font-size: 12px;
   line-height: 16px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-muted);
   white-space: normal;
 }
