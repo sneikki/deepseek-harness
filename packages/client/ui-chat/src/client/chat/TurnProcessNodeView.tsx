@@ -1,10 +1,28 @@
 import { memo } from 'react'
-import { IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  IconAgentPresetOutlineRegular,
+  IconChevronDownOutlineRegular,
+  IconCloseCircleFillRegular,
+  IconCodeOutlineRegular,
+  IconEditOutlineRegular,
+  IconSearchOutlineRegular,
+  IconSettingsOutlineRegular,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ComponentType } from 'react'
 import type { ChatNodeViewProps } from '../contract/slots.ts'
-import { turnProcessAlwaysOpen } from '../contract/turn-process.ts'
+import { turnProcessAlwaysOpen, type TurnActivity } from '../contract/turn-process.ts'
 import { formatRunDuration } from './message-chrome.ts'
 import a11yCss from './accessibility.module.css'
 import css from './TurnProcessNodeView.module.css'
+
+const ACTIVITY_ICON: Record<TurnActivity, ComponentType<{ className?: string | undefined }>> = {
+  review: IconSearchOutlineRegular,
+  deploy: IconCodeOutlineRegular,
+  other: IconSettingsOutlineRegular,
+  code: IconEditOutlineRegular,
+  proof: IconAgentPresetOutlineRegular,
+  error: IconCloseCircleFillRegular,
+}
 
 /** Settled Turn duration and process disclosure above its content. */
 export const TurnProcessNodeView = memo(function TurnProcessNodeView({
@@ -61,9 +79,14 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
         </span>
         {node.data.activity.length > 0 && (
           <span className={css.strip} aria-hidden>
-            {node.data.activity.map((kind, index) => (
-              <span key={index} className={css.cell} data-activity={kind} />
-            ))}
+            {node.data.activity.map((kind, index) => {
+              const Icon = ACTIVITY_ICON[kind]
+              return (
+                <span key={index} className={css.cell} data-activity={kind} title={t(`message.turnProcess.activity.${kind}`)}>
+                  <Icon className={css.cellIcon} />
+                </span>
+              )
+            })}
           </span>
         )}
         {canCollapse && <IconChevronDownOutlineRegular className={css.chevron} />}
