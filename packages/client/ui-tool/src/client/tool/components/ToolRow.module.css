@@ -11,8 +11,8 @@
   flex-direction: column;
 }
 
-/* Canvas timeline item: a 22px status circle (done green check, running
-   teal spinner, error red) on a 1px --amv-border line that joins this row's
+/* Canvas timeline item: a 16px tinted status circle (done check, running
+   spinner, error cross, each in the status colour) on a 1px --amv-border line that joins this row's
    icon to the next tool row's. The business glyph and the hover chevron are
    hidden (not removed); a trailing chevron fades in on hover and rotates when
    open, in space the row always reserves, so nothing shifts. */
@@ -42,8 +42,8 @@
 .root::before {
   content: '';
   position: absolute;
-  left: 10.5px;
-  top: 23px;
+  left: 7.5px;
+  top: 17px;
   bottom: -6px;
   width: 1px;
   background: var(--amv-border);
@@ -57,32 +57,27 @@
 }
 
 .root .leading {
-  width: 22px;
-  height: 22px;
-  margin-right: 10px;
+  width: 16px;
+  height: 16px;
+  margin-right: 16px; /* 16 + 16 keeps the tool name at its old x */
   box-sizing: border-box;
   border-radius: 50%;
   corner-shape: round;
   z-index: 1;
   border: 1px solid color-mix(in srgb, var(--tool-status) 35%, transparent);
-  background: color-mix(in srgb, var(--tool-status) 12%, var(--amv-bg));
+  background: color-mix(in srgb, var(--tool-status) 14%, var(--amv-bg));
   color: var(--tool-status);
   transition: border-color var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
 }
 .root .leading > * { display: none; }
 .root .leading::before {
   content: '';
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: currentColor;
   -webkit-mask: var(--tool-glyph) center / contain no-repeat;
   mask: var(--tool-glyph) center / contain no-repeat;
   --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3l2.4 2.4 4.6-5.1' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-.root[data-state='ok'] .leading {
-  background: var(--tool-status);
-  border-color: var(--tool-status);
-  color: var(--amv-bg-deep);
 }
 .root[data-state='error'] .leading::before {
   --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 3l6 6M9 3l-6 6' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -91,8 +86,8 @@
   --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect x='3' y='3' width='6' height='6' rx='1'/%3E%3C/svg%3E");
 }
 .root:is([data-state='running'], [data-state='preparing']) .leading::before {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: none;
   -webkit-mask: none;
   mask: none;
@@ -259,7 +254,7 @@
 .bodyWrap {
   display: flex;
   flex-direction: column;
-  margin-left: 28px; /* clears the timeline line through the 22px icon + 10px gap */
+  margin-left: 28px; /* clears the timeline line through the 16px icon + gap */
 }
 
 /* Hover-revealed jump to the trajectory record: a small pill in real flow
