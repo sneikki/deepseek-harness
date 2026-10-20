@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { PartialArguments } from '@deepseek-ai/dsh-util-values'
 import { deriveTrajectoryLayout } from '../src/client/layout.ts'
-import { deriveTrajectoryTimeline } from '../src/client/timeline.ts'
+import { deriveTrajectoryTimeline, layoutTimelineLanes } from '../src/client/timeline.ts'
 import { TrajectoryTimeline } from '../src/client/TrajectoryTimeline.tsx'
 import { trajectorySubagentLifecycles } from '../src/client/trajectory-subagent.ts'
 import { t } from './locale.client.ts'
@@ -172,6 +172,20 @@ describe('subagent timeline lane', () => {
     expect(model.subagents[1]?.end).toBe(model.end)
     expect(model.subagents[0]?.end).toBeLessThan(model.end + 1)
     expect(model.subagents[0]?.index).toBe(model.subagents[0]?.lifecycle.startIndex)
+  })
+
+  it('keeps subagent start calls out of the Tools lane but not the Agents lane', () => {
+    seq = 0
+    const withBash = [...nodes, ...call('bash', 'c3', { command: 'ls' }, 'ok')]
+    const turns = deriveTrajectoryLayout({ nodes: withBash as Nodes, partial: null, runningCalls: [] }, t)
+    const model = deriveTrajectoryTimeline(turns, 'sequence')!
+    const starts = model.subagents.map(s => s.lifecycle.startIndex)
+    expect(starts).toHaveLength(2)
+    const { spanTrack, subagentTrack } = layoutTimelineLanes(model)
+    const placed = [...spanTrack.keys()]
+    expect(placed.some(span => starts.includes(span.index))).toBe(false)
+    expect(placed.filter(span => span.lane === 2).map(span => span.toolName)).toEqual(['bash'])
+    expect(model.subagents.every(bar => subagentTrack.has(bar))).toBe(true)
   })
 
   it('falls back to the recorded end when the settle record has no span', () => {

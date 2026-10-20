@@ -740,9 +740,9 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
             style={projectedDomainStyle}
           >
             {model.spans
-              .filter(span =>
-                span.index === selectedIndex
-                || (span.end >= domainStart && span.start <= domainStart + domainDuration))
+              .filter(span => (layout?.spanTrack.has(span) ?? true)
+                && (span.index === selectedIndex
+                || (span.end >= domainStart && span.start <= domainStart + domainDuration)))
               .map((span) => {
                 const left = (span.start - model.start) / fullDuration
                 const width = (span.end - span.start) / fullDuration
