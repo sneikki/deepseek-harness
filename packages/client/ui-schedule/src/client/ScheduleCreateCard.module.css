@@ -156,8 +156,7 @@
   font-family: var(--ds-font-family-code);
 }
 
-.frequency,
-.status {
+.frequency {
   font-family: var(--ds-font-family-code);
   font-size: 11px;
   font-variant-numeric: tabular-nums;

@@ -1642,15 +1642,16 @@
 .pillActive {
   border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-text-2);
 }
 
 .pillActive .pillDot {
+  color: var(--amv-accent);
   animation: amv-pulse 2s var(--amv-ease) infinite;
 }
 
 .endedRow .rowSummary {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .list .empty {
