@@ -18,14 +18,14 @@ type ButtonProps = {
 
 /**
  * Render a button.
- * @param props.variant - visual family (default 'ghost').
+ * @param props.variant - visual family (default 'outline').
  * @param props.size - 'md' 36px control with 12px corners or 'sm' 28px control with 8px corners.
  * @param props.icon - optional leading 16px icon node.
  * @param ref - native button for focus management and overlay anchors.
  * @returns the button element; native button attributes pass through.
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
-  variant = 'ghost', size = 'md', icon, className, children, ...rest
+  variant = 'outline', size = 'md', icon, className, children, ...rest
 }, ref) {
   return (
     <button ref={ref} type="button" className={clsx(css.button, css[variant], css[size], className)} {...rest}>

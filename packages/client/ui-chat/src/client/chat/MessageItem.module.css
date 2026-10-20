@@ -24,8 +24,8 @@
      the bubble widens with a user-dragged or adaptive column; percentage
      keeps narrow windows sane. */
   max-width: 100%;
-  background: var(--amv-accent-soft);
-  border: 1px solid var(--amv-accent-ring);
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
   border-radius: var(--dsw-radius-lg);
   animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
   /* 42px single-line bubble at the default size: 22 line + 10 vertical
