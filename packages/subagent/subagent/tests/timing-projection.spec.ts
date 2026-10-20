@@ -177,7 +177,9 @@ describe('subagent timing projection', () => {
       lastTurnEnd: { at: 5, reason: 'plugin-custom' },
     }
     expect(subagentTimingProjectionDefinition.stateSchema.parse(state)).toEqual(state)
-    const view = subagentTimingProjectionDefinition.wire.view(state)
+    // A plugin-added kind is outside the built-in union; the schemas must still accept it.
+    type ViewInput = Parameters<typeof subagentTimingProjectionDefinition.wire.view>[0]
+    const view = subagentTimingProjectionDefinition.wire.view(state as unknown as ViewInput)
     expect(subagentTimingProjectionDefinition.wire.viewSchema.parse(view)).toEqual({
       settledMs: 0,
       lastTurnEnd: { at: 5, reason: 'plugin-custom' },
