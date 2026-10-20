@@ -14,6 +14,7 @@ import {
   type TrajectoryUsage,
 } from './TrajectoryTable.tsx'
 import { TrajectoryToolbar } from './TrajectoryToolbar.tsx'
+import { reduceTrajectoryNoise, type TrajectoryRowFilter } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
@@ -345,6 +346,11 @@ export function TrajectoryView({
     () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
     [finalized, timelinePartial, t],
   )
+  const [rowFilter, setRowFilter] = useState<TrajectoryRowFilter>('all')
+  const { turns: visibleTurns, counts: rowCounts } = useMemo(
+    () => reduceTrajectoryNoise(timelineTurns, rowFilter, t),
+    [timelineTurns, rowFilter, t],
+  )
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
@@ -405,8 +411,8 @@ export function TrajectoryView({
   const timelineFocusIndexes = useMemo(
     () => timelineRange === null
       ? null
-      : trajectoryTimelineFocusIndexes(timelineTurns, timelineRange, timelineMode),
-    [timelineMode, timelineRange, timelineTurns],
+      : trajectoryTimelineFocusIndexes(visibleTurns, timelineRange, timelineMode),
+    [timelineMode, timelineRange, visibleTurns],
   )
   const handleRecordSelect = useCallback((index: number) => {
     if (
@@ -428,7 +434,7 @@ export function TrajectoryView({
     setTimelineRecordFocus({ index })
   }, [])
   const collapsibleTurnIds = useMemo(
-    () => timelineTurns
+    () => visibleTurns
       .filter(turn =>
         turn.turn !== null
         &&
@@ -439,13 +445,13 @@ export function TrajectoryView({
           0,
         ) > 1)
       .flatMap(turn => turn.turn === null ? [] : [turn.turn]),
-    [timelineTurns],
+    [visibleTurns],
   )
   const allTurnsCollapsed = collapsibleTurnIds.length > 0
     && collapsibleTurnIds.every(turn => collapsedTurns.has(turn))
   const collapsibleAssistantIds = useMemo(() => {
     const ids: string[] = []
-    for (const turn of timelineTurns) {
+    for (const turn of visibleTurns) {
       const cells = turn.groups.flatMap(group => group.cells)
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i]
@@ -457,7 +463,7 @@ export function TrajectoryView({
       }
     }
     return ids
-  }, [timelineTurns])
+  }, [visibleTurns])
   const allAssistantsCollapsed = collapsibleAssistantIds.length > 0
     && collapsibleAssistantIds.every(index => collapsedAssistants.has(index))
 
@@ -526,13 +532,16 @@ export function TrajectoryView({
         onToggleAllTurns={toggleAllTurns}
         allAssistantsCollapsed={allAssistantsCollapsed}
         onToggleAllAssistants={toggleAllAssistants}
+        rowFilter={rowFilter}
+        onRowFilterChange={setRowFilter}
+        rowCounts={rowCounts}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         t={t}
       />
       <TrajectoryTimeline
         t={t}
-        turns={timelineTurns}
+        turns={visibleTurns}
         mode={timelineMode}
         range={timelineRange}
         hasEarlierRecords={hasOlderHistory}
@@ -553,7 +562,7 @@ export function TrajectoryView({
           renderSlot={renderSlot}
           loadImage={loadImage}
           requestNumbers={requestNumbers}
-          turns={timelineTurns}
+          turns={visibleTurns}
           streamingCells={streamingCells}
           timelineFocusIndexes={timelineFocusIndexes}
           searchMatchIndexes={searchMatchIndexes}

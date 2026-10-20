@@ -147,7 +147,7 @@ describe('deriveTrajectoryLayout', () => {
     const tool = turns[0]?.groups.flatMap(g => g.cells).find(c => c.kind === 'tool')
     expect(tool).toMatchObject({
       text: 'bash',
-      previewMarkdown: '{"command":"ls"}',
+      previewMarkdown: 'ls',
     })
     expect(tool?.timeSeconds).toBe(1.3)
   })
@@ -165,7 +165,7 @@ describe('deriveTrajectoryLayout', () => {
     expect(turns[0]?.groups[0]?.cells[0]).toMatchObject({
       kind: 'tool',
       text: 'bash',
-      previewMarkdown: '{"command":"pwd"}',
+      previewMarkdown: 'pwd',
       timeSeconds: null,
     })
   })
@@ -588,7 +588,7 @@ describe('run_code sub-dispatch cells', () => {
     // Sequential indexes across the interleave; durations from the pair times.
     expect(cells.map(c => c.index)).toEqual([1, 2, 3, 4])
     expect(cells[2]).toMatchObject({
-      text: 'bash', previewMarkdown: '{"x":1}', timeSeconds: 1,
+      text: 'bash', previewMarkdown: 'x: 1', timeSeconds: 1,
     })
     expect(cells[3]).toMatchObject({ timeSeconds: 0.5 })
   })
@@ -601,7 +601,7 @@ describe('run_code sub-dispatch cells', () => {
     const turns = deriveTrajectoryLayout({ nodes: withSubCalls([running]), partial: null, runningCalls: [] })
     const sub = turns[0]!.groups.flatMap(g => g.cells).find(c => c.kind === 'subtool')
     expect(sub).toMatchObject({
-      text: 'grep', previewMarkdown: '{"pattern":"x"}', timeSeconds: null,
+      text: 'grep', previewMarkdown: 'pattern: x', timeSeconds: null,
     })
   })
 

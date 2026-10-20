@@ -3,6 +3,8 @@
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconSearchOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NS } from './locales.ts'
+import { TrajectoryRowFilterChips } from './TrajectoryRowFilterChips.tsx'
+import type { TrajectoryRowCounts, TrajectoryRowFilter } from './trajectory-noise.ts'
 import css from './TrajectoryToolbar.module.css'
 
 export interface TrajectoryToolbarProps {
@@ -22,6 +24,12 @@ export interface TrajectoryToolbarProps {
   allAssistantsCollapsed: boolean
   /** Fold or expand tool calls under every collapsible assistant. */
   onToggleAllAssistants: () => void
+  /** Selected row-kind filter chip. */
+  rowFilter: TrajectoryRowFilter
+  /** Select a row-kind filter chip. */
+  onRowFilterChange: (filter: TrajectoryRowFilter) => void
+  /** Rows behind each chip. */
+  rowCounts: TrajectoryRowCounts
   /** Current live ledger search query. */
   searchQuery: string
   /** Update the live ledger search query. */
@@ -44,6 +52,9 @@ export function TrajectoryToolbar({
   onToggleAllTurns,
   allAssistantsCollapsed,
   onToggleAllAssistants,
+  rowFilter,
+  onRowFilterChange,
+  rowCounts,
   searchQuery,
   onSearchQueryChange,
   t,
@@ -52,6 +63,7 @@ export function TrajectoryToolbar({
     <div className={css.root} role="toolbar" aria-label={t('toolbar.aria')}>
       <div className={css.inner}>
         <div className={css.actions}>
+          <TrajectoryRowFilterChips value={rowFilter} counts={rowCounts} onChange={onRowFilterChange} t={t} />
           <button
             type="button"
             className={css.toggle}
