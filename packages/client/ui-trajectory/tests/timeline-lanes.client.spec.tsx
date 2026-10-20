@@ -15,7 +15,7 @@ const span = (index: number, start: number, end: number, lane = 2): TrajectoryTi
   index, start, end, lane, kind: 'tool', isError: false, label: `s${index}`, toolName: 'bash',
 })
 const modelOf = (spans: TrajectoryTimelineSpan[]): TrajectoryTimelineModel => ({
-  start: 0, end: Math.max(...spans.map(s => s.end)), spans, turnBoundaries: [], subagents: [],
+  start: 0, end: Math.max(...spans.map(s => s.end)), spans, turnBoundaries: [], subagents: [], wallToDomain: t => t,
 })
 
 describe('packTimelineTracks', () => {

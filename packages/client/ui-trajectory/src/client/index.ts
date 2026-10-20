@@ -30,6 +30,11 @@ import { TrajectoryView, type TrajectoryViewInjected } from './TrajectoryView.ts
 
 export type { TrajectoryKey } from './locales.ts'
 export type {
+  AgentTreeProjectionLike,
+  AgentTreeRow,
+  AgentTreeStatus,
+} from './trajectory-agent-tree.ts'
+export type {
   TrajectorySubagentInfo,
   TrajectorySubagentLifecycle,
   TrajectorySubagentPhase,
