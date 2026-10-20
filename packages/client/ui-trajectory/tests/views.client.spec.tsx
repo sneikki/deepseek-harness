@@ -681,6 +681,10 @@ describe('tab switching in ConversationRoot', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '收起所有调用' }))
     expect(screen.getByText('1 个工具调用 · bash')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '请求 #1' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /^工具/ }))
+    expect((screen.getByRole('button', { name: '展开所有调用' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('activates only the selected standalone compaction section', async () => {

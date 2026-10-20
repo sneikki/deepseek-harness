@@ -451,11 +451,12 @@ export function TrajectoryView({
         turn.groups.reduce(
           (count, group) =>
             count + group.cells.filter(cell =>
-              cell.requestOnly !== true && cell.kind !== 'system').length,
+              cell.requestOnly !== true && cell.kind !== 'system'
+              && !noise.hidden.has(cell.index)).length,
           0,
         ) > 1)
       .flatMap(turn => turn.turn === null ? [] : [turn.turn]),
-    [timelineTurns],
+    [timelineTurns, noise],
   )
   const allTurnsCollapsed = collapsibleTurnIds.length > 0
     && collapsibleTurnIds.every(turn => collapsedTurns.has(turn))

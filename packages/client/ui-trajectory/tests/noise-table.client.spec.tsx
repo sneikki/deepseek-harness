@@ -63,6 +63,41 @@ describe('TrajectoryTable with hidden rows', () => {
     render(ledger({ collapsedAssistants: new Set([id]) }, layout))
     expect(screen.queryAllByRole('row', { name: /TOOL/ })).toHaveLength(0)
     expect(screen.getByText('2 tool calls · bash, edit')).toBeTruthy()
+    // the summary line carries the request label and inspector button
+    expect(screen.getByRole('button', { name: 'Request #1' })).toBeTruthy()
+  })
+
+  it('merges consecutive hidden steps into one line and unfolds them together', () => {
+    const step = (n: number, base: number, tool: string): TrajectoryTurnModel['groups'][number] => ({
+      title: `Step ${n}`,
+      cells: [
+        { index: base, kind: 'message', text: only, timeSeconds: 1, sourceSeq: base },
+        { index: base + 1, kind: 'tool', text: tool, toolName: tool, timeSeconds: 0.1, sourceSeq: base + 1, outputDetail: 'x' },
+      ],
+    })
+    const layout: readonly TrajectoryTurnModel[] = [{
+      turn: 1,
+      groups: [step(1, 1, 'bash'), step(2, 3, 'bash'), step(3, 5, 'mcp__moonshine__store')],
+    }]
+    const ids = [1, 3, 5].map(index => trajectoryRecordId(layout[0]!.groups.flatMap(g => g.cells).find(c => c.index === index)!))
+    const toggled: string[] = []
+    render(ledger({
+      collapsedAssistants: new Set(ids),
+      onToggleAssistant: id => toggled.push(id),
+      hiddenIndexes: new Set([1, 3, 5]),
+      requestNumbers: [1, 2, 3].map(n => ({ turn: 1, step: n, group: `Step ${n}`, number: n })),
+    }, layout))
+    const line = screen.getByText('3 tool calls · bash ×2, moonshine store')
+    fireEvent.click(line)
+    expect(toggled).toEqual(ids)
+  })
+
+  it('counts only shown rows in a folded turn summary', () => {
+    render(ledger({
+      collapsedTurns: new Set([1]),
+      hiddenIndexes: new Set([1]),
+    }))
+    expect(screen.getByText(/1 step · 1 tool call$/)).toBeTruthy()
   })
 
   it('opens the request inspector with the hidden assistant usage', () => {

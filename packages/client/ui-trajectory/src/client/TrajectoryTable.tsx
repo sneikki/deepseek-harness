@@ -143,6 +143,9 @@ interface TableRecord {
   turnEnd: boolean
   collapsedSummary?: string
   collapsedSummaryKind?: 'turn' | 'assistant'
+  /** Hidden-assistant fold lines merge with their neighbours; these are the merged parts. */
+  foldedAssistantIds?: readonly string[]
+  foldedCalls?: readonly TableRecord[]
 }
 
 interface VirtualRowStructure {
@@ -578,14 +581,15 @@ function requestIdentity(request: TrajectoryRequestNumber): string {
 function indexRequestBoundaries(
   records: readonly TableRecord[],
   requestGroups: ReadonlySet<string>,
-): ReadonlyMap<string, number> {
-  const boundaries = new Map<string, number>()
+): ReadonlyMap<string, string> {
+  const boundaries = new Map<string, string>()
   for (const record of records) {
+    if (record.collapsedSummaryKind === 'turn') continue
     const key = requestKey(record.turn, record.group)
     if (!requestGroups.has(key)) continue
     if (boundaries.has(key)) continue
     if (record.cell.kind === 'user' || record.cell.kind === 'context') continue
-    boundaries.set(key, record.cell.index)
+    boundaries.set(key, trajectoryVirtualRecordKey(record))
   }
   return boundaries
 }
@@ -652,6 +656,7 @@ function collapseTurnRecords(
   records: readonly TableRecord[],
   collapsedTurns: ReadonlySet<number>,
   requestGroups: ReadonlySet<string>,
+  hidden: ReadonlySet<number> | null,
   t: TrajectoryTranslate,
 ): TableRecord[] {
   const recordsByTurn = new Map<number, TableRecord[]>()
@@ -666,7 +671,8 @@ function collapseTurnRecords(
     const turnRecords = recordsByTurn.get(record.turn) ?? [record]
     if (record.cell.requestOnly === true || record.cell.kind === 'system') return [record]
     const contentRecords = turnRecords.filter(candidate =>
-      candidate.cell.requestOnly !== true && candidate.cell.kind !== 'system')
+      candidate.cell.requestOnly !== true && candidate.cell.kind !== 'system'
+      && hidden?.has(candidate.cell.index) !== true)
     if (contentRecords.length <= 1) return [record]
     if (record.cell.index !== contentRecords[0]?.cell.index) return []
     return [
@@ -699,14 +705,24 @@ function assistantToolCalls(
   return calls
 }
 
+/** `mcp__server__tool` reads as `server tool`. */
+function displayToolName(name: string): string {
+  const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
+  return mcp === null ? name : `${mcp[1]} ${mcp[2]}`
+}
+
 function summarizeAssistantTools(
   records: readonly TableRecord[],
   t: TrajectoryTranslate,
 ): string {
-  const names = [...new Set(records.map((record) => {
+  const counts = new Map<string, number>()
+  for (const record of records) {
     const separator = record.cell.text.indexOf(' · ')
-    return separator === -1 ? record.cell.text : record.cell.text.slice(0, separator)
-  }).filter(name => name !== ''))]
+    const name = separator === -1 ? record.cell.text : record.cell.text.slice(0, separator)
+    if (name !== '') counts.set(name, (counts.get(name) ?? 0) + 1)
+  }
+  const names = [...counts].map(([name, count]) =>
+    count > 1 ? `${displayToolName(name)} ×${count}` : displayToolName(name))
   const count = records.length
   const summary = t(count === 1 ? 'summary.toolCalls.one' : 'summary.toolCalls.other', { count })
   return names.length > 0 ? `${summary} · ${names.join(', ')}` : summary
@@ -715,12 +731,14 @@ function summarizeAssistantTools(
 function collapseAssistantRecords(
   records: readonly TableRecord[],
   collapsedAssistants: ReadonlySet<string>,
+  hidden: ReadonlySet<number> | null,
   t: TrajectoryTranslate,
 ): TableRecord[] {
   const out: TableRecord[] = []
   for (let i = 0; i < records.length; i++) {
     const record = records[i]
     if (record === undefined) continue
+    const previous = out.at(-1)
     out.push(record)
     if (
       record.cell.kind !== 'message'
@@ -738,6 +756,22 @@ function collapseAssistantRecords(
     }
     if (calls.length === 0) continue
     const last = calls.at(-1)
+    const id = trajectoryRecordId(record.cell)
+    const hiddenStep = hidden?.has(record.cell.index) === true
+    if (hiddenStep && previous?.foldedCalls !== undefined && previous.collapsedSummaryKind === 'assistant') {
+      // Consecutive hidden-assistant steps fold into one line.
+      const allCalls = [...previous.foldedCalls, ...calls]
+      out.pop()
+      out[out.length - 1] = {
+        ...previous,
+        turnEnd: last?.turnEnd ?? false,
+        collapsedSummary: summarizeAssistantTools(allCalls, t),
+        foldedAssistantIds: [...previous.foldedAssistantIds ?? [], id],
+        foldedCalls: allCalls,
+      }
+      i += calls.length
+      continue
+    }
     out[out.length - 1] = { ...record, turnEnd: false }
     out.push({
       ...record,
@@ -746,6 +780,7 @@ function collapseAssistantRecords(
       turnEnd: last?.turnEnd ?? false,
       collapsedSummary: summarizeAssistantTools(calls, t),
       collapsedSummaryKind: 'assistant',
+      ...(hiddenStep ? { foldedAssistantIds: [id], foldedCalls: calls } : {}),
     })
     i += calls.length
   }
@@ -2194,11 +2229,6 @@ export function TrajectoryTable({
     () => hideRecords(allRecords, hiddenIndexes, rowFilter),
     [allRecords, hiddenIndexes, rowFilter],
   )
-  // The request label lands on the first shown row of its step.
-  const requestBoundaries = useMemo(
-    () => indexRequestBoundaries(shownRecords, requestGroups),
-    [shownRecords, requestGroups],
-  )
   const requestNumbers = useMemo(
     () => indexRequestNumbers(sessionRequestNumbers),
     [sessionRequestNumbers],
@@ -2208,15 +2238,21 @@ export function TrajectoryTable({
     if (rowFilter !== 'all') return shownRecords
     const turnRecords = collapsedTurns.size === 0
       ? allRecords
-      : collapseTurnRecords(allRecords, collapsedTurns, requestGroups, t)
+      : collapseTurnRecords(allRecords, collapsedTurns, requestGroups, hiddenIndexes, t)
     const folded = collapsedAssistants.size === 0
       ? turnRecords
-      : collapseAssistantRecords(turnRecords, collapsedAssistants, t)
+      : collapseAssistantRecords(turnRecords, collapsedAssistants, hiddenIndexes, t)
     return hideRecords(folded, hiddenIndexes, rowFilter)
   }, [
     allRecords, shownRecords, collapsedAssistants, collapsedTurns, hiddenIndexes,
     requestGroups, rowFilter, searchMatchIndexes, t,
   ])
+  // The request label lands on the first row actually shown for its step,
+  // which is the fold summary when the step's assistant row is hidden.
+  const requestBoundaries = useMemo(
+    () => indexRequestBoundaries(records, requestGroups),
+    [records, requestGroups],
+  )
   const projectedVirtualRows = useMemo(
     () => groupTrajectoryVirtualRows(records),
     [records],
@@ -2287,6 +2323,11 @@ export function TrajectoryTable({
       terminalRequestBoundary:
         record.cell.requestOnly === true && position === records.length - 1,
     }))
+  const toggleFolded = (record: TableRecord) => {
+    for (const id of record.foldedAssistantIds ?? [trajectoryRecordId(record.cell)]) {
+      onToggleAssistant(id)
+    }
+  }
   const requestBoundaryRuns = useMemo(
     () => indexRequestBoundaryRuns(records, requestGroups),
     [records, requestGroups],
@@ -2493,7 +2534,13 @@ export function TrajectoryTable({
     if (id === null) return
     const position = records.findIndex(record =>
       trajectoryRecordId(record.cell) === id && record.collapsedSummary === undefined)
-    if (position === -1) return
+    if (position === -1) {
+      // A row that is hidden outright never appears; folded rows may unfold later.
+      if (!shownRecords.some(record => trajectoryRecordId(record.cell) === id)) {
+        pendingScrollRecordId.current = null
+      }
+      return
+    }
     if (virtualizationEnabled) {
       const virtualIndex = virtualIndexByRecordId.get(id)
       if (virtualIndex === undefined) return
@@ -2512,7 +2559,7 @@ export function TrajectoryTable({
     if (row !== undefined && row !== null && typeof row.scrollIntoView === 'function') {
       row.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [records, rowVirtualizer, virtualIndexByRecordId, virtualizationEnabled])
+  }, [records, shownRecords, rowVirtualizer, virtualIndexByRecordId, virtualizationEnabled])
   useEffect(() => {
     if (timelineFocusIndexes === null || timelineFocusIndexes.size === 0) return
     const focusedPositions = records.flatMap((record, position) =>
@@ -2726,8 +2773,7 @@ export function TrajectoryTable({
                   const isInitialSystem = record.cell.kind === 'system'
                 && record.cell.index === allRecords[0]?.cell.index
                   const key = requestKey(record.turn, record.group)
-                  const request = requestBoundaries.get(key) === record.cell.index
-                && !isCollapsedSummary
+                  const request = requestBoundaries.get(key) === trajectoryVirtualRecordKey(record)
                 && (record.turn === null || !collapsedTurns.has(record.turn))
                     ? requestNumbers.get(key)
                     : undefined
@@ -2799,7 +2845,7 @@ export function TrajectoryTable({
                           ? () => {
                             if (record.collapsedSummaryKind === 'turn' && record.turn !== null) {
                               onToggleTurn(record.turn)
-                            } else onToggleAssistant(trajectoryRecordId(record.cell))
+                            } else toggleFolded(record)
                           }
                           : () => { selectRecord(record.cell.index) }}
                       onDoubleClick={(event) => {
@@ -2833,7 +2879,7 @@ export function TrajectoryTable({
                         if (isCollapsedSummary) {
                           if (record.collapsedSummaryKind === 'turn' && record.turn !== null) {
                             onToggleTurn(record.turn)
-                          } else onToggleAssistant(trajectoryRecordId(record.cell))
+                          } else toggleFolded(record)
                           return
                         }
                         selectRecord(record.cell.index)

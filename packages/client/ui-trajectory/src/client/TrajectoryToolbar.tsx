@@ -102,6 +102,8 @@ export function TrajectoryToolbar({
             aria-label={allTurnsCollapsed ? t('toolbar.expandTurns') : t('toolbar.collapseTurns')}
             aria-pressed={allTurnsCollapsed}
             title={allTurnsCollapsed ? t('toolbar.expandTurns') : t('toolbar.collapseTurns')}
+            disabled={rowFilter !== 'all'}
+            style={rowFilter === 'all' ? undefined : { opacity: 0.4, cursor: 'default' }}
             onClick={onToggleAllTurns}
           >
             <span className={css.actionIcon} aria-hidden="true">
@@ -115,6 +117,8 @@ export function TrajectoryToolbar({
             aria-label={allAssistantsCollapsed ? t('toolbar.expandCalls') : t('toolbar.collapseCalls')}
             aria-pressed={allAssistantsCollapsed}
             title={allAssistantsCollapsed ? t('toolbar.expandCalls') : t('toolbar.collapseCalls')}
+            disabled={rowFilter !== 'all'}
+            style={rowFilter === 'all' ? undefined : { opacity: 0.4, cursor: 'default' }}
             onClick={onToggleAllAssistants}
           >
             <span className={css.actionIcon} aria-hidden="true">
