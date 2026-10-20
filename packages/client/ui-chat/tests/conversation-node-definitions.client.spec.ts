@@ -521,7 +521,7 @@ describe('built-in conversation node Definitions', () => {
         turn: 1, step: 1, callId: 'call-subagent', name: 'subagent_fork', arguments: '{}',
       }),
       at(7, 'tool/result', {
-        turn: 1, step: 1, message: toolResult('call-subagent', 'delegation done'),
+        turn: 1, step: 1, message: toolResult('call-subagent', 'delegation done', true),
       }, { surfaceOp: 'append' }),
       at(8, 'step/end', { turn: 1, step: 1 }),
       at(9, 'step/start', { turn: 1, step: 2 }),
@@ -536,6 +536,7 @@ describe('built-in conversation node Definitions', () => {
       messageCount: 1,
       toolCallCount: 1,
       subagentCount: 1,
+      activity: ['review', 'error'],
     })
   })
 

@@ -8,7 +8,7 @@ import type {} from '@deepseek-ai/dsh-tools/types'
 import { hasAssistantReplyContent } from '../contract/assistant-content.ts'
 import type { AssistantChatData, ChatNode, FinalAssistantChatData } from '../contract/chat-nodes.ts'
 import {
-  isSubagentDelegationTool, sameTurnProcessSpec, type TurnProcessSpec,
+  isSubagentDelegationTool, sameTurnProcessSpec, turnActivityOf, type TurnActivity, type TurnProcessSpec,
 } from '../contract/turn-process.ts'
 import { CHAT_SYNTHETIC_SEQ_OFFSETS, chatNode } from './common.ts'
 import { toAssistantBlocks } from './event-projection.ts'
@@ -36,6 +36,8 @@ interface TurnProcessState {
   readonly messageCount: number
   readonly toolCallCount: number
   readonly subagentCount: number
+  readonly callIds: readonly string[]
+  readonly activity: readonly TurnActivity[]
 }
 
 type ConversationEvent = Parameters<ConversationNodeDefinition['match']>[0]
@@ -103,6 +105,8 @@ function fallbackState(context: ConversationNodeContext<TurnProcessState>): Turn
     messageCount: 0,
     toolCallCount: 0,
     subagentCount: 0,
+    callIds: [],
+    activity: [],
   }
   for (const match of context.matches) state = updateProcessState(state, match.event)
   return state
@@ -133,6 +137,7 @@ function processSpec(state: TurnProcessState, turn: TurnLocation): TurnProcessSp
         .reduce((total, [, count]) => total + count, 0),
     toolCallCount: state.toolCallCount,
     subagentCount: state.subagentCount,
+    activity: state.activity,
   }
   if (answer === null) {
     return {
@@ -182,6 +187,14 @@ function updateProcessState(state: TurnProcessState, event: ConversationEvent): 
       ...current,
       toolCallCount: current.toolCallCount + (subagent ? 0 : 1),
       subagentCount: current.subagentCount + (subagent ? 1 : 0),
+      callIds: [...current.callIds, event.data.callId],
+      activity: [...current.activity, turnActivityOf(event.data.name)],
+    }
+  }
+  if (event.type === 'tool/result' && event.data.message.isError === true) {
+    const index = current.callIds.indexOf(String(event.data.message.source.callId))
+    if (index >= 0 && current.activity[index] !== 'error') {
+      current = { ...current, activity: current.activity.with(index, 'error') }
     }
   }
   const evidence = processEvidence(event)
@@ -234,6 +247,8 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       messageCount: 0,
       toolCallCount: 0,
       subagentCount: 0,
+      callIds: [],
+      activity: [],
     }
   },
   update: (context, match) => updateProcessState(context.state, match.event),
@@ -260,6 +275,7 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       && current.data.messageCount === state.messageCount
       && current.data.toolCallCount === state.toolCallCount
       && current.data.subagentCount === state.subagentCount
+      && current.data.activity === state.activity
       && turn.status !== 'closed'
       && latestStep?.status !== 'closed') return previous
     const spec = processSpec(state, turn)
@@ -288,6 +304,7 @@ export const turnProcessDefinition: ConversationNodeDefinition<TurnProcessState>
       && current.data.messageCount === state.messageCount
       && current.data.toolCallCount === state.toolCallCount
       && current.data.subagentCount === state.subagentCount
+      && current.data.activity === state.activity
       && turn.status !== 'closed'
       && turn.steps.at(-1)?.status !== 'closed'
       && current.location === (context.start?.location ?? context.matches[0]?.location)) return current
