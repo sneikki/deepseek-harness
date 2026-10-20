@@ -11,11 +11,16 @@ import {
   TrajectoryCell as LocalizedTrajectoryCell,
   type TrajectoryCellKind,
 } from '../src/client/TrajectoryCell.tsx'
-import { formatDurationMillis as formatDurationMillisWithLocale } from '../src/client/trajectory-record.ts'
+import {
+  formatDurationMillis as formatDurationMillisWithLocale,
+  formatClock,
+  formatTurnDuration as formatTurnDurationWithLocale,
+} from '../src/client/trajectory-record.ts'
 import { t } from './locale.client.ts'
 
 const formatDurationMillis = (value: number | null) => formatDurationMillisWithLocale(value, t)
 const formatElapsedSeconds = (value: number | null) => formatElapsedSecondsWithLocale(value, t)
+const formatTurnDuration = (value: number) => formatTurnDurationWithLocale(value, t)
 
 function TrajectoryCell(props: Omit<ComponentProps<typeof LocalizedTrajectoryCell>, 't'>) {
   return <LocalizedTrajectoryCell {...props} t={t} />
@@ -47,6 +52,25 @@ describe('formatElapsedSeconds', () => {
     expect(formatElapsedSeconds(0.5)).toBe('500 ms')
     expect(formatElapsedSeconds(1.5)).toBe('1,500 ms')
     expect(formatElapsedSeconds(Number.NaN)).toBe('—')
+  })
+})
+
+describe('formatTurnDuration', () => {
+  it('picks ms, seconds or minutes by magnitude', () => {
+    expect(formatTurnDuration(820)).toBe('820 ms')
+    expect(formatTurnDuration(12_400)).toBe('12 s')
+    expect(formatTurnDuration(185_000)).toBe('3 min 5 s')
+  })
+
+  it('rounds to whole seconds before splitting units', () => {
+    expect(formatTurnDuration(59_960)).toBe('1 min 0 s')
+    expect(formatTurnDuration(119_600)).toBe('2 min 0 s')
+    expect(formatTurnDuration(3_599_700)).toBe('1 h 0 min')
+    expect(formatTurnDuration(3_720_000)).toBe('1 h 2 min')
+  })
+
+  it('formats a clock label with zero padding', () => {
+    expect(formatClock(new Date(2026, 9, 12, 7, 5).getTime(), t)).toBe('07:05')
   })
 })
 

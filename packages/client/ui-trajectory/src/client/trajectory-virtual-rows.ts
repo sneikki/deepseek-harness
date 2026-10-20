@@ -3,7 +3,9 @@
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import { trajectoryRecordId } from './trajectory-record.ts'
 
-const CONTENT_ROW_HEIGHT = 30
+export const CONTENT_ROW_HEIGHT = 30
+/** A turn's first row carries the turn header above its content line; the table feeds this to CSS. */
+export const TURN_START_ROW_HEIGHT = 72
 const COLLAPSED_SUMMARY_HEIGHT = 20
 const TERMINAL_BOUNDARY_HEIGHT = 9
 
@@ -11,6 +13,7 @@ const TERMINAL_BOUNDARY_HEIGHT = 9
 export interface VirtualizableTrajectoryRecord {
   cell: TrajectoryCellProps
   collapsedSummaryKind?: 'turn' | 'assistant'
+  turnStart?: boolean
 }
 
 /** One logical record retained inside a measurable virtual row. */
@@ -64,9 +67,9 @@ export function groupTrajectoryVirtualRows<T extends VirtualizableTrajectoryReco
     pending = []
     rows.push({
       entries,
-      height: record.collapsedSummaryKind === undefined
-        ? CONTENT_ROW_HEIGHT
-        : COLLAPSED_SUMMARY_HEIGHT,
+      height: record.collapsedSummaryKind !== undefined
+        ? COLLAPSED_SUMMARY_HEIGHT
+        : record.turnStart === true ? TURN_START_ROW_HEIGHT : CONTENT_ROW_HEIGHT,
       key: trajectoryVirtualRecordKey(record),
     })
   }

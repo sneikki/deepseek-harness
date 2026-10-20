@@ -54,6 +54,12 @@ describe('trajectory virtual rows', () => {
     })
   })
 
+  it('gives a turn-start row the turn-header height', () => {
+    const first = { ...record(1, { sourceSeq: 10 }), turnStart: true }
+
+    expect(groupTrajectoryVirtualRows([first])[0]?.height).toBe(72)
+  })
+
   it('uses the rendered collapsed-summary height', () => {
     const summary = record(1, { sourceSeq: 10 }, 'turn')
 

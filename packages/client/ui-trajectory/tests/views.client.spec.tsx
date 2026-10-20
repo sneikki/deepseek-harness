@@ -733,8 +733,8 @@ describe('tab switching in ConversationRoot', () => {
 
     const firstRequest = screen.getByRole('button', { name: '请求 #2 · 压缩' })
     const secondRequest = screen.getByRole('button', { name: '请求 #4 · 压缩' })
-    const firstSection = firstRequest.closest('tr')?.querySelector('span')
-    const secondSection = secondRequest.closest('tr')?.querySelector('span')
+    const firstSection = firstRequest.closest('tr')?.querySelector('[aria-label="轮次之间"]')
+    const secondSection = secondRequest.closest('tr')?.querySelector('[aria-label="轮次之间"]')
     expect(firstSection?.textContent).toBe('轮次之间')
     expect(secondSection?.textContent).toBe('轮次之间')
 

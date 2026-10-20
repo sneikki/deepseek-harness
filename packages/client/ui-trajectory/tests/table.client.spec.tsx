@@ -885,7 +885,7 @@ describe('TrajectoryTable', () => {
       />,
     )
     const tablePane = screen.getByRole('table').parentElement as HTMLElement
-    tablePane.scrollTop = 5_000
+    tablePane.scrollTop = 50_000
     fireEvent.scroll(tablePane)
 
     await waitFor(() => {
@@ -1103,12 +1103,66 @@ describe('TrajectoryTable', () => {
     )).toBeTruthy()
   })
 
-  it('keeps a compact turn label available for narrow layouts', () => {
-    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
-    const turnLabel = screen.getByLabelText('Turn 1')
+  it('heads a turn with its label and start-time, duration and tool-count chips', () => {
+    const turns: readonly TrajectoryTurnModel[] = [{
+      turn: 7,
+      groups: [{
+        title: 'Step 1',
+        cells: [
+          {
+            index: 1, kind: 'user', text: 'Do it', timeSeconds: 0, startedAt: Date.UTC(2026, 9, 12, 10, 0, 0),
+          },
+          {
+            index: 2, kind: 'tool', text: 'bash · {"command":"pwd"}', outputDetail: 'ok',
+            timeSeconds: 12.4, startedAt: Date.UTC(2026, 9, 12, 10, 0, 0),
+          },
+        ],
+      }],
+    }]
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
-    expect(turnLabel.textContent).toContain('Turn 1')
-    expect(turnLabel.textContent).toContain('#1')
+    expect(screen.getByLabelText('Turn 7').textContent).toBe('Turn 7')
+    expect(screen.getByText('12 s')).toBeTruthy()
+    expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeTruthy()
+    expect(screen.getByText('tools 1')).toBeTruthy()
+  })
+
+  it('hides the duration chip while the turn still runs', () => {
+    const turns: readonly TrajectoryTurnModel[] = [{
+      turn: 1,
+      groups: [{
+        title: 'Step 1',
+        cells: [
+          { index: 1, kind: 'user', text: 'Do it', timeSeconds: 0, startedAt: 1_000_000 },
+          { index: 2, kind: 'tool', text: 'bash', timeSeconds: 5, startedAt: 1_000_000 },
+        ],
+      }],
+    }]
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+
+    expect(screen.getByText('tools 1')).toBeTruthy()
+    expect(screen.queryByText('5 s')).toBeNull()
+  })
+
+  it('hides the chips of a partly loaded first turn', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    const turns: readonly TrajectoryTurnModel[] = [{
+      turn: 4,
+      groups: [{
+        title: 'Step 1',
+        cells: [
+          { index: 1, kind: 'user', text: 'Do it', timeSeconds: 0, startedAt: 1_000_000 },
+          {
+            index: 2, kind: 'tool', text: 'bash', outputDetail: 'ok', timeSeconds: 5,
+            startedAt: 1_000_000,
+          },
+        ],
+      }],
+    }]
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} hasOlderRecords />)
+
+    expect(screen.getByLabelText('Turn 4')).toBeTruthy()
+    expect(screen.queryByText('tools 1')).toBeNull()
   })
 
   it('renders a single-text JSON tool result as a JSON tree', () => {

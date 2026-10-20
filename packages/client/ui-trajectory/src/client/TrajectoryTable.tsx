@@ -31,9 +31,12 @@ import type {
 import type {
   AssistantMetricDetail, TrajectoryCellKind, TrajectoryCellProps, TrajectorySourceBlock,
 } from './trajectory-record.ts'
-import { formatElapsedSeconds, trajectoryRecordId } from './trajectory-record.ts'
 import {
-  groupTrajectoryVirtualRows, trajectoryVirtualRecordKey,
+  formatClock, formatElapsedSeconds, formatTurnDuration, trajectoryRecordId,
+} from './trajectory-record.ts'
+import {
+  CONTENT_ROW_HEIGHT, groupTrajectoryVirtualRows, TURN_START_ROW_HEIGHT,
+  trajectoryVirtualRecordKey,
 } from './trajectory-virtual-rows.ts'
 import type { TrajectoryVirtualRow } from './trajectory-virtual-rows.ts'
 import type { TrajectoryTurnModel } from './layout.ts'
@@ -597,6 +600,57 @@ function indexRequestBoundaries(
 function sectionLabel(turn: number | null, t: TrajectoryTranslate): string {
   return turn === null ? t('section.betweenTurns') : t('turn.label', { turn })
 }
+
+interface TurnStats {
+  /** Epoch ms of the earliest known record start. */
+  start: number | null
+  /** Wall-clock span from the first start to the latest known record end. */
+  durationMs: number | null
+  tools: number
+  /** Some record of the turn is still running, so its span is not final. */
+  running: boolean
+  /** The turn's earlier records are not loaded yet (partial span and count). */
+  partial: boolean
+}
+
+/** Per-turn start time, duration and Tool-call count for the turn header chips. */
+function indexTurnStats(
+  records: readonly TableRecord[],
+  hasOlderRecords: boolean,
+): ReadonlyMap<number, TurnStats> {
+  const acc = new Map<number, {
+    start: number | null
+    end: number | null
+    tools: number
+    running: boolean
+  }>()
+  for (const record of records) {
+    const { turn, cell } = record
+    if (turn === null) continue
+    const entry = acc.get(turn) ?? { start: null, end: null, tools: 0, running: false }
+    acc.set(turn, entry)
+    if (cell.kind === 'tool') entry.tools += 1
+    if (stateOf(record) === 'running') entry.running = true
+    if (typeof cell.startedAt !== 'number') continue
+    const end = cell.startedAt + (cell.timeSeconds ?? 0) * 1000
+    entry.start = entry.start === null ? cell.startedAt : Math.min(entry.start, cell.startedAt)
+    entry.end = entry.end === null ? end : Math.max(entry.end, end)
+  }
+  const firstTurn = records.find(record => record.turn !== null)?.turn
+  return new Map([...acc].map(([turn, { start, end, tools, running }]) => [turn, {
+    start,
+    durationMs: start === null || end === null ? null : end - start,
+    tools,
+    running,
+    partial: hasOlderRecords && turn === firstTurn,
+  }]))
+}
+
+/** A turn's first row is its header plus a content line; CSS reads both heights from the row. */
+const TURN_START_ROW_STYLE = {
+  '--trajectory-head': `${TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT}px`,
+  '--trajectory-row-height': `${TURN_START_ROW_HEIGHT}px`,
+} as CSSProperties
 
 function indexRequestNumbers(
   sessionNumbers: readonly TrajectoryRequestNumber[] | undefined,
@@ -1162,6 +1216,58 @@ function RecordPresentation({
   })
 }
 
+function SummaryDotsIcon(): ReactNode {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+      <circle cx="2" cy="5" r="1" />
+      <circle cx="5" cy="5" r="1" />
+      <circle cx="8" cy="5" r="1" />
+    </svg>
+  )
+}
+
+/** 16px tinted circle with the kind's glyph; tone comes from the enclosing `data-kind` scope. */
+function KindGlyph({ kind, t }: { kind: TrajectoryCellKind; t: TrajectoryTranslate }) {
+  return (
+    <span className={css.glyph} data-role-kind={kind}>
+      <Tooltip label={t(KIND_LABEL_KEY[kind])} side="right">
+        <span className={css.glyphIcon} aria-hidden="true">{KIND_ICON[kind]}</span>
+      </Tooltip>
+    </span>
+  )
+}
+
+/** Section header above a turn's first row: `Turn N` plus start time, duration and tool-count chips. */
+function TurnHeader({ turn, stats, active, t }: {
+  turn: number | null
+  stats: TurnStats | undefined
+  active: boolean
+  t: TrajectoryTranslate
+}) {
+  const label = sectionLabel(turn, t)
+  const complete = stats?.partial === true ? undefined : stats
+  return (
+    <div className={css.turnHead}>
+      <span
+        className={active ? `${css.turnLabel} ${css.turnLabelActive}` : css.turnLabel}
+        aria-label={label}
+      >
+        {label}
+      </span>
+      {complete?.start != null && (
+        <span className={css.chip}>{formatClock(complete.start, t)}</span>
+      )}
+      {complete?.durationMs != null && complete.durationMs > 0 && !complete.running && (
+        <span className={css.chip}>{formatTurnDuration(complete.durationMs, t)}</span>
+      )}
+      {complete !== undefined && complete.tools > 0 && (
+        <span className={css.chip}>{t('turn.tools', { count: complete.tools })}</span>
+      )}
+      <span className={css.turnRule} aria-hidden="true" />
+    </div>
+  )
+}
+
 function RecordListText({
   displayText,
   toolCallOnly,
@@ -1176,10 +1282,7 @@ function RecordListText({
   if (toolCallText === undefined) return displayText || '—'
   return (
     <>
-      <span className={css.toolCallNameTypeface}>
-        {toolCallText.program && <IconCodeOutlineRegular className={css.programIcon} size={12} />}
-        {toolCallText.name || '—'}
-      </span>
+      {toolCallText.program && <IconCodeOutlineRegular className={css.programIcon} size={12} />}
       {toolCallText.args !== undefined && (
         <span className={toolCallText.program ? css.programSummary : css.toolCallPayload}>
           {toolCallText.args}
@@ -2234,6 +2337,10 @@ export function TrajectoryTable({
     () => indexRequestNumbers(sessionRequestNumbers),
     [sessionRequestNumbers],
   )
+  const turnStats = useMemo(
+    () => indexTurnStats(allRecords, hasOlderRecords),
+    [allRecords, hasOlderRecords],
+  )
   const records = useMemo(() => {
     if (searchMatchIndexes !== null) return filterRecords(allRecords, searchMatchIndexes)
     if (rowFilter !== 'all') return shownRecords
@@ -2771,8 +2878,6 @@ export function TrajectoryTable({
                 {({ displayText, listDisplayText, resultText, toolCallOnly, toolCallText }) => {
                   const isCollapsedSummary = record.collapsedSummary !== undefined
                   const isRequestOnly = record.cell.requestOnly === true
-                  const isInitialSystem = record.cell.kind === 'system'
-                && record.cell.index === allRecords[0]?.cell.index
                   const key = requestKey(record.turn, record.group)
                   const request = requestBoundaries.get(key) === trajectoryVirtualRecordKey(record)
                 && (record.turn === null || !collapsedTurns.has(record.turn))
@@ -2829,6 +2934,7 @@ export function TrajectoryTable({
                       data-terminal-request-boundary={terminalRequestBoundary || undefined}
                       data-group-start={record.groupStart || undefined}
                       data-turn-start={record.turnStart || undefined}
+                      style={record.turnStart ? TURN_START_ROW_STYLE : undefined}
                       data-error={record.cell.isError || undefined}
                       data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
                         ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
@@ -2908,113 +3014,75 @@ export function TrajectoryTable({
                             onDoubleClick={(event) => { event.stopPropagation() }}
                           />
                         )}
-                        {record.turn !== null
-                    && activeTurn === record.turn
-                    && !isInitialSystem && (
-                          <span className={css.turnRail} aria-hidden="true" />
-                        )}
                         {!isCollapsedSummary && selectedIndex === record.cell.index && (
                           <span className={css.selectionRail} aria-hidden="true" />
                         )}
-                        {!isCollapsedSummary
-                    && !isRequestOnly
-                    && record.turnStart && (
-                          <span
-                            className={sectionActive
-                              ? `${css.turnLabel} ${css.turnLabelActive}`
-                              : css.turnLabel}
-                            aria-label={sectionLabel(record.turn, t)}
-                          >
-                            {record.turn === null
-                              ? sectionLabel(record.turn, t)
-                              : (
-                                <>
-                                  <span className={css.turnLabelFull} aria-hidden="true">
-                                    {sectionLabel(record.turn, t)}
-                                  </span>
-                                  <span className={css.turnLabelCompact} aria-hidden="true">
-                                    #{record.turn}
-                                  </span>
-                                </>
-                              )}
+                        {!isCollapsedSummary && !isRequestOnly && (
+                          <span className={css.glyphSlot}>
+                            <KindGlyph kind={record.cell.kind} t={t} />
                           </span>
                         )}
-                        <div className={css.eventInner}>
-                          {!isCollapsedSummary && !isRequestOnly && (
-                            <span
-                              className={css.kindSlot}
-                            >
-                              <span
-                                className={`${css.kindTag} ${
-                                  record.cell.kind === 'system'
-                                    ? css.systemNeutral
-                                    : record.cell.kind === 'context'
-                                      ? css.contextGreen
-                                      : record.cell.kind === 'compacted'
-                                        ? css.compacted
-                                        : record.cell.kind === 'tool'
-                                          ? css.toolAmber
-                                          : record.cell.kind === 'message'
-                                            ? css.assistantVioletBright
-                                            : record.cell.kind === 'subtool'
-                                              ? css.subtoolAmber
-                                              : css[record.cell.kind]
-                                }`}
-                                data-role-kind={record.cell.kind}
-                              >
-                                <Tooltip
-                                  label={t(KIND_LABEL_KEY[record.cell.kind])}
-                                  side="right"
-                                >
-                                  <span className={css.kindTagIcon} aria-hidden="true">
-                                    {KIND_ICON[record.cell.kind]}
-                                  </span>
-                                </Tooltip>
-                                <span className={css.kindTagLabel}>
-                                  {t(KIND_LABEL_KEY[record.cell.kind])}
-                                </span>
-                              </span>
+                        {isCollapsedSummary && (
+                          <span className={css.glyphSlot}>
+                            <span className={css.glyph} aria-hidden="true">
+                              <SummaryDotsIcon />
                             </span>
-                          )}
-                        </div>
+                          </span>
+                        )}
                       </td>
                       <td className={css.content}>
+                        {!isCollapsedSummary
+                          && !isRequestOnly
+                          && record.turnStart && (
+                          <TurnHeader
+                            turn={record.turn}
+                            stats={record.turn === null ? undefined : turnStats.get(record.turn)}
+                            active={sectionActive}
+                            t={t}
+                          />
+                        )}
                         {isRequestOnly
                           ? null
                           : record.collapsedSummary !== undefined
                             ? (
                               <span className={css.collapsedTurnContent} title={record.collapsedSummary}>
-                                <span className={css.collapsedTurnEllipsis}>…</span>
                                 <span className={css.collapsedTurnText}>{record.collapsedSummary}</span>
                               </span>
                             )
                             : (
-                              <span
-                                className={resultText === undefined ? css.contentText : css.resultPreview}
-                                title={resultText === undefined
-                                  ? listDisplayText
-                                  : `${listDisplayText} → ${resultText}`}
-                              >
-                                <span className={resultText === undefined ? undefined : css.resultRequest}>
-                                  <RecordListText
-                                    displayText={displayText}
-                                    toolCallOnly={toolCallOnly}
-                                    toolCallText={toolCallText}
-                                    t={t}
-                                  />
+                              <div className={css.line}>
+                                <span
+                                  className={css.label}
+                                  title={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
+                                >
+                                  {displayToolName(toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind]))}
                                 </span>
-                                {resultText !== undefined && (
-                                  <span className={record.cell.isError ? `${css.inlineResult} ${css.error}` : css.inlineResult}>
-                                    <span className={css.arrow}>→</span>
-                                    <span className={resultText === t('record.noOutput')
-                                      ? `${css.inlineResultText} ${css.noOutputText}`
-                                      : css.inlineResultText}
-                                    >
-                                      {resultText}
-                                    </span>
+                                <span
+                                  className={resultText === undefined ? css.contentText : css.resultPreview}
+                                  title={resultText === undefined
+                                    ? listDisplayText
+                                    : `${listDisplayText} → ${resultText}`}
+                                >
+                                  <span className={resultText === undefined ? css.body : css.resultRequest}>
+                                    <RecordListText
+                                      displayText={displayText}
+                                      toolCallOnly={toolCallOnly}
+                                      toolCallText={toolCallText}
+                                      t={t}
+                                    />
                                   </span>
-                                )}
-                              </span>
+                                  {resultText !== undefined && (
+                                    <span className={record.cell.isError ? `${css.inlineResult} ${css.error}` : css.inlineResult}>
+                                      <span className={resultText === t('record.noOutput')
+                                        ? `${css.inlineResultText} ${css.noOutputText}`
+                                        : css.inlineResultText}
+                                      >
+                                        {resultText}
+                                      </span>
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
                             )}
                       </td>
                     </tr>
@@ -3138,27 +3206,28 @@ export function TrajectoryTable({
                 : promptSelected
                   ? (
                     <>
-                      <span className={`${css.kindTag} ${css.systemNeutral}`}>{t('kind.system')}</span>
+                      <span className={css.tone} data-kind="system">
+                        <KindGlyph kind="system" t={t} />
+                        <span className={css.toneLabel}>{t('kind.system')}</span>
+                      </span>
                       <span className={css.detailsLocation}>{selected?.cell.text}</span>
                     </>
                   )
                   : selected !== undefined && (
                     <>
-                      <span className={`${css.kindTag} ${
-                        selected.cell.kind === 'context'
-                          ? css.contextGreen
-                          : selected.cell.kind === 'compacted'
-                            ? css.compacted
-                            : selected.cell.kind === 'tool'
-                              ? css.toolAmber
-                              : selected.cell.kind === 'message'
-                                ? css.assistantVioletBright
-                                : selected.cell.kind === 'subtool'
-                                  ? css.subtoolAmber
-                                  : css[selected.cell.kind]
-                      }`}
+                      <span
+                        className={css.tone}
+                        data-kind={selected.cell.kind}
+                        data-activity={selected.cell.kind === 'tool' || selected.cell.kind === 'subtool'
+                          ? trajectoryActivityOf(selected.cell.toolName ?? '', selected.cell.isError)
+                          : undefined}
                       >
-                        {t(KIND_LABEL_KEY[selected.cell.kind])}
+                        <KindGlyph kind={selected.cell.kind} t={t} />
+                        <span className={css.toneLabel}>
+                          {selected.cell.toolName === undefined
+                            ? t(KIND_LABEL_KEY[selected.cell.kind])
+                            : displayToolName(selected.cell.toolName)}
+                        </span>
                       </span>
                       <span className={css.detailsLocation}>
                         {selected.cell.kind === 'compacted'

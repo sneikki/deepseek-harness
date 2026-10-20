@@ -145,3 +145,35 @@ export function formatElapsedSeconds(
 ): string {
   return formatDurationMillis(seconds === null ? null : seconds * 1000, t)
 }
+
+/**
+ * Format a turn's wall-clock duration compactly (`820 ms`, `12 s`, `3 min 5 s`, `1 h 2 min`).
+ * @param milliseconds - Duration in milliseconds.
+ * @param t - Trajectory locale translator.
+ * @returns the shortest readable duration label.
+ */
+export function formatTurnDuration(
+  milliseconds: number,
+  t: TrajectoryTranslate,
+): string {
+  if (milliseconds < 1000) return formatDurationMillis(milliseconds, t)
+  // Round once so no unit can read as 60 of the next.
+  const total = Math.round(milliseconds / 1000)
+  const part = (unit: 'hours' | 'minutes' | 'seconds', value: number) =>
+    t(`unit.${unit}`, { value: String(value) })
+  if (total < 60) return part('seconds', total)
+  if (total < 3600) return `${part('minutes', Math.floor(total / 60))} ${part('seconds', total % 60)}`
+  return `${part('hours', Math.floor(total / 3600))} ${part('minutes', Math.floor(total % 3600 / 60))}`
+}
+
+/**
+ * Format an epoch-millisecond start time as a 24-hour clock label in the viewer's time zone.
+ * @param epochMs - Unix epoch milliseconds.
+ * @param t - Trajectory locale translator.
+ * @returns the zero-padded clock label.
+ */
+export function formatClock(epochMs: number, t: TrajectoryTranslate): string {
+  const date = new Date(epochMs)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return t('unit.clock', { hour: pad(date.getHours()), minute: pad(date.getMinutes()) })
+}
