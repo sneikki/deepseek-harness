@@ -49,6 +49,7 @@ import {
   TrajectoryView, type TrajectoryViewInjected,
 } from '../src/client/TrajectoryView.tsx'
 import { createTrajectoryDurationStore } from '../src/client/duration-store.ts'
+import { createTrajectoryThinkingStore } from '../src/client/thinking-store.ts'
 import { EMPTY_TRAJECTORY_SNAPSHOT } from '../src/client/trajectory-snapshot-builder.ts'
 import type { TrajectorySnapshot } from '../src/client/trajectory-contract.ts'
 import { deriveTrajectoryTimeline } from '../src/client/timeline.ts'
@@ -162,12 +163,16 @@ function standaloneHistory(
 }
 
 function standaloneDuration(): Pick<
-  ComponentProps<typeof TrajectoryView>, 'useDuration' | 'setActualDuration'
+  ComponentProps<typeof TrajectoryView>,
+  'useDuration' | 'setActualDuration' | 'useThinking' | 'setShowThinking'
 > {
   const duration = createSnapshotStore(false)
+  const thinking = createSnapshotStore(true)
   return {
     useDuration: bindSnapshotSelector(duration),
     setActualDuration: (value) => { duration.set(value) },
+    useThinking: bindSnapshotSelector(thinking),
+    setShowThinking: (value) => { thinking.set(value) },
   }
 }
 
@@ -205,6 +210,7 @@ const useProjection: UseProjection = emptyProjection
 type StandaloneBaseProps = Omit<
   ComponentProps<typeof TrajectoryView>,
   'useSession' | 'useTrajectory' | 'useDuration' | 'loadOlder' | 'setActualDuration'
+  | 'useThinking' | 'setShowThinking'
 >
 
 /** Standalone view props: the session-scope standard kit the outlet would bake. */
@@ -391,6 +397,8 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
           loadImage: trajectory.loadImage,
           setActualDuration: trajectory.setActualDuration,
           useDuration: bindSnapshotSelector(trajectory.hooks.duration),
+          setShowThinking: trajectory.setShowThinking,
+          useThinking: bindSnapshotSelector(trajectory.hooks.thinking),
           t: tZh,
         }
       })()
@@ -1593,6 +1601,7 @@ describe('TrajectoryView state', () => {
     const first = render(
       <TrajectoryView
         {...commonProps}
+        {...standaloneDuration()}
         useDuration={bindSnapshotSelector(firstDuration)}
         setActualDuration={(value) => { firstDuration.set(value) }}
       />,
@@ -1608,6 +1617,7 @@ describe('TrajectoryView state', () => {
     render(
       <TrajectoryView
         {...commonProps}
+        {...standaloneDuration()}
         useDuration={bindSnapshotSelector(restoredDuration)}
         setActualDuration={(value) => { restoredDuration.set(value) }}
       />,
@@ -1617,6 +1627,51 @@ describe('TrajectoryView state', () => {
   })
 
 
+
+  it('hides thinking rows from the ledger and chip counts, and remembers the choice', () => {
+    localStorage.removeItem('dsh.trajectory.thinking')
+    const nodes = [
+      { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'go' }], source: null },
+      {
+        kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
+        blocks: [{ kind: 'reasoning', text: 'weigh the options' }, { kind: 'text', text: 'done' }],
+      },
+    ] as unknown as LegacyConversationSlice['nodes']
+    const thinkingRows = () => document.querySelectorAll('tr[data-kind="thinking"]').length
+    const messagesCount = () =>
+      screen.getByRole('button', { name: /^消息/ }).querySelector('span:last-child')?.textContent
+    const commonProps = {
+      ...standaloneProps(nodes),
+      ...standaloneHistory(historySnapshot(nodes)),
+    }
+    const mount = () => {
+      const thinking = createTrajectoryThinkingStore()
+      return render(
+        <TrajectoryView
+          {...commonProps}
+          {...standaloneDuration()}
+          useThinking={bindSnapshotSelector(thinking)}
+          setShowThinking={(value) => { thinking.set(value) }}
+        />,
+      )
+    }
+    const first = mount()
+    const toggle = screen.getByRole('button', { name: '思考' })
+
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    expect(thinkingRows()).toBe(1)
+    const shownCount = Number(messagesCount())
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    expect(thinkingRows()).toBe(0)
+    expect(Number(messagesCount())).toBe(shownCount - 1)
+    expect(localStorage.getItem('dsh.trajectory.thinking')).toBe('false')
+    first.unmount()
+
+    mount()
+    expect(screen.getByRole('button', { name: '思考' }).getAttribute('aria-pressed')).toBe('false')
+    expect(thinkingRows()).toBe(0)
+  })
 
   it('keeps ledger and timeline selection on the same event after prepend', () => {
     const older: LegacyConversationSlice['nodes'][number] = {

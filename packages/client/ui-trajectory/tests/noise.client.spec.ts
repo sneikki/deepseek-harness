@@ -61,6 +61,12 @@ describe('analyzeTrajectoryNoise', () => {
     expect(analyzeTrajectoryNoise(layout).counts).toEqual({ all: 8, messages: 7, tools: 1 })
   })
 
+  it('hides thinking rows on request and drops them from the counts', () => {
+    const result = analyzeTrajectoryNoise(layout, true)
+    expect([...result.hidden]).toEqual([6, 10])
+    expect(result.counts).toEqual({ all: 7, messages: 6, tools: 1 })
+  })
+
   it('matches chips by kind and shows boundary markers only under All', () => {
     const tool = cell(1, { kind: 'tool' })
     const message = cell(2, {})

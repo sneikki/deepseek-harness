@@ -153,6 +153,23 @@ export function formatDurationMillis(
 }
 
 /**
+ * Format a box duration compactly: `60 ms`, `21.2 s`, `2 min 4 s`.
+ * @param milliseconds - Duration in milliseconds.
+ * @param t - Trajectory locale translator.
+ * @returns the readable duration label.
+ */
+export function formatBoxDuration(
+  milliseconds: number,
+  t: TrajectoryTranslate,
+): string {
+  if (milliseconds < 1000) return formatDurationMillis(milliseconds, t)
+  const tenths = Math.round(milliseconds / 100)
+  return tenths < 600
+    ? t('unit.seconds', { value: String(tenths / 10) })
+    : formatTurnDuration(milliseconds, t)
+}
+
+/**
  * Format an elapsed duration given in seconds as a millisecond label.
  * @param seconds - Duration seconds, or `null` when absent.
  * @param t - Trajectory locale translator.

@@ -11,7 +11,9 @@ import type { MessageImageLoader, MessageImagesOwnerProps } from '@deepseek-ai/d
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/layout.ts'
-import { trajectoryRecordId } from '../src/client/trajectory-record.ts'
+import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
+import { correlateTrajectorySubagents } from '../src/client/trajectory-subagent.ts'
+import { CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
 import { t, tZh } from './locale.client.ts'
 
 const loadImage: MessageImageLoader = async () => 'blob:trajectory'
@@ -203,7 +205,7 @@ describe('TrajectoryTable', () => {
     const row = screen.getByRole('row', { name: /ASSISTANT/ })
     const badge = within(row).getByText('→ Read')
     const text = within(row).getByText('Reading now')
-    expect(badge.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(text.firstElementChild).toBe(badge)
   })
 
   it('opens the step inspector from the thinking row, labelling thinking and output apart', () => {
@@ -1201,7 +1203,7 @@ describe('TrajectoryTable', () => {
     render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
     expect(screen.getByText('tools 1')).toBeTruthy()
-    expect(screen.queryByText('5 s')).toBeNull()
+    expect(within(screen.getByLabelText('Turn 1').parentElement!).queryByText('5 s')).toBeNull()
   })
 
   it('hides the chips of a partly loaded first turn', () => {
@@ -1442,5 +1444,302 @@ describe('TrajectoryTable', () => {
 
     expect(screen.getByRole('row', { name: /TOOL/ }).getAttribute('aria-selected')).toBe('false')
     expect(onInspectApplied).not.toHaveBeenCalled()
+  })
+})
+
+const turnOf = (cells: TrajectoryCellProps[]): TrajectoryTurnModel[] => [{
+  turn: 1,
+  groups: [{ title: 'Step 1', cells }],
+}]
+
+const rowByIndex = (index: number) => screen.getAllByRole('row')
+  .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
+describe('ledger boxes', () => {
+  const LONG = `${'word '.repeat(130)}TAIL-OF-THE-TEXT`
+  const message: TrajectoryCellProps = {
+    index: 1,
+    recordId: 'm1',
+    kind: 'message',
+    text: '',
+    previewMarkdown: LONG,
+    outputDetail: LONG,
+    timeSeconds: 0.5,
+  }
+
+  it('shows See all only on a box whose text overflows, and toggles the full text', () => {
+    const short: TrajectoryCellProps = {
+      index: 2, kind: 'message', text: 'short reply', timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([message, short])} {...FOLD_PROPS} />)
+
+    expect(screen.getAllByRole('button', { name: 'See all' })).toHaveLength(1)
+    expect(screen.queryByText(/TAIL-OF-THE-TEXT/)).toBeNull()
+    const row = screen.getAllByRole('row').find(candidate => candidate.getAttribute('data-record-index') === '1')!
+    fireEvent.click(within(row).getByRole('button', { name: 'See all' }))
+
+    expect(row.getAttribute('data-card-expanded')).toBe('true')
+    expect(within(row).getByText(/TAIL-OF-THE-TEXT/)).toBeTruthy()
+    expect(within(row).getByRole('button', { name: 'Show less' }).getAttribute('aria-expanded')).toBe('true')
+    expect(row.getAttribute('aria-selected')).toBe('false')
+    fireEvent.click(within(row).getByRole('button', { name: 'Show less' }))
+    expect(row.getAttribute('data-card-expanded')).toBeNull()
+    expect(screen.queryByText(/TAIL-OF-THE-TEXT/)).toBeNull()
+  })
+
+  it('shows See all when the rendered body runs past the box height', () => {
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(120)
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(60)
+    render(<TrajectoryTable
+      turns={turnOf([{ index: 2, kind: 'message', text: 'short reply', timeSeconds: 0.1 }])}
+      {...FOLD_PROPS}
+    />)
+
+    expect(screen.getByRole('button', { name: 'See all' })).toBeTruthy()
+  })
+
+  it('gives every collapsed box one height and expanded boxes their measured height', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table')
+
+    expect(table.style.getPropertyValue('--trajectory-card-height')).toBe(`${CARD_HEIGHT}px`)
+    expect(table.style.getPropertyValue('--trajectory-card-row-height')).toBe(`${CARD_ROW_HEIGHT}px`)
+    const row = document.createElement('tr') as HTMLTableRowElement
+    row.dataset['index'] = '3'
+    const instance = { options: { estimateSize: () => CARD_ROW_HEIGHT } }
+    const entry = { borderBoxSize: [{ blockSize: 300 }] } as unknown as ResizeObserverEntry
+    const call = () => measureCardRow(row, entry, instance as unknown as Parameters<typeof measureCardRow>[2])
+    expect(call()).toBe(CARD_ROW_HEIGHT)
+    row.dataset['cardExpanded'] = 'true'
+    expect(call()).toBe(300)
+  })
+
+  it('renders an assistant step with only tool calls as a low box without a body', () => {
+    const calls: TrajectoryCellProps = {
+      index: 3, kind: 'message', text: '', callsBadge: '→ Bash', timeSeconds: 21.235,
+    }
+    render(<TrajectoryTable turns={turnOf([calls, message])} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table')
+    const rowOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
+    expect(table.style.getPropertyValue('--trajectory-card-compact-height')).toBe(`${CARD_COMPACT_HEIGHT}px`)
+    const low = rowOf(3)
+    expect(low.querySelector('[data-card]')?.getAttribute('data-compact')).toBe('true')
+    expect(low.querySelector('[data-section]')).toBeNull()
+    expect(within(low).getByText('→ Bash')).toBeTruthy()
+    expect(low.style.getPropertyValue('--trajectory-card-row-height')).not.toBe('')
+    expect(rowOf(1).querySelector('[data-card]')?.getAttribute('data-compact')).toBeNull()
+    expect(rowOf(1).style.getPropertyValue('--trajectory-card-row-height')).toBe('')
+  })
+
+  it('writes box durations in readable units', () => {
+    const at = (timeSeconds: number): TrajectoryCellProps => ({
+      index: 1, kind: 'message', text: 'x', timeSeconds,
+    })
+    const metaOf = (timeSeconds: number) => {
+      const view = render(<TrajectoryTable turns={turnOf([at(timeSeconds)])} {...FOLD_PROPS} />)
+      const text = view.container.querySelector('[data-card]')?.querySelector('span:last-child')?.textContent
+      view.unmount()
+      return text
+    }
+
+    expect(metaOf(0.06)).toBe('60 ms')
+    expect(metaOf(21.235)).toBe('21.2 s')
+    expect(metaOf(5)).toBe('5 s')
+    expect(metaOf(124)).toBe('2 min 4 s')
+  })
+
+  it('indents tool boxes under their assistant step', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const levelOf = (index: number) => {
+      const row = screen.getAllByRole('row').find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+      return row.querySelector<HTMLElement>('[data-card]')!.parentElement!.style.getPropertyValue('--trajectory-card-level')
+    }
+
+    expect(levelOf(1)).toBe('0')
+    expect(levelOf(2)).toBe('1')
+    expect(levelOf(3)).toBe('1')
+    expect([cardLevel('thinking'), cardLevel('tool'), cardLevel('subtool')]).toEqual([0, 1, 2])
+  })
+
+  it('labels a tool box Input and Output, and drops the Input block when the call has no payload', () => {
+    const withArgs: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'bash', text: 'bash', previewMarkdown: 'pwd',
+      inputDetail: '{"command":"pwd"}', outputDetail: '/work', result: '', resultPreviewMarkdown: '/work',
+      timeSeconds: 0.1,
+    }
+    const noArgs: TrajectoryCellProps = {
+      index: 2, kind: 'tool', toolName: 'list_subagent_models', text: 'list_subagent_models',
+      inputDetail: '{}', outputDetail: 'deepseek-official', result: '', resultPreviewMarkdown: 'deepseek-official',
+      timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([withArgs, noArgs])} {...FOLD_PROPS} />)
+    const rowOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
+    expect(rowOf(1).querySelector('[data-section="input"]')?.textContent).toContain('Input')
+    expect(rowOf(1).querySelector('[data-section="output"]')?.textContent).toContain('Output')
+    expect(rowOf(2).querySelector('[data-section="input"]')).toBeNull()
+    expect(rowOf(2).querySelector('[data-section="output"]')?.textContent).toContain('deepseek-official')
+  })
+
+  it('takes the timeline range membership of a thinking row from its assistant record', () => {
+    const thinking: TrajectoryCellProps = {
+      index: 2, kind: 'thinking', text: '', previewMarkdown: 'weighing', ownerRecordId: 'm1', timeSeconds: 0,
+    }
+    const other: TrajectoryCellProps = { index: 3, kind: 'message', text: 'elsewhere', timeSeconds: 0.1 }
+    render(<TrajectoryTable
+      turns={turnOf([message, thinking, other])}
+      timelineFocusIndexes={new Set([1])}
+      {...FOLD_PROPS}
+    />)
+    const focusOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+      .getAttribute('data-timeline-focus')
+
+    expect(focusOf(1)).toBe('inside')
+    expect(focusOf(2)).toBe('inside')
+    expect(focusOf(3)).toBe('outside')
+  })
+})
+
+describe('ledger boxes: clipping, search, subagents', () => {
+  const rowOf = rowByIndex
+
+  it('shows See all when only the output section of a tool box is cut', () => {
+    const tool: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'bash', text: 'bash', previewMarkdown: 'pwd',
+      inputDetail: '{"command":"pwd"}', outputDetail: 'r'.repeat(300), result: '',
+      resultPreviewMarkdown: 'r'.repeat(300), timeSeconds: 0.1,
+    }
+    // Only the clipping section holds more than it shows; the body element itself reports nothing.
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === 'output' ? 100 : 20
+    })
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === undefined ? 60 : 40
+    })
+    render(<TrajectoryTable turns={turnOf([tool])} {...FOLD_PROPS} />)
+
+    expect(within(rowOf(1)).getByRole('button', { name: 'See all' })).toBeTruthy()
+  })
+
+  it('opens every box of a search result and lets the user collapse one', () => {
+    const long = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', previewMarkdown: `needle ${'word '.repeat(130)}end-${index}`,
+      outputDetail: `needle ${'word '.repeat(130)}end-${index}`, timeSeconds: 0.1,
+    })
+    render(<TrajectoryTable
+      turns={turnOf([long(1), long(2)])}
+      searchMatchIndexes={new Set([1])}
+      {...FOLD_PROPS}
+    />)
+
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBe('true')
+    expect(within(rowOf(1)).getByText(/end-1/)).toBeTruthy()
+    fireEvent.click(within(rowOf(1)).getByRole('button', { name: 'Show less' }))
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+  })
+
+  it('sizes a streaming calls-only step as the box it renders, not as the compact placeholder', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+    const callsOnly = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 0.1,
+    })
+    const cells = Array.from({ length: 500 }, (_, index) => callsOnly(index + 1))
+    const bottomSpacer = async (streamingCells: TrajectoryCellProps[]) => {
+      const view = render(
+        <TrajectoryTable turns={turnOf(cells)} streamingCells={streamingCells} {...FOLD_PROPS} />,
+      )
+      await waitFor(() => {
+        expect(view.container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeTruthy()
+      })
+      const td = view.container.querySelector('tr[data-virtual-spacer="bottom"] td') as HTMLElement
+      const height = Number(td.style.getPropertyValue('--trajectory-virtual-spacer-height').replace('px', ''))
+      view.unmount()
+      return height
+    }
+    const compact = await bottomSpacer([])
+    const streaming = await bottomSpacer([{ ...callsOnly(500), text: 'streamed words arrive' }])
+
+    // The last (unrendered) row grows from the compact to the regular box height.
+    expect(streaming - compact).toBe(CARD_ROW_HEIGHT - CARD_COMPACT_ROW_HEIGHT)
+  })
+
+  it('never opens a calls-only box, search hit or not', () => {
+    const callsOnly: TrajectoryCellProps = {
+      index: 1, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([callsOnly])} searchMatchIndexes={new Set([1])} {...FOLD_PROPS} />)
+
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+    expect(within(rowOf(1)).queryByRole('button', { name: 'Show less' })).toBeNull()
+  })
+
+  it('drops card flips when search starts or ends', () => {
+    const long = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', previewMarkdown: `needle ${'word '.repeat(130)}end-${index}`,
+      outputDetail: `needle ${'word '.repeat(130)}end-${index}`, timeSeconds: 0.1,
+    })
+    const turns = turnOf([long(1), long(2)])
+    const view = render(<TrajectoryTable turns={turns} searchMatchIndexes={new Set([1, 2])} {...FOLD_PROPS} />)
+    fireEvent.click(within(rowOf(1)).getByRole('button', { name: 'Show less' }))
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+
+    view.rerender(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+    view.rerender(<TrajectoryTable turns={turns} searchMatchIndexes={new Set([1, 2])} {...FOLD_PROPS} />)
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBe('true')
+  })
+
+  it('shows See all when a lone input section is cut', () => {
+    const tool: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'edit', text: 'edit', previewMarkdown: 'path: x',
+      inputDetail: JSON.stringify({ path: 'x', content: 'c'.repeat(400) }), timeSeconds: 0.1,
+    }
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === 'input' ? 100 : 20
+    })
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === undefined ? 60 : 40
+    })
+    render(<TrajectoryTable turns={turnOf([tool])} {...FOLD_PROPS} />)
+
+    expect(within(rowOf(1)).getByRole('button', { name: 'See all' })).toBeTruthy()
+  })
+
+  it('renders the subagent lifecycle in box headers and notices', () => {
+    const id = '2c619f73-aaaa-bbbb'
+    const start: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'subagent', text: 'subagent', callId: 'c1',
+      inputDetail: '{"description":"Review PR"}', outputDetail: `started subagent ${id}`,
+      result: 'started', timeSeconds: 0.1, startedAt: 1_000,
+    }
+    const report: TrajectoryCellProps = {
+      index: 2, kind: 'context', text: 'Agent sent a message', timeSeconds: 0, startedAt: 5_000,
+      messageSource: { kind: 'agent-message', senderSessionId: id },
+    }
+    const finish: TrajectoryCellProps = {
+      index: 3, kind: 'context', text: 'Background subagent finished', timeSeconds: 0, startedAt: 13_200,
+      messageSource: {
+        kind: 'subagent-settled', senderSessionId: id,
+        summary: `Background subagent ${id} finished and will do no further work.`,
+      },
+    }
+    const turns = correlateTrajectorySubagents(turnOf([start, report, finish]))
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+
+    const head = rowOf(1)
+    expect(within(head).getByText('Finished')).toBeTruthy()
+    expect(within(head).getByText('12.2 s')).toBeTruthy()
+    expect(within(head).getByText('1 report')).toBeTruthy()
+    expect(within(head).getByText('2c619f73')).toBeTruthy()
+    expect(within(rowOf(2)).getByText('Subagent')).toBeTruthy()
+    expect(within(rowOf(2)).getByText('Report from 2c619f73')).toBeTruthy()
+    expect(rowOf(2).getAttribute('data-subagent-status')).toBe('finished')
+    expect(within(rowOf(3)).getByText('2c619f73 finished')).toBeTruthy()
+    expect(within(rowOf(3)).queryByText('Context')).toBeNull()
   })
 })

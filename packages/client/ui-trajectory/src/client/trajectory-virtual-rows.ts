@@ -2,10 +2,14 @@
 
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import { trajectoryRecordId } from './trajectory-record.ts'
+import { CARD_COMPACT_ROW_HEIGHT, CARD_ROW_HEIGHT, cardIsCompact } from './trajectory-card.ts'
 
-export const CONTENT_ROW_HEIGHT = 30
-/** A turn's first row carries the turn header above its content line; the table feeds this to CSS. */
-export const TURN_START_ROW_HEIGHT = 72
+/** Collapsed height of a content row: one ledger box plus the gap below it. Expanded boxes are measured. */
+export const CONTENT_ROW_HEIGHT = CARD_ROW_HEIGHT
+/** Turn header above a turn's first row. */
+export const TURN_HEAD_HEIGHT = 42
+/** A turn's first row carries the turn header above its box; the table feeds this to CSS. */
+export const TURN_START_ROW_HEIGHT = CONTENT_ROW_HEIGHT + TURN_HEAD_HEIGHT
 const COLLAPSED_SUMMARY_HEIGHT = 20
 const TERMINAL_BOUNDARY_HEIGHT = 9
 
@@ -69,7 +73,8 @@ export function groupTrajectoryVirtualRows<T extends VirtualizableTrajectoryReco
       entries,
       height: record.collapsedSummaryKind !== undefined
         ? COLLAPSED_SUMMARY_HEIGHT
-        : record.turnStart === true ? TURN_START_ROW_HEIGHT : CONTENT_ROW_HEIGHT,
+        : (cardIsCompact(record.cell) ? CARD_COMPACT_ROW_HEIGHT : CONTENT_ROW_HEIGHT)
+          + (record.turnStart === true ? TURN_HEAD_HEIGHT : 0),
       key: trajectoryVirtualRecordKey(record),
     })
   }

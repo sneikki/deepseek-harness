@@ -15,6 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import { createTrajectoryDurationStore } from './duration-store.ts'
+import { createTrajectoryThinkingStore } from './thinking-store.ts'
 import { createTrajectoryStringWrappingStore } from './string-wrapping-store.ts'
 import { en, NS, zh } from './locales.ts'
 import { registerTrajectoryAssistantDefinition } from './trajectory-assistant-definition.ts'
@@ -76,6 +77,7 @@ export function apply(ctx: Context): void {
   // re-registration.
   const t = ctx.locale.bind(NS)
   const duration = createTrajectoryDurationStore()
+  const thinking = createTrajectoryThinkingStore()
   const stringWrapping = createTrajectoryStringWrappingStore()
   registerTrajectoryMessageDefinitions(ctx)
   registerTrajectoryRequestHeaderDefinition(ctx)
@@ -101,7 +103,7 @@ export function apply(ctx: Context): void {
       }
       const trajectory = ctx.uiConversation.binding(sessionId).target('trajectory')
       return {
-        hooks: { duration },
+        hooks: { duration, thinking },
         jsonStringWrapping: {
           getDefault: () => stringWrapping.getSnapshot(),
           setDefault: (value) => { stringWrapping.set(value) },
@@ -116,6 +118,7 @@ export function apply(ctx: Context): void {
           { peek: (attachment: ImageAttachmentRef) => ctx.uiConversation.peekImageUrl(sessionId, attachment) },
         ),
         setActualDuration: (value) => { duration.set(value) },
+        setShowThinking: (value) => { thinking.set(value) },
       }
     },
   }, TrajectoryView))

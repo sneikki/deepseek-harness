@@ -106,6 +106,8 @@
   color: var(--amv-text);
   background: var(--amv-bg);
   font: 400 13px/18px var(--dsw-font-family);
+  /* Centre of a box's header line: where the rail glyph sits. */
+  --trajectory-glyph-y: calc(1px + var(--trajectory-card-pad, 10px) + var(--trajectory-card-head, 20px) / 2);
 }
 
 .eventColumn {
@@ -143,7 +145,7 @@
 
 .table td {
   box-sizing: border-box;
-  height: 30px;
+  height: var(--trajectory-card-row-height, 30px);
   padding: 0 8px;
   overflow: hidden;
   vertical-align: top;
@@ -224,25 +226,8 @@
   opacity: 0.24;
 }
 
-.table tbody tr:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):not([data-selected='true']):hover {
-  background: var(--amv-raised);
-}
-
 .table tbody tr[data-request-only='true']:hover {
   background: transparent;
-}
-
-.table tbody tr[data-turn-start='true']:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):hover,
-.table tbody tr[data-turn-start='true'][data-selected='true'] {
-  background: transparent;
-}
-
-.table tbody tr[data-turn-start='true']:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):hover .line {
-  background: var(--amv-raised);
-}
-
-.table tbody tr[data-turn-start='true'][data-selected='true'] .line {
-  background: var(--amv-accent-soft);
 }
 
 .table tbody tr[data-request-only='true'] td,
@@ -260,10 +245,6 @@
 
 .table tbody tr:not([data-collapsed-summary]):focus-visible {
   box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
-}
-
-.table tbody tr[data-selected='true'] {
-  background: var(--amv-accent-soft);
 }
 
 .requestBoundaryControl {
@@ -387,11 +368,17 @@
 
 /* The line starts at the turn's first glyph and ends at its last. */
 .table tbody tr[data-turn-start='true'] .event::after {
-  top: calc(var(--trajectory-head) + 15px);
+  top: calc(var(--trajectory-head) + var(--trajectory-glyph-y));
 }
 
-.table tbody tr[data-turn-end='true'] .event::after {
-  bottom: 15px;
+/* A box is taller than its glyph: the line stops at the last glyph, not the box end. */
+.table tbody tr[data-turn-end='true']:not([data-collapsed-summary]) .event::after {
+  bottom: auto;
+  height: calc(var(--trajectory-head, 0px) + var(--trajectory-glyph-y));
+}
+
+.table tbody tr[data-turn-start='true'][data-turn-end='true']:not([data-collapsed-summary]) .event::after {
+  height: 0;
 }
 
 .table tbody tr[data-collapsed-summary][data-turn-end='true'] .event::after {
@@ -404,7 +391,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
+  height: calc(2 * var(--trajectory-glyph-y));
   margin-top: var(--trajectory-head, 0px);
   padding-right: 1px;
 }
@@ -446,7 +433,7 @@
   position: absolute;
   z-index: 5;
   top: var(--trajectory-head, 0px);
-  bottom: 0;
+  bottom: var(--trajectory-card-gap, 0px);
   left: 0;
   width: 3px;
   background: var(--amv-accent);
@@ -463,7 +450,8 @@
   align-items: center;
   box-sizing: border-box;
   height: var(--trajectory-head);
-  padding: 22px 8px 0 4px;
+  max-width: calc(var(--trajectory-card-width, 760px) + 16px);
+  padding: 22px 12px 0 4px;
   gap: 8px;
 }
 
@@ -503,17 +491,324 @@
   color: var(--amv-text);
 }
 
-/* Baseline-aligned so the 12px mono label and 13-14px body share one text line. */
-.line {
-  display: flex;
-  align-items: baseline;
+/* Ledger boxes: a narrow book-page column, one collapsed height for every box.
+   Sizes come from trajectory-card.ts through the variables set on the table. */
+/* Tool boxes sit under the assistant step that called them (level 1); a sub-call one level deeper. */
+.cardRow {
   box-sizing: border-box;
-  height: 30px;
+  max-width: calc(var(--trajectory-card-width, 760px) + 16px);
+  padding:
+    0 12px var(--trajectory-card-gap, 8px)
+    calc(4px + var(--trajectory-card-level, 0) * var(--trajectory-card-indent, 28px));
+}
+
+.card {
+  --trajectory-card-tint: color-mix(in srgb, var(--trajectory-tone) 7%, var(--amv-surface));
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: var(--trajectory-card-height);
+  padding: var(--trajectory-card-pad) 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 26%, var(--amv-surface));
+  border-radius: 10px;
+  background: var(--trajectory-card-tint);
+  white-space: normal;
+  transition:
+    border-color var(--amv-dur-1) var(--amv-ease),
+    box-shadow var(--amv-dur-1) var(--amv-ease);
+}
+
+.card[data-compact] {
+  height: var(--trajectory-card-compact-height);
+}
+
+.card[data-compact] .cardHead {
+  margin-bottom: 0;
+}
+
+.card[data-compact] .callsBadge {
+  margin-right: 0;
+}
+
+.card[data-expanded] {
+  height: auto;
+  min-height: var(--trajectory-card-height);
+  overflow: visible;
+}
+
+.table tbody tr:not([data-collapsed-summary]):hover .card {
+  border-color: color-mix(in srgb, var(--trajectory-tone) 44%, var(--amv-surface));
+}
+
+/* The ring sits inside the border: the row clips overflow, an outer glow would be cut at the top. */
+.table tbody tr[data-selected='true'] .card {
+  border-color: var(--amv-accent);
+  box-shadow: inset 0 0 0 1px var(--amv-accent), inset 0 0 0 4px var(--amv-accent-tint);
+}
+
+.table tbody tr[data-error='true'][data-selected='true'] .card {
+  border-color: var(--amv-danger);
+  box-shadow:
+    inset 0 0 0 1px var(--amv-danger),
+    inset 0 0 0 4px color-mix(in srgb, var(--amv-danger) 14%, transparent);
+}
+
+.cardHead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: var(--trajectory-card-head);
   min-width: 0;
-  padding: 6px 8px 0 4px;
-  border-radius: 8px;
+  margin-bottom: var(--trajectory-card-head-gap);
+  gap: 8px;
+}
+
+/* Kind or tool name as a pill tinted in the box tone: sans, humanised text. */
+.cardBadge {
+  min-width: 0;
+  max-width: 60%;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 35%, transparent);
+  border-radius: 999px;
+  color: var(--trajectory-tone-text);
+  background: color-mix(in srgb, var(--trajectory-tone) 14%, transparent);
+  font: 500 12px/18px var(--dsw-font-family);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Subagent lifecycle pill and badges render here. */
+.cardLifecycle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardLifecycle:empty {
+  display: none;
+}
+
+.cardMeta {
+  flex: none;
+  margin-left: auto;
+  color: var(--amv-muted);
+  font: 400 11px/16px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cardBody {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  height: calc(var(--trajectory-card-line) * var(--trajectory-card-body-lines));
+  min-width: 0;
+  overflow: hidden;
+  color: var(--trajectory-body);
+  font: 400 13px/var(--trajectory-card-line) var(--dsw-font-family);
+}
+
+.card[data-expanded] .cardBody {
+  height: auto;
+  overflow: visible;
   gap: 10px;
-  transition: background-color var(--amv-dur-1) var(--amv-ease);
+}
+
+/* Cut text fades out instead of ending mid-glyph. */
+.cardBody[data-clipped] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+}
+
+.cardSection {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  gap: 10px;
+}
+
+/* Collapsed tool box: the input keeps at most two lines when an output follows, the output takes the rest. */
+.card:not([data-expanded]) .cardSection {
+  overflow: hidden;
+}
+
+.card:not([data-expanded]) .cardSection[data-section='input']:not(:last-child) {
+  max-height: calc(2 * var(--trajectory-card-line));
+}
+
+.card:not([data-expanded]) .cardSection[data-section='output'],
+.card:not([data-expanded]) .cardSection[data-section='text'],
+.card:not([data-expanded]) .cardSection[data-section='input']:last-child {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Sans caps label so the payload and its result are never confused. */
+.cardSectionLabel {
+  flex: none;
+  width: 46px;
+  color: var(--amv-muted);
+  font: 500 10px/var(--trajectory-card-line) var(--dsw-font-family);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.cardText {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card[data-expanded] .cardText {
+  white-space: pre-wrap;
+}
+
+.cardSection[data-section='input'] .cardText,
+.cardSection[data-section='output'] .cardText {
+  font: 400 12px/var(--trajectory-card-line) var(--ds-font-family-code);
+}
+
+.cardSection[data-section='input'] .cardText {
+  color: var(--amv-text-2);
+}
+
+.cardSection[data-tone='output'] .cardText {
+  color: var(--amv-muted);
+}
+
+.cardSection[data-tone='error'] .cardText {
+  color: var(--amv-danger);
+}
+
+.cardSection[data-tone='empty'] .cardText {
+  color: var(--amv-muted);
+  font-style: italic;
+}
+
+.table tbody tr[data-kind='user'] .cardSection[data-section='text'] .cardText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.table tbody tr[data-kind='thinking'] .cardSection[data-section='text'] .cardText {
+  font-style: italic;
+}
+
+.cardMore {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--amv-accent-text);
+  background: var(--trajectory-card-tint);
+  font: 500 12px/20px var(--dsw-font-family);
+  cursor: pointer;
+}
+
+.cardMore:hover {
+  background: var(--amv-accent-tint);
+}
+
+.cardMore:focus-visible {
+  outline: 1px solid var(--amv-accent);
+}
+
+/* Subagent notices (report, settle) take the tone of the agent's status, like the timeline lane. */
+.table tbody tr[data-kind='context'][data-subagent-status] {
+  --trajectory-tone: var(--amv-success);
+  --trajectory-tone-text: var(--amv-success);
+  --trajectory-body: var(--amv-text-2);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='running'] {
+  --trajectory-tone: var(--amv-accent);
+  --trajectory-tone-text: var(--amv-accent-text);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='failed'] {
+  --trajectory-tone: var(--amv-danger);
+  --trajectory-tone-text: var(--amv-danger);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='interrupted'] {
+  --trajectory-tone: var(--amv-warning);
+  --trajectory-tone-text: var(--amv-warning);
+}
+
+.subagentPill {
+  --subagent-tone: var(--amv-success);
+
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 18px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--subagent-tone) 35%, transparent);
+  border-radius: 999px;
+  color: var(--subagent-tone);
+  background: color-mix(in srgb, var(--subagent-tone) 10%, transparent);
+  font: 500 12px/16px var(--dsw-font-family);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.subagentPill[data-status='running'] {
+  --subagent-tone: var(--amv-accent-text);
+}
+
+.subagentPill[data-status='failed'] {
+  --subagent-tone: var(--amv-danger);
+}
+
+.subagentPill[data-status='interrupted'] {
+  --subagent-tone: var(--amv-warning);
+}
+
+.subagentDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.subagentPill[data-status='running'] .subagentDot {
+  animation: subagent-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes subagent-dot-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subagentPill[data-status='running'] .subagentDot {
+    animation: none;
+  }
+}
+
+.subagentChip {
+  padding: 0 6px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  color: var(--amv-muted);
+  font: 400 11px/16px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.card[data-expanded] .cardMore {
+  position: static;
+  align-self: flex-end;
+  margin-top: 8px;
+  margin-right: -4px;
+  margin-bottom: -2px;
 }
 
 .tone {
@@ -532,53 +827,6 @@
   text-overflow: ellipsis;
   text-transform: lowercase;
   white-space: nowrap;
-}
-
-.label {
-  display: flex;
-  flex: 0 0 156px;
-  min-width: 0;
-}
-
-/* Kind or tool name as a pill tinted in the row tone: sans, humanised text. */
-.labelBadge {
-  min-width: 0;
-  padding: 0 8px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 35%, transparent);
-  border-radius: 999px;
-  color: var(--trajectory-tone-text);
-  background: color-mix(in srgb, var(--trajectory-tone) 14%, transparent);
-  font: 500 12px/16px var(--dsw-font-family);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.line > .contentText,
-.line > .resultPreview {
-  flex: 1;
-  min-width: 0;
-  color: var(--trajectory-body);
-}
-
-.body {
-  min-width: 0;
-}
-
-.table tbody tr[data-kind='user'] .contentText {
-  font-weight: 500;
-}
-
-.table tbody tr[data-turn-start='true'] .line > .contentText {
-  font-size: 14px;
-}
-
-.table tbody tr[data-kind='thinking'] .contentText {
-  font-style: italic;
-}
-
-.table tbody tr[data-kind='subtool'] .line {
-  padding-left: 18px;
 }
 
 .compactedSummary {
@@ -650,17 +898,10 @@
   );
 }
 
-.contentText {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* The tools an assistant step chose: a pill, never prose; output text follows it. */
 .callsBadge {
   display: inline-block;
+  margin-right: 8px;
   max-width: 100%;
   padding: 0 6px;
   overflow: hidden;
@@ -669,12 +910,8 @@
   background: var(--amv-accent-tint);
   font: 500 12px/18px var(--dsw-font-family);
   text-overflow: ellipsis;
-  vertical-align: top;
+  vertical-align: baseline;
   white-space: nowrap;
-}
-
-.callsText {
-  margin-left: 8px;
 }
 
 .table tbody tr[data-collapsed-summary='turn'] td,
@@ -711,56 +948,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.resultPreview {
-  display: grid;
-  grid-template-columns:
-    clamp(
-      180px,
-      var(--trajectory-tool-request-width, calc(36cqw - 56px)),
-      480px
-    )
-    minmax(0, 1fr);
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-}
-
-.resultRequest,
-.inlineResultText {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolCallNameTypeface {
-  color: var(--trajectory-act, var(--amv-text));
-  font: 500 12px/18px var(--ds-font-family-code);
-}
-
-.toolCallPayload {
-  margin-left: 0;
-  color: var(--amv-text-2);
-  font: 400 12px/18px var(--ds-font-family-code);
-}
-
-.table tbody tr[data-kind='tool'] .contentText,
-.table tbody tr[data-kind='subtool'] .contentText,
-.table tbody tr[data-kind='tool'] .resultPreview,
-.table tbody tr[data-kind='subtool'] .resultPreview {
-  font-family: var(--ds-font-family-code);
-  font-size: 12px;
-}
-
-.inlineResult {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding-left: 10px;
-  border-left: 1px solid var(--amv-border-strong);
-  color: var(--amv-muted);
 }
 
 .noOutputText {
@@ -1196,11 +1383,6 @@
 .programIcon {
   margin-right: 4px;
   vertical-align: -2px;
-}
-
-.programSummary {
-  margin-left: 5px;
-  font-family: var(--dsw-font-family);
 }
 
 .detailBodyProgram,
