@@ -372,10 +372,11 @@ export function TrajectoryView({
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
   )
-  // Rows without a projection get theirs read (bounded, once, one retry); nested children follow.
+  // Rows without a projection, or with one that carries no timing (cache hints of a
+  // historical-format child), get it read (bounded, once, one retry); nested children follow.
   const [projectionLoader] = useState(() => createProjectionLoader(loadProjection))
   useEffect(() => {
-    for (const row of agentRows) if (!row.loaded) projectionLoader.request(row.sessionId)
+    for (const row of agentRows) if (!row.loaded || row.activeMs === null) projectionLoader.request(row.sessionId)
   }, [agentRows, projectionLoader])
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'

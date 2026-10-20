@@ -15,6 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import { loadExactProjection } from './projection-loader.ts'
 import { createTrajectoryDurationStore } from './duration-store.ts'
 import { createTrajectoryThinkingStore } from './thinking-store.ts'
 import { createTrajectoryStringWrappingStore } from './string-wrapping-store.ts'
@@ -49,6 +50,13 @@ export type {
   TrajectorySnapshot,
   UseTrajectory,
 } from './trajectory-contract.ts'
+
+declare module '@deepseek-ai/dsh-api-session-controller/client' {
+  interface SessionReferenceSourceMap {
+    /** Agent-waterfall read of a child whose cached projection lacks timing. */
+    trajectoryAgents: unknown
+  }
+}
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
 export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale']
@@ -120,9 +128,13 @@ export function apply(ctx: Context): void {
         ),
         setActualDuration: (value) => { duration.set(value) },
         setShowThinking: (value) => { thinking.set(value) },
-        loadProjection: async (id) => {
-          await ctx.sessions.refreshProjections(id as SessionId)
-          return ctx.sessions.list.getSnapshot().projectionsBySession[id as SessionId]?.state === 'ready'
+        loadProjection: (id) => {
+          const sessionId = id as SessionId
+          return loadExactProjection(
+            () => ctx.sessions.refreshProjections(sessionId),
+            () => ctx.sessions.list.getSnapshot().projectionsBySession[sessionId]?.state === 'ready',
+            () => ctx.sessions.using(sessionId, { source: 'trajectoryAgents' }, reference => reference.ready),
+          )
         },
         openSession: (id) => {
           const sessionId = id as SessionId

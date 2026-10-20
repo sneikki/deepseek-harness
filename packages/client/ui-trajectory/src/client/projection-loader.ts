@@ -47,3 +47,23 @@ export function createProjectionLoader(
     },
   }
 }
+
+/**
+ * Read one child's projections: the cheap read first, then its opened history.
+ * A child still in a historical format only serves cache hints from the cheap
+ * read (no timing); the exact values arrive with its opened history.
+ * @param read - Cheap projection read (settles once the read finished).
+ * @param isReady - Whether exact projections are now present.
+ * @param openHistory - Holds the child's history open just long enough to seed them.
+ * @returns whether exact projections are present.
+ */
+export async function loadExactProjection(
+  read: () => Promise<void>,
+  isReady: () => boolean,
+  openHistory: () => Promise<unknown>,
+): Promise<boolean> {
+  await read()
+  if (isReady()) return true
+  await openHistory()
+  return isReady()
+}

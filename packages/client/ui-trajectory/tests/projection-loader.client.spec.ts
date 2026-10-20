@@ -1,6 +1,6 @@
 /** Projection loader: dedupe, concurrency cap, single retry. */
-import { describe, expect, it } from 'vitest'
-import { createProjectionLoader } from '../src/client/projection-loader.ts'
+import { describe, expect, it, vi } from 'vitest'
+import { createProjectionLoader, loadExactProjection } from '../src/client/projection-loader.ts'
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -43,5 +43,17 @@ describe('createProjectionLoader', () => {
     loader.request('a')
     await flush()
     expect(calls).toBe(2)
+  })
+})
+
+describe('loadExactProjection', () => {
+  it('skips the history for a ready read and opens it for cache hints only', async () => {
+    const open = vi.fn(() => Promise.resolve())
+    expect(await loadExactProjection(() => Promise.resolve(), () => true, open)).toBe(true)
+    expect(open).not.toHaveBeenCalled()
+    let ready = false
+    open.mockImplementation(() => { ready = true; return Promise.resolve() })
+    expect(await loadExactProjection(() => Promise.resolve(), () => ready, open)).toBe(true)
+    expect(open).toHaveBeenCalledOnce()
   })
 })
