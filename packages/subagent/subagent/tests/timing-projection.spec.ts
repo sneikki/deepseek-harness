@@ -169,4 +169,18 @@ describe('subagent timing projection', () => {
     expect(subagentTimingProjectionDefinition.stateSchema.parse(closed)).toEqual(closed)
     expect(closed.lastTurnEnd).toEqual({ at: 200, reason: 'blocked' })
   })
+
+  it('round-trips a plugin-added turn end kind through the state and view schemas', () => {
+    const state = {
+      descriptorSeen: true,
+      settledMs: 0,
+      lastTurnEnd: { at: 5, reason: 'plugin-custom' },
+    }
+    expect(subagentTimingProjectionDefinition.stateSchema.parse(state)).toEqual(state)
+    const view = subagentTimingProjectionDefinition.wire.view(state)
+    expect(subagentTimingProjectionDefinition.wire.viewSchema.parse(view)).toEqual({
+      settledMs: 0,
+      lastTurnEnd: { at: 5, reason: 'plugin-custom' },
+    })
+  })
 })

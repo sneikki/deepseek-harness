@@ -34,14 +34,9 @@ const activeIntervalSchema = z.object({
   through: z.number().int().nonnegative(),
 }).strict()
 
-const turnEndReasonKinds = ['completed', 'aborted', 'blocked', 'error', 'max-tokens', 'interrupted', 'forked'] as const satisfies readonly TurnEndReason['kind'][]
-// Compile-time guard: a TurnEndReason kind missing from the list above fails typecheck here.
-type UncoveredTurnEndKind = Exclude<TurnEndReason['kind'], (typeof turnEndReasonKinds)[number]>
-export const turnEndKindsExhaustive: [UncoveredTurnEndKind] extends [never] ? true : never = true
-
 const lastTurnEndSchema = z.object({
   at: z.number().int().nonnegative(),
-  reason: z.enum(turnEndReasonKinds),
+  reason: z.string().min(1).transform(kind => kind as TurnEndReason['kind']),
 }).strict()
 
 const projectionSchema: z.ZodType<SubagentTimingProjection> = z.object({
