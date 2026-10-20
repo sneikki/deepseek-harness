@@ -543,14 +543,17 @@
   border-color: color-mix(in srgb, var(--trajectory-tone) 44%, var(--amv-surface));
 }
 
+/* The ring sits inside the border: the row clips overflow, an outer glow would be cut at the top. */
 .table tbody tr[data-selected='true'] .card {
   border-color: var(--amv-accent);
-  box-shadow: 0 0 0 3px var(--amv-accent-tint);
+  box-shadow: inset 0 0 0 1px var(--amv-accent), inset 0 0 0 4px var(--amv-accent-tint);
 }
 
 .table tbody tr[data-error='true'][data-selected='true'] .card {
   border-color: var(--amv-danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-danger) 14%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--amv-danger),
+    inset 0 0 0 4px color-mix(in srgb, var(--amv-danger) 14%, transparent);
 }
 
 .cardHead {
@@ -629,15 +632,18 @@
 }
 
 /* Collapsed tool box: the input keeps at most two lines when an output follows, the output takes the rest. */
-.card:not([data-expanded]) .cardSection[data-section='input']:not(:last-child) {
-  max-height: calc(2 * var(--trajectory-card-line));
+.card:not([data-expanded]) .cardSection {
   overflow: hidden;
 }
 
-.card:not([data-expanded]) .cardSection[data-section='output'] {
+.card:not([data-expanded]) .cardSection[data-section='input']:not(:last-child) {
+  max-height: calc(2 * var(--trajectory-card-line));
+}
+
+.card:not([data-expanded]) .cardSection[data-section='output'],
+.card:not([data-expanded]) .cardSection[data-section='text'] {
   flex: 1 1 0;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* Sans caps label so the payload and its result are never confused. */
@@ -712,6 +718,88 @@
 
 .cardMore:focus-visible {
   outline: 1px solid var(--amv-accent);
+}
+
+/* Subagent notices (report, settle) take the tone of the agent's status, like the timeline lane. */
+.table tbody tr[data-kind='context'][data-subagent-status] {
+  --trajectory-tone: var(--amv-success);
+  --trajectory-tone-text: var(--amv-success);
+  --trajectory-body: var(--amv-text-2);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='running'] {
+  --trajectory-tone: var(--amv-accent);
+  --trajectory-tone-text: var(--amv-accent-text);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='failed'] {
+  --trajectory-tone: var(--amv-danger);
+  --trajectory-tone-text: var(--amv-danger);
+}
+
+.table tbody tr[data-kind='context'][data-subagent-status='interrupted'] {
+  --trajectory-tone: var(--amv-warning);
+  --trajectory-tone-text: var(--amv-warning);
+}
+
+.subagentPill {
+  --subagent-tone: var(--amv-success);
+
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 18px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--subagent-tone) 35%, transparent);
+  border-radius: 999px;
+  color: var(--subagent-tone);
+  background: color-mix(in srgb, var(--subagent-tone) 10%, transparent);
+  font: 500 12px/16px var(--dsw-font-family);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.subagentPill[data-status='running'] {
+  --subagent-tone: var(--amv-accent-text);
+}
+
+.subagentPill[data-status='failed'] {
+  --subagent-tone: var(--amv-danger);
+}
+
+.subagentPill[data-status='interrupted'] {
+  --subagent-tone: var(--amv-warning);
+}
+
+.subagentDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.subagentPill[data-status='running'] .subagentDot {
+  animation: subagent-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes subagent-dot-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subagentPill[data-status='running'] .subagentDot {
+    animation: none;
+  }
+}
+
+.subagentChip {
+  padding: 0 6px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  color: var(--amv-muted);
+  font: 400 11px/16px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .card[data-expanded] .cardMore {

@@ -151,6 +151,7 @@ kind: "package-library"
 | [`src/input-modality.ts`](src/input-modality.ts) | 全文档输入模态，发布到 `<html>` |
 | [`src/plugin-artwork.tsx`](src/plugin-artwork.tsx) | 固定配色插件插画，SVG def id 按实例生成 |
 | [`src/useAnchoredPosition.ts`](src/useAnchoredPosition.ts) / [`src/useAnchoredMaxHeight.ts`](src/useAnchoredMaxHeight.ts) | 浮动面板与浮层几何钩子 |
+| [`src/useClippedContent.ts`](src/useClippedContent.ts) | 固定高度的 `overflow: hidden` 文本框是否截断了内容 |
 | [`src/settings-form/`](src/settings-form/) | 设置页套件：基于设置 scope 的暂存表单模型、值字段与密文字段、表单框架 |
 
 <a id="input-modality"></a>

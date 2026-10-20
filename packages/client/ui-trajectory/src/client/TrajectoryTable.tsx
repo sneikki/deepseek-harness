@@ -42,6 +42,8 @@ import type { TrajectoryVirtualRow } from './trajectory-virtual-rows.ts'
 import type { TrajectoryTurnModel } from './layout.ts'
 import { trajectoryPreviewText } from './trajectory-preview.ts'
 import { TrajectoryCard } from './TrajectoryCard.tsx'
+import { subagentBadges, subagentNoticeText } from './TrajectorySubagentBadges.tsx'
+import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   CARD_BODY_LINES, CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
   CARD_LINE_HEIGHT, CARD_MAX_WIDTH, CARD_PADDING_Y, CARD_ROW_HEIGHT, cardIsCompact, cardLevel, measureCardRow,
@@ -1097,12 +1099,12 @@ function isMarkdownRecord(record: TableRecord): boolean {
 
 /** The record whose inspector a row opens: itself, or the assistant a thinking row belongs to. */
 function ownerRecord(
-  records: readonly TableRecord[],
+  byId: ReadonlyMap<string, TableRecord>,
   record: TableRecord | undefined,
 ): TableRecord | undefined {
   const owner = record?.cell.ownerRecordId
   if (owner === undefined) return record
-  return records.find(candidate => trajectoryRecordId(candidate.cell) === owner) ?? record
+  return byId.get(owner) ?? record
 }
 
 function parentRecords(
@@ -2302,9 +2304,10 @@ export function TrajectoryTable({
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
   const [codeWrappingOnOpen, setCodeWrappingOnOpen] = useState(false)
-  const [expandedCards, setExpandedCards] = useState<ReadonlySet<string>>(new Set())
+  // Boxes the user flipped away from their default: collapsed normally, open while a search shows only hits.
+  const [flippedCards, setFlippedCards] = useState<ReadonlySet<string>>(new Set())
   const toggleCard = useCallback((key: string) => {
-    setExpandedCards((current) => {
+    setFlippedCards((current) => {
       const next = new Set(current)
       if (!next.delete(key)) next.add(key)
       return next
@@ -2327,6 +2330,14 @@ export function TrajectoryTable({
   const [olderLoading, setOlderLoading] = useState(false)
   const olderLoadAnchor = useRef<OlderLoadAnchor | null>(null)
   const allRecords = useMemo(() => flattenRecords(turns), [turns])
+  const recordById = useMemo(
+    () => new Map(allRecords.map(record => [trajectoryRecordId(record.cell), record])),
+    [allRecords],
+  )
+  const subagentByStart = useMemo(
+    () => new Map(trajectorySubagentLifecycles(turns).map(lifecycle => [lifecycle.startIndex, lifecycle])),
+    [turns],
+  )
   const streamingCellsByIndex = useMemo(
     () => new Map(streamingCells.map(cell => [cell.index, cell])),
     [streamingCells],
@@ -2336,8 +2347,9 @@ export function TrajectoryTable({
     return cell === undefined ? record : { ...record, cell }
   }, [streamingCellsByIndex])
   // A thinking row shows the running/error state of its step's assistant record.
+  const cardExpanded = (key: string) => (searchMatchIndexes !== null) !== flippedCards.has(key)
   const currentOwner = (record: TableRecord): TableRecord =>
-    currentRecord(ownerRecord(allRecords, record) ?? record)
+    currentRecord(ownerRecord(recordById, record) ?? record)
   const selectedTemplate = useMemo(() => selectedRecordId === null
     ? undefined
     : allRecords.find(record => trajectoryRecordId(record.cell) === selectedRecordId),
@@ -2598,7 +2610,7 @@ export function TrajectoryTable({
     setCodeWrappingOnOpen(stringWrapping?.getDefault() ?? false)
     const row = allRecords.find(candidate => candidate.cell.index === index)
     // A thinking row is a view of its step's assistant record.
-    const record = ownerRecord(allRecords, row)
+    const record = ownerRecord(recordById, row)
     onRecordSelect?.(index)
     setSelectedRequest(null)
     setSelectedRecordId(record === undefined ? null : trajectoryRecordId(record.cell))
@@ -2607,7 +2619,7 @@ export function TrajectoryTable({
     const available = new Set(tabs.map(tab => tab.id))
     const recent = [...tabHistory.current].reverse().find(tab => available.has(tab))
     setActiveTab(recent ?? tabs[0]?.id ?? 'overview')
-  }, [allRecords, onRecordSelect, stringWrapping])
+  }, [allRecords, onRecordSelect, recordById, stringWrapping])
   useEffect(() => {
     if (
       recordSelection === null
@@ -2711,7 +2723,7 @@ export function TrajectoryTable({
     const focusedPositions = records.flatMap((record, position) =>
       record.collapsedSummary === undefined
       && record.cell.requestOnly !== true
-      && timelineFocusIndexes.has((ownerRecord(allRecords, record) ?? record).cell.index)
+      && timelineFocusIndexes.has((ownerRecord(recordById, record) ?? record).cell.index)
         ? [position]
         : [])
     const first = focusedPositions.at(0)
@@ -2766,7 +2778,7 @@ export function TrajectoryTable({
       },
     )
   }, [
-    allRecords,
+    recordById,
     records,
     rowVirtualizer,
     timelineFocusIndexes,
@@ -2918,6 +2930,7 @@ export function TrajectoryTable({
                   const isRequestOnly = record.cell.requestOnly === true
                   const key = requestKey(record.turn, record.group)
                   const rowKey = trajectoryVirtualRecordKey(record)
+                  const subagentNotice = subagentNoticeText(record.cell, t)
                   const request = requestBoundaries.get(key) === rowKey
                 && (record.turn === null || !collapsedTurns.has(record.turn))
                     ? requestNumbers.get(key)
@@ -2953,7 +2966,7 @@ export function TrajectoryTable({
                         ? rowVirtualizer.measureElement
                         : undefined}
                       data-index={virtualizationEnabled ? virtualIndex : undefined}
-                      data-card-expanded={expandedCards.has(rowKey) || undefined}
+                      data-card-expanded={cardExpanded(rowKey) || undefined}
                       tabIndex={isRequestOnly || singleToolNotice ? -1 : 0}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
@@ -2972,6 +2985,8 @@ export function TrajectoryTable({
                           })}
                       aria-selected={!isCollapsedSummary && !isRequestOnly && rowSelected}
                       data-kind={record.cell.kind}
+                      data-subagent-phase={record.cell.subagent?.phase}
+                      data-subagent-status={record.cell.subagent?.status}
                       data-trajectory-row-key={trajectoryVirtualRecordKey(record)}
                       data-virtual-position={virtualizationEnabled ? position : undefined}
                       data-record-index={!isCollapsedSummary && !isRequestOnly
@@ -2994,7 +3009,7 @@ export function TrajectoryTable({
                       data-selected={!isCollapsedSummary && rowSelected || undefined}
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
-                        : timelineFocusIndexes.has((ownerRecord(allRecords, record) ?? record).cell.index) ? 'inside' : 'outside'}
+                        : timelineFocusIndexes.has((ownerRecord(recordById, record) ?? record).cell.index) ? 'inside' : 'outside'}
                       onClick={isRequestOnly || singleToolNotice
                         ? undefined
                         : isCollapsedSummary
@@ -3011,7 +3026,7 @@ export function TrajectoryTable({
                           onToggleTurn(record.turn)
                           return
                         }
-                        const foldOwner = ownerRecord(allRecords, record)
+                        const foldOwner = ownerRecord(recordById, record)
                         if (
                           foldOwner?.cell.kind === 'message'
                       && assistantToolCalls(allRecords, foldOwner.cell.index).length > 0
@@ -3109,14 +3124,27 @@ export function TrajectoryTable({
                               >
                                 <TrajectoryCard
                                   cell={record.cell}
-                                  content={{ displayText, resultText, callsBadge, toolCallText }}
-                                  badge={displayToolName(toolCallText?.name
-                                    || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
+                                  content={{
+                                    displayText: subagentNotice ?? displayText,
+                                    resultText,
+                                    callsBadge,
+                                    toolCallText,
+                                    ...(subagentNotice === undefined ? {} : { fullText: subagentNotice }),
+                                  }}
+                                  badge={subagentNotice === undefined
+                                    ? displayToolName(toolCallText?.name
+                                      || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())
+                                    : t('card.subagent')}
+                                  lifecycle={subagentBadges(
+                                    record.cell,
+                                    subagentByStart.get(record.cell.index),
+                                    t,
+                                  )}
                                   badgeTitle={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                   {...(record.cell.timeSeconds !== null && record.cell.timeSeconds > 0
                                     ? { meta: formatBoxDuration(record.cell.timeSeconds * 1000, t) }
                                     : {})}
-                                  expanded={expandedCards.has(rowKey)}
+                                  expanded={cardExpanded(rowKey)}
                                   onToggle={() => { toggleCard(rowKey) }}
                                   t={t}
                                 />

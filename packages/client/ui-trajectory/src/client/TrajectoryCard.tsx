@@ -1,8 +1,8 @@
 /** One ledger box: sans badge and mono meta on top, a body cut to a fixed height, "See all" to grow it. */
 
-import { useLayoutEffect, useRef, useState } from 'react'
-import type { ReactNode, RefObject } from 'react'
-import { IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useRef } from 'react'
+import type { ReactNode } from 'react'
+import { IconCodeOutlineRegular, useClippedContent } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TrajectoryTranslate } from './locales.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import { cardFullInput, cardFullOutput, cardFullText, cardIsCompact } from './trajectory-card.ts'
@@ -14,6 +14,8 @@ export interface TrajectoryCardContent {
   resultText: string | undefined
   callsBadge: string | undefined
   toolCallText: { program: boolean; name: string; args?: string } | undefined
+  /** Complete text of a non-tool box whose text is not the record's own (subagent notices). */
+  fullText?: string
 }
 
 interface CardSection {
@@ -60,7 +62,7 @@ export function cardSections(
       preview: empty
         ? cell.kind === 'message' ? t('record.noOutput') : '—'
         : displayText,
-      full: cardFullText(cell),
+      full: content.fullText ?? cardFullText(cell),
       tone: empty && cell.kind === 'message' ? 'empty' : 'primary',
       truncated: isTruncated(displayText),
     }]
@@ -94,29 +96,6 @@ export function cardSections(
     })
   }
   return sections
-}
-
-/** Whether the body text runs past the box height. */
-function useClipped(
-  ref: RefObject<HTMLDivElement | null>,
-  active: boolean,
-  dependency: string,
-): boolean {
-  const [clipped, setClipped] = useState(false)
-  useLayoutEffect(() => {
-    const body = ref.current
-    if (body === null || !active) {
-      setClipped(false)
-      return undefined
-    }
-    const measure = () => { setClipped(body.scrollHeight - body.clientHeight > 1) }
-    measure()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(measure)
-    observer.observe(body)
-    return () => { observer.disconnect() }
-  }, [ref, active, dependency])
-  return clipped
 }
 
 /** Props of {@link TrajectoryCard}. */
@@ -158,12 +137,12 @@ export function TrajectoryCard({
   const compact = cardIsCompact(cell)
   const sections = compact ? [] : cardSections(cell, content, t)
   const bodyRef = useRef<HTMLDivElement>(null)
-  const clipped = useClipped(
+  const clipped = useClippedContent(
     bodyRef,
-    !expanded,
-    `${content.displayText}\u0000${content.resultText ?? ''}`,
+    sections.map(section => section.full).join('\u0000'),
+    '[data-clip]',
   )
-  const more = clipped || sections.some(section => section.truncated)
+  const more = (!expanded && clipped) || sections.some(section => section.truncated)
   return (
     <div
       className={css.card}
@@ -188,6 +167,7 @@ export function TrajectoryCard({
               key={section.key}
               className={css.cardSection}
               data-section={section.key}
+              data-clip=""
               data-tone={section.tone}
             >
               {section.label !== undefined && (

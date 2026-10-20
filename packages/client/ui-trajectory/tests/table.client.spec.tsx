@@ -12,6 +12,7 @@ import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/layout.ts'
 import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
+import { correlateTrajectorySubagents } from '../src/client/trajectory-subagent.ts'
 import { CARD_COMPACT_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
 import { t, tZh } from './locale.client.ts'
 
@@ -1446,12 +1447,16 @@ describe('TrajectoryTable', () => {
   })
 })
 
+const turnOf = (cells: TrajectoryCellProps[]): TrajectoryTurnModel[] => [{
+  turn: 1,
+  groups: [{ title: 'Step 1', cells }],
+}]
+
+const rowByIndex = (index: number) => screen.getAllByRole('row')
+  .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
 describe('ledger boxes', () => {
   const LONG = `${'word '.repeat(130)}TAIL-OF-THE-TEXT`
-  const turnOf = (cells: TrajectoryCellProps[]): TrajectoryTurnModel[] => [{
-    turn: 1,
-    groups: [{ title: 'Step 1', cells }],
-  }]
   const message: TrajectoryCellProps = {
     index: 1,
     recordId: 'm1',
@@ -1596,5 +1601,77 @@ describe('ledger boxes', () => {
     expect(focusOf(1)).toBe('inside')
     expect(focusOf(2)).toBe('inside')
     expect(focusOf(3)).toBe('outside')
+  })
+})
+
+describe('ledger boxes: clipping, search, subagents', () => {
+  const rowOf = rowByIndex
+
+  it('shows See all when only the output section of a tool box is cut', () => {
+    const tool: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'bash', text: 'bash', previewMarkdown: 'pwd',
+      inputDetail: '{"command":"pwd"}', outputDetail: 'r'.repeat(300), result: '',
+      resultPreviewMarkdown: 'r'.repeat(300), timeSeconds: 0.1,
+    }
+    // Only the clipping section holds more than it shows; the body element itself reports nothing.
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === 'output' ? 100 : 20
+    })
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === undefined ? 60 : 40
+    })
+    render(<TrajectoryTable turns={turnOf([tool])} {...FOLD_PROPS} />)
+
+    expect(within(rowOf(1)).getByRole('button', { name: 'See all' })).toBeTruthy()
+  })
+
+  it('opens every box of a search result and lets the user collapse one', () => {
+    const long = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', previewMarkdown: `needle ${'word '.repeat(130)}end-${index}`,
+      outputDetail: `needle ${'word '.repeat(130)}end-${index}`, timeSeconds: 0.1,
+    })
+    render(<TrajectoryTable
+      turns={turnOf([long(1), long(2)])}
+      searchMatchIndexes={new Set([1])}
+      {...FOLD_PROPS}
+    />)
+
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBe('true')
+    expect(within(rowOf(1)).getByText(/end-1/)).toBeTruthy()
+    fireEvent.click(within(rowOf(1)).getByRole('button', { name: 'Show less' }))
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+  })
+
+  it('renders the subagent lifecycle in box headers and notices', () => {
+    const id = '2c619f73-aaaa-bbbb'
+    const start: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'subagent', text: 'subagent', callId: 'c1',
+      inputDetail: '{"description":"Review PR"}', outputDetail: `started subagent ${id}`,
+      result: 'started', timeSeconds: 0.1, startedAt: 1_000,
+    }
+    const report: TrajectoryCellProps = {
+      index: 2, kind: 'context', text: 'Agent sent a message', timeSeconds: 0, startedAt: 5_000,
+      messageSource: { kind: 'agent-message', senderSessionId: id },
+    }
+    const finish: TrajectoryCellProps = {
+      index: 3, kind: 'context', text: 'Background subagent finished', timeSeconds: 0, startedAt: 13_200,
+      messageSource: {
+        kind: 'subagent-settled', senderSessionId: id,
+        summary: `Background subagent ${id} finished and will do no further work.`,
+      },
+    }
+    const turns = correlateTrajectorySubagents(turnOf([start, report, finish]))
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+
+    const head = rowOf(1)
+    expect(within(head).getByText('Finished')).toBeTruthy()
+    expect(within(head).getByText('12.2 s')).toBeTruthy()
+    expect(within(head).getByText('1 report')).toBeTruthy()
+    expect(within(head).getByText('2c619f73')).toBeTruthy()
+    expect(within(rowOf(2)).getByText('Subagent')).toBeTruthy()
+    expect(within(rowOf(2)).getByText('Report from 2c619f73')).toBeTruthy()
+    expect(rowOf(2).getAttribute('data-subagent-status')).toBe('finished')
+    expect(within(rowOf(3)).getByText('2c619f73 finished')).toBeTruthy()
+    expect(within(rowOf(3)).queryByText('Context')).toBeNull()
   })
 })
