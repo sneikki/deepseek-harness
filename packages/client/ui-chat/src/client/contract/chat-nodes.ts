@@ -4,6 +4,7 @@ import type {
   ToolCallBlock,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { ChatGroupTree } from './group-tree.ts'
+import type { TurnActivity } from './turn-process.ts'
 
 /** Final Chat render unit produced by a Chat business Definition. */
 export interface ChatConversationViewNode extends ConversationViewNode {
@@ -114,6 +115,7 @@ export interface TurnProcessChatData {
   readonly messageCount: number
   readonly toolCallCount: number
   readonly subagentCount: number
+  readonly activity: readonly TurnActivity[]
 }
 
 /**

@@ -135,6 +135,8 @@ type StatId = 'activity' | 'usage'
 interface PillContent {
   stat: StatId
   icon: ReactNode
+  /** Section-label caption shown above the reading's value inside the pill. */
+  caption: string
   label: ReactNode
 }
 
@@ -170,11 +172,10 @@ function decodeSpeed(stats: WindowStats, t: Translate): string {
 }
 
 /** A static reading: used when the pill has no dialog rows or the mode is Compact. */
-function PlainPill({ stat, icon, label }: PillContent) {
+function PlainPill({ stat, caption, label }: PillContent) {
   return (
     <span className={css.anchor} data-composer-stat={stat}>
-      <span className={css.pill}>
-        {icon}
+      <span className={css.pill} data-caption={caption}>
         <span className={css.label}>{label}</span>
       </span>
     </span>
@@ -186,7 +187,7 @@ function PlainPill({ stat, icon, label }: PillContent) {
  * state; useStatDialog closes it on Escape or an outside pointerdown or click,
  * so at most one dialog is open across the dock.
  */
-function DialogPill({ stat, icon, label, ariaLabel, title, titleValue, children }: PillContent & {
+function DialogPill({ stat, icon, caption, label, ariaLabel, title, titleValue, children }: PillContent & {
   ariaLabel: string
   title: string
   titleValue?: string
@@ -198,12 +199,12 @@ function DialogPill({ stat, icon, label, ariaLabel, title, titleValue, children 
       <button
         type="button"
         className={css.pill}
+        data-caption={caption}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => { setOpen(!open) }}
       >
-        {icon}
         <span className={css.label}>{label}</span>
       </button>
       {open && createPortal(
@@ -239,10 +240,10 @@ export const ActivityPill = memo(function ActivityPill({ useChat, useProjection,
   const stats = useSessionStats(useChat, useProjection)
   const speed = stats.decodeMs > 0 ? decodeSpeed(stats, t) : null
   const icon = <IconGaugeOutlineRegular />
-  if (mode === 'compact') return speed === null ? null : <PlainPill stat="activity" icon={icon} label={speed} />
+  if (mode === 'compact') return speed === null ? null : <PlainPill stat="activity" icon={icon} caption={t('stats.dialog.title')} label={speed} />
   if (stats.steps === 0) return null
   const counts = t('stats.counts', { turns: stats.turns, steps: stats.steps })
-  const content: PillContent = { stat: 'activity', icon, label: joined(counts, speed) }
+  const content: PillContent = { stat: 'activity', icon, caption: t('stats.dialog.title'), label: joined(counts, speed) }
   // A window without one timed figure has no dialog rows to show, so the pill
   // stays a plain reading instead of a button opening an empty dialog.
   if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && speed === null) return <PlainPill {...content} />
@@ -289,7 +290,7 @@ export const UsagePill = memo(function UsagePill({ useProjection, usePerformance
   const cacheHitText = cacheHit !== null ? t('stats.cacheHit', { percent: cacheHit }) : null
   const icon = <IconDatabaseOutlineRegular />
   if (mode === 'compact') {
-    return cacheHitText === null ? null : <PlainPill stat="usage" icon={icon} label={cacheHitText} />
+    return cacheHitText === null ? null : <PlainPill stat="usage" icon={icon} caption={t('stats.dialog.usageTitle')} label={cacheHitText} />
   }
   // Same aggregate as the Turn pill's totalTokens: every prompt-side billing bucket plus output.
   const total = billedInputTokens(usage) + usage.outputTokens
@@ -298,6 +299,7 @@ export const UsagePill = memo(function UsagePill({ useProjection, usePerformance
     <DialogPill
       stat="usage"
       icon={icon}
+      caption={t('stats.dialog.usageTitle')}
       label={joined(totalText, cacheHitText)}
       ariaLabel={cacheHitText === null ? totalText : `${totalText} · ${cacheHitText}`}
       title={t('stats.dialog.usageTitle')}

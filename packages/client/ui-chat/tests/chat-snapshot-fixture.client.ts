@@ -17,7 +17,7 @@ import { orderedVisibleChatNodes } from '../src/client/conversation-nodes/chat-s
 import { ChatTurnProcessProjector } from '../src/client/conversation-nodes/turn-process-presentation.ts'
 import { hasAssistantReplyContent } from '../src/client/contract/assistant-content.ts'
 import {
-  isSubagentDelegationTool, sameTurnProcessSpec,
+  isSubagentDelegationTool, sameTurnProcessSpec, turnActivityOf,
   type TurnProcessSpec,
 } from '../src/client/contract/turn-process.ts'
 import { isAtOrOutside, type ChatGroupTree } from '../src/client/contract/group-tree.ts'
@@ -463,6 +463,7 @@ export function chatSnapshotFixture(input: {
         const name = toolCallName(call)
         return name !== null && isSubagentDelegationTool(name)
       }).length,
+      activity: toolCalls.map(call => ('kind' in call && call.isError ? 'error' : turnActivityOf(toolCallName(call) ?? ''))),
     }
     const previousSpec = dataStore.get('turn-process')
     const spec = previousSpec !== undefined && sameTurnProcessSpec(previousSpec, candidate)

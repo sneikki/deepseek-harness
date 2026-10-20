@@ -253,7 +253,7 @@ describe('Definition-owned Chat process groups', () => {
       location: { kind: 'turn', turn }, visibility: 'visible', groupTree: 'turn',
       data: {
         turn: 1, controlAnchorSeq: 1, processStartSeq: 1, answerAnchorSeq: null,
-        answerStep: null, inlineReasoning: false, messageCount: 0, toolCallCount: 1, subagentCount: 0,
+        answerStep: null, inlineReasoning: false, messageCount: 0, toolCallCount: 1, subagentCount: 0, activity: ['other'],
       },
     }
     const h = harness([control, tool('first', 6), tool('after', 8)])
@@ -268,7 +268,7 @@ describe('Definition-owned Chat process groups', () => {
       location: { kind: 'turn', turn }, visibility: 'visible', groupTree: 'turn',
       data: {
         turn: 1, controlAnchorSeq: 6, processStartSeq: 1, answerAnchorSeq: null,
-        answerStep: null, inlineReasoning: false, messageCount: 0, toolCallCount: 1, subagentCount: 0,
+        answerStep: null, inlineReasoning: false, messageCount: 0, toolCallCount: 1, subagentCount: 0, activity: ['other'],
       },
     }
     const h = harness([tool('reply', 6), control, tool('after', 8)])
