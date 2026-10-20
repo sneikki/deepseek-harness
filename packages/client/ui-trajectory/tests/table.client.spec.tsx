@@ -11,7 +11,8 @@ import type { MessageImageLoader, MessageImagesOwnerProps } from '@deepseek-ai/d
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/layout.ts'
-import { trajectoryRecordId } from '../src/client/trajectory-record.ts'
+import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
+import { CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
 import { t, tZh } from './locale.client.ts'
 
 const loadImage: MessageImageLoader = async () => 'blob:trajectory'
@@ -203,7 +204,7 @@ describe('TrajectoryTable', () => {
     const row = screen.getByRole('row', { name: /ASSISTANT/ })
     const badge = within(row).getByText('→ Read')
     const text = within(row).getByText('Reading now')
-    expect(badge.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(text.firstElementChild).toBe(badge)
   })
 
   it('opens the step inspector from the thinking row, labelling thinking and output apart', () => {
@@ -1442,5 +1443,122 @@ describe('TrajectoryTable', () => {
 
     expect(screen.getByRole('row', { name: /TOOL/ }).getAttribute('aria-selected')).toBe('false')
     expect(onInspectApplied).not.toHaveBeenCalled()
+  })
+})
+
+describe('ledger boxes', () => {
+  const LONG = `${'word '.repeat(130)}TAIL-OF-THE-TEXT`
+  const turnOf = (cells: TrajectoryCellProps[]): TrajectoryTurnModel[] => [{
+    turn: 1,
+    groups: [{ title: 'Step 1', cells }],
+  }]
+  const message: TrajectoryCellProps = {
+    index: 1,
+    recordId: 'm1',
+    kind: 'message',
+    text: '',
+    previewMarkdown: LONG,
+    outputDetail: LONG,
+    timeSeconds: 0.5,
+  }
+
+  it('shows See all only on a box whose text overflows, and toggles the full text', () => {
+    const short: TrajectoryCellProps = {
+      index: 2, kind: 'message', text: 'short reply', timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([message, short])} {...FOLD_PROPS} />)
+
+    expect(screen.getAllByRole('button', { name: 'See all' })).toHaveLength(1)
+    expect(screen.queryByText(/TAIL-OF-THE-TEXT/)).toBeNull()
+    const row = screen.getAllByRole('row').find(candidate => candidate.getAttribute('data-record-index') === '1')!
+    fireEvent.click(within(row).getByRole('button', { name: 'See all' }))
+
+    expect(row.getAttribute('data-card-expanded')).toBe('true')
+    expect(within(row).getByText(/TAIL-OF-THE-TEXT/)).toBeTruthy()
+    expect(within(row).getByRole('button', { name: 'Show less' }).getAttribute('aria-expanded')).toBe('true')
+    expect(row.getAttribute('aria-selected')).toBe('false')
+    fireEvent.click(within(row).getByRole('button', { name: 'Show less' }))
+    expect(row.getAttribute('data-card-expanded')).toBeNull()
+    expect(screen.queryByText(/TAIL-OF-THE-TEXT/)).toBeNull()
+  })
+
+  it('shows See all when the rendered body runs past the box height', () => {
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(120)
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(60)
+    render(<TrajectoryTable
+      turns={turnOf([{ index: 2, kind: 'message', text: 'short reply', timeSeconds: 0.1 }])}
+      {...FOLD_PROPS}
+    />)
+
+    expect(screen.getByRole('button', { name: 'See all' })).toBeTruthy()
+  })
+
+  it('gives every collapsed box one height and expanded boxes their measured height', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table')
+
+    expect(table.style.getPropertyValue('--trajectory-card-height')).toBe(`${CARD_HEIGHT}px`)
+    expect(table.style.getPropertyValue('--trajectory-card-row-height')).toBe(`${CARD_ROW_HEIGHT}px`)
+    const row = document.createElement('tr') as HTMLTableRowElement
+    row.dataset['index'] = '3'
+    const instance = { options: { estimateSize: () => CARD_ROW_HEIGHT } }
+    const entry = { borderBoxSize: [{ blockSize: 300 }] } as unknown as ResizeObserverEntry
+    const call = () => measureCardRow(row, entry, instance as unknown as Parameters<typeof measureCardRow>[2])
+    expect(call()).toBe(CARD_ROW_HEIGHT)
+    row.dataset['cardExpanded'] = 'true'
+    expect(call()).toBe(300)
+  })
+
+  it('indents tool boxes under their assistant step', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const levelOf = (index: number) => {
+      const row = screen.getAllByRole('row').find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+      return row.querySelector<HTMLElement>('[data-card]')!.parentElement!.style.getPropertyValue('--trajectory-card-level')
+    }
+
+    expect(levelOf(1)).toBe('0')
+    expect(levelOf(2)).toBe('1')
+    expect(levelOf(3)).toBe('1')
+    expect([cardLevel('thinking'), cardLevel('tool'), cardLevel('subtool')]).toEqual([0, 1, 2])
+  })
+
+  it('labels a tool box Input and Output, and drops the Input block when the call has no payload', () => {
+    const withArgs: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'bash', text: 'bash', previewMarkdown: 'pwd',
+      inputDetail: '{"command":"pwd"}', outputDetail: '/work', result: '', resultPreviewMarkdown: '/work',
+      timeSeconds: 0.1,
+    }
+    const noArgs: TrajectoryCellProps = {
+      index: 2, kind: 'tool', toolName: 'list_subagent_models', text: 'list_subagent_models',
+      inputDetail: '{}', outputDetail: 'deepseek-official', result: '', resultPreviewMarkdown: 'deepseek-official',
+      timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([withArgs, noArgs])} {...FOLD_PROPS} />)
+    const rowOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
+    expect(rowOf(1).querySelector('[data-section="input"]')?.textContent).toContain('Input')
+    expect(rowOf(1).querySelector('[data-section="output"]')?.textContent).toContain('Output')
+    expect(rowOf(2).querySelector('[data-section="input"]')).toBeNull()
+    expect(rowOf(2).querySelector('[data-section="output"]')?.textContent).toContain('deepseek-official')
+  })
+
+  it('takes the timeline range membership of a thinking row from its assistant record', () => {
+    const thinking: TrajectoryCellProps = {
+      index: 2, kind: 'thinking', text: '', previewMarkdown: 'weighing', ownerRecordId: 'm1', timeSeconds: 0,
+    }
+    const other: TrajectoryCellProps = { index: 3, kind: 'message', text: 'elsewhere', timeSeconds: 0.1 }
+    render(<TrajectoryTable
+      turns={turnOf([message, thinking, other])}
+      timelineFocusIndexes={new Set([1])}
+      {...FOLD_PROPS}
+    />)
+    const focusOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+      .getAttribute('data-timeline-focus')
+
+    expect(focusOf(1)).toBe('inside')
+    expect(focusOf(2)).toBe('inside')
+    expect(focusOf(3)).toBe('outside')
   })
 })

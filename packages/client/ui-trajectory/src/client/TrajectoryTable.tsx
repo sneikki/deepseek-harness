@@ -10,7 +10,6 @@ import {
   fileSizeText,
   IconCheckOutlineRegular,
   IconChevronRightOutlineRegular,
-  IconCodeOutlineRegular,
   IconWrapLinesOutlineRegular,
   IconCopyOutlineRegular,
   IconSettingsOutlineRegular,
@@ -41,6 +40,11 @@ import {
 import type { TrajectoryVirtualRow } from './trajectory-virtual-rows.ts'
 import type { TrajectoryTurnModel } from './layout.ts'
 import { trajectoryPreviewText } from './trajectory-preview.ts'
+import { TrajectoryCard } from './TrajectoryCard.tsx'
+import {
+  CARD_BODY_LINES, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
+  CARD_LINE_HEIGHT, CARD_MAX_WIDTH, CARD_PADDING_Y, CARD_ROW_HEIGHT, cardLevel, measureCardRow,
+} from './trajectory-card.ts'
 import { trajectoryRowMatchesFilter, type TrajectoryRowFilter } from './trajectory-noise.ts'
 import type { TrajectoryKey, TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
@@ -669,7 +673,21 @@ function indexTurnStats(
   }]))
 }
 
-/** A turn's first row is its header plus a content line; CSS reads both heights from the row. */
+/** Box geometry from trajectory-card.ts; the ledger CSS reads every size from these variables. */
+const CARD_STYLE = {
+  '--trajectory-card-body-lines': CARD_BODY_LINES,
+  '--trajectory-card-gap': `${CARD_GAP}px`,
+  '--trajectory-card-head': `${CARD_HEAD_HEIGHT}px`,
+  '--trajectory-card-head-gap': `${CARD_HEAD_GAP}px`,
+  '--trajectory-card-height': `${CARD_HEIGHT}px`,
+  '--trajectory-card-indent': `${CARD_INDENT}px`,
+  '--trajectory-card-line': `${CARD_LINE_HEIGHT}px`,
+  '--trajectory-card-pad': `${CARD_PADDING_Y}px`,
+  '--trajectory-card-row-height': `${CARD_ROW_HEIGHT}px`,
+  '--trajectory-card-width': `${CARD_MAX_WIDTH}px`,
+} as CSSProperties
+
+/** A turn's first row is its header plus a box; CSS reads both heights from the row. */
 const TURN_START_ROW_STYLE = {
   '--trajectory-head': `${TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT}px`,
   '--trajectory-row-height': `${TURN_START_ROW_HEIGHT}px`,
@@ -1279,43 +1297,6 @@ function TurnHeader({ turn, stats, active, t }: {
       )}
       <span className={css.turnRule} aria-hidden="true" />
     </div>
-  )
-}
-
-function RecordListText({
-  displayText,
-  callsBadge,
-  toolCallText,
-  emptyMessage,
-  t,
-}: Pick<RecordPresentationValue, 'displayText' | 'callsBadge' | 'toolCallText'> & {
-  /** An assistant row with no output and no tool calls. */
-  emptyMessage: boolean
-  t: TrajectoryTranslate
-}) {
-  if (toolCallText === undefined) {
-    if (callsBadge === undefined) {
-      if (displayText === '' && emptyMessage) {
-        return <span className={css.noOutputText}>{t('record.noOutput')}</span>
-      }
-      return displayText || '—'
-    }
-    return (
-      <>
-        <span className={css.callsBadge}>{callsBadge}</span>
-        {displayText !== '' && <span className={css.callsText}>{displayText}</span>}
-      </>
-    )
-  }
-  return (
-    <>
-      {toolCallText.program && <IconCodeOutlineRegular className={css.programIcon} size={12} />}
-      {toolCallText.args !== undefined && (
-        <span className={toolCallText.program ? css.programSummary : css.toolCallPayload}>
-          {toolCallText.args}
-        </span>
-      )}
-    </>
   )
 }
 
@@ -2306,6 +2287,14 @@ export function TrajectoryTable({
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
   const [codeWrappingOnOpen, setCodeWrappingOnOpen] = useState(false)
+  const [expandedCards, setExpandedCards] = useState<ReadonlySet<string>>(new Set())
+  const toggleCard = useCallback((key: string) => {
+    setExpandedCards((current) => {
+      const next = new Set(current)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
+  }, [])
   const [thinkingDisclosure, setThinkingDisclosure] = useState<{ recordId: string; expanded: boolean }>()
   const [detailsWidth, setDetailsWidth] = useState<number | null>(null)
   const [toolRequestOffset, setToolRequestOffset] = useState<number | null>(null)
@@ -2412,6 +2401,7 @@ export function TrajectoryTable({
     enabled: virtualizationEnabled,
     estimateSize: estimateVirtualRowSize,
     getItemKey: getVirtualRowKey,
+    measureElement: measureCardRow,
     getScrollElement: getTableScrollElement,
     initialRect: { width: 0, height: VIRTUAL_INITIAL_VIEWPORT_HEIGHT_PX },
     anchorTo: 'end',
@@ -2448,6 +2438,7 @@ export function TrajectoryTable({
       return row.entries.map((entry, entryIndex) => ({
         record: currentRecord(entry.record),
         position: entry.logicalIndex,
+        virtualIndex: item.index,
         terminalRequestBoundary:
           entry.record.cell.requestOnly === true
           && row.entries.at(-1)?.record.cell.requestOnly === true
@@ -2457,6 +2448,7 @@ export function TrajectoryTable({
     : records.map((record, position) => ({
       record: currentRecord(record),
       position,
+      virtualIndex: position,
       terminalRequestBoundary:
         record.cell.requestOnly === true && position === records.length - 1,
     }))
@@ -2704,7 +2696,7 @@ export function TrajectoryTable({
     const focusedPositions = records.flatMap((record, position) =>
       record.collapsedSummary === undefined
       && record.cell.requestOnly !== true
-      && timelineFocusIndexes.has(record.cell.index)
+      && timelineFocusIndexes.has((ownerRecord(allRecords, record) ?? record).cell.index)
         ? [position]
         : [])
     const first = focusedPositions.at(0)
@@ -2744,9 +2736,9 @@ export function TrajectoryTable({
     const lastVirtual = focusedVirtualIndexes.at(-1)
     if (firstVirtual === undefined || lastVirtual === undefined) return
     const paneHeight = tablePaneRef.current?.clientHeight ?? 0
-    const focusHeight = projectedVirtualRows
+    const focusHeight = rowVirtualizer.measurementsCache
       .slice(firstVirtual, lastVirtual + 1)
-      .reduce((height, row) => height + row.height, 0)
+      .reduce((height, row) => height + row.size, 0)
     followsTableTail.current = false
     rowVirtualizer.scrollToIndex(
       focusHeight > paneHeight
@@ -2759,7 +2751,7 @@ export function TrajectoryTable({
       },
     )
   }, [
-    projectedVirtualRows,
+    allRecords,
     records,
     rowVirtualizer,
     timelineFocusIndexes,
@@ -2850,6 +2842,7 @@ export function TrajectoryTable({
         )}
         <table
           className={css.table}
+          style={CARD_STYLE}
           data-scroll-ready={tableScrollReady || undefined}
           aria-rowcount={records.length + historyRowOffset}
         >
@@ -2900,7 +2893,7 @@ export function TrajectoryTable({
                 />
               </tr>
             )}
-            {renderedRecords.map(({ record, position, terminalRequestBoundary }) => (
+            {renderedRecords.map(({ record, position, virtualIndex, terminalRequestBoundary }) => (
               <RecordPresentation
                 key={trajectoryVirtualRecordKey(record)}
                 cell={record.cell}
@@ -2909,7 +2902,8 @@ export function TrajectoryTable({
                   const isCollapsedSummary = record.collapsedSummary !== undefined
                   const isRequestOnly = record.cell.requestOnly === true
                   const key = requestKey(record.turn, record.group)
-                  const request = requestBoundaries.get(key) === trajectoryVirtualRecordKey(record)
+                  const rowKey = trajectoryVirtualRecordKey(record)
+                  const request = requestBoundaries.get(key) === rowKey
                 && (record.turn === null || !collapsedTurns.has(record.turn))
                     ? requestNumbers.get(key)
                     : undefined
@@ -2940,6 +2934,11 @@ export function TrajectoryTable({
                     && record.cell.sourceBlocks.every(block => block.type === 'tool-addition' || block.type === 'tool-removal')
                   return (
                     <tr
+                      ref={virtualizationEnabled && !isRequestOnly && !isCollapsedSummary
+                        ? rowVirtualizer.measureElement
+                        : undefined}
+                      data-index={virtualizationEnabled ? virtualIndex : undefined}
+                      data-card-expanded={expandedCards.has(rowKey) || undefined}
                       tabIndex={isRequestOnly || singleToolNotice ? -1 : 0}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
@@ -2978,7 +2977,7 @@ export function TrajectoryTable({
                       data-selected={!isCollapsedSummary && rowSelected || undefined}
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
-                        : timelineFocusIndexes.has(record.cell.index) ? 'inside' : 'outside'}
+                        : timelineFocusIndexes.has((ownerRecord(allRecords, record) ?? record).cell.index) ? 'inside' : 'outside'}
                       onClick={isRequestOnly || singleToolNotice
                         ? undefined
                         : isCollapsedSummary
@@ -3015,6 +3014,7 @@ export function TrajectoryTable({
                       }}
                       onKeyDown={(event) => {
                         if (isRequestOnly || singleToolNotice) return
+                        if (event.target !== event.currentTarget) return
                         if (event.key !== 'Enter' && event.key !== ' ') return
                         event.preventDefault()
                         if (isCollapsedSummary) {
@@ -3084,42 +3084,25 @@ export function TrajectoryTable({
                               </span>
                             )
                             : (
-                              <div className={css.line}>
-                                <span
-                                  className={css.label}
-                                  title={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
-                                >
-                                  <span className={css.labelBadge}>
-                                    {displayToolName(toolCallText?.name
-                                      || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
-                                  </span>
-                                </span>
-                                <span
-                                  className={resultText === undefined ? css.contentText : css.resultPreview}
-                                  title={resultText === undefined
-                                    ? listDisplayText
-                                    : `${listDisplayText} → ${resultText}`}
-                                >
-                                  <span className={resultText === undefined ? css.body : css.resultRequest}>
-                                    <RecordListText
-                                      displayText={displayText}
-                                      callsBadge={callsBadge}
-                                      toolCallText={toolCallText}
-                                      emptyMessage={record.cell.kind === 'message'}
-                                      t={t}
-                                    />
-                                  </span>
-                                  {resultText !== undefined && (
-                                    <span className={record.cell.isError ? `${css.inlineResult} ${css.error}` : css.inlineResult}>
-                                      <span className={resultText === t('record.noOutput')
-                                        ? `${css.inlineResultText} ${css.noOutputText}`
-                                        : css.inlineResultText}
-                                      >
-                                        {resultText}
-                                      </span>
-                                    </span>
-                                  )}
-                                </span>
+                              <div
+                                className={css.cardRow}
+                                style={{
+                                  '--trajectory-card-level': cardLevel(record.cell.kind),
+                                } as CSSProperties}
+                              >
+                                <TrajectoryCard
+                                  cell={record.cell}
+                                  content={{ displayText, resultText, callsBadge, toolCallText }}
+                                  badge={displayToolName(toolCallText?.name
+                                    || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
+                                  badgeTitle={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
+                                  {...(record.cell.timeSeconds !== null && record.cell.timeSeconds > 0
+                                    ? { meta: formatElapsedSeconds(record.cell.timeSeconds, t) }
+                                    : {})}
+                                  expanded={expandedCards.has(rowKey)}
+                                  onToggle={() => { toggleCard(rowKey) }}
+                                  t={t}
+                                />
                               </div>
                             )}
                       </td>

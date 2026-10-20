@@ -3,7 +3,8 @@
 import { describe, expect, it } from 'vitest'
 import type { TrajectoryCellProps } from '../src/client/trajectory-record.ts'
 import {
-  groupTrajectoryVirtualRows, trajectoryVirtualRecordKey,
+  CONTENT_ROW_HEIGHT, groupTrajectoryVirtualRows, TURN_START_ROW_HEIGHT,
+  trajectoryVirtualRecordKey,
   type VirtualizableTrajectoryRecord,
 } from '../src/client/trajectory-virtual-rows.ts'
 
@@ -36,7 +37,7 @@ describe('trajectory virtual rows', () => {
         { logicalIndex: 1, record: second },
         { logicalIndex: 2, record: content },
       ],
-      height: 30,
+      height: CONTENT_ROW_HEIGHT,
       key: trajectoryVirtualRecordKey(content),
     }])
   })
@@ -54,10 +55,10 @@ describe('trajectory virtual rows', () => {
     })
   })
 
-  it('gives a turn-start row the turn-header height', () => {
+  it('gives a turn-start row the box height plus the turn header', () => {
     const first = { ...record(1, { sourceSeq: 10 }), turnStart: true }
 
-    expect(groupTrajectoryVirtualRows([first])[0]?.height).toBe(72)
+    expect(groupTrajectoryVirtualRows([first])[0]?.height).toBe(TURN_START_ROW_HEIGHT)
   })
 
   it('uses the rendered collapsed-summary height', () => {
