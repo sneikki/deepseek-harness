@@ -97,23 +97,19 @@
 }
 
 .table {
-  --trajectory-turn-accent: color-mix(
-    in srgb,
-    var(--dsw-static-blue-500) 22%,
-    var(--dsw-alias-bg-layer-1)
-  );
+  --trajectory-turn-accent: color-mix(in srgb, var(--amv-accent) 32%, var(--amv-bg));
 
   width: 100%;
   min-width: 0;
   border-spacing: 0;
   table-layout: fixed;
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-layer-1);
-  font: var(--dsw-font-xxs-12);
+  color: var(--amv-text);
+  background: var(--amv-bg);
+  font: 400 13px/18px var(--dsw-font-family);
 }
 
 .eventColumn {
-  width: 122px;
+  width: 140px;
 }
 
 .eventColumn:where(:lang(zh)) {
@@ -132,11 +128,12 @@
   height: 30px;
   padding: 0 8px;
   overflow: hidden;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
-  color: var(--dsw-alias-label-tertiary);
-  background: var(--dsw-specific-sidebar-fill);
-  font: var(--dsw-font-xxs-12);
-  font-weight: 500;
+  border-bottom: 1px solid var(--amv-border);
+  color: var(--amv-muted);
+  background: var(--amv-bg-deep);
+  font: 500 11px/16px var(--dsw-font-family);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   text-align: left;
   text-overflow: ellipsis;
   user-select: none;
@@ -153,7 +150,7 @@
   height: 30px;
   padding: 0 8px;
   overflow: hidden;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+  border-bottom: 1px solid var(--amv-border);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -172,16 +169,24 @@
   cursor: default;
   outline: none;
   transition:
-    background-color 120ms var(--ds-ease-in-out),
+    background-color var(--amv-dur-1) var(--amv-ease),
     opacity 120ms var(--ds-ease-in-out);
 }
+
+/* Tool rows carry their activity bucket; pill, name and timeline bars read it. */
+.table tbody tr[data-activity='code'] { --trajectory-act: var(--amv-act-code); }
+.table tbody tr[data-activity='review'] { --trajectory-act: var(--amv-act-review); }
+.table tbody tr[data-activity='deploy'] { --trajectory-act: var(--amv-act-deploy); }
+.table tbody tr[data-activity='proof'] { --trajectory-act: var(--amv-act-proof); }
+.table tbody tr[data-activity='other'] { --trajectory-act: color-mix(in srgb, var(--amv-act-wait) 45%, var(--amv-text-2)); }
+.table tbody tr[data-activity='error'] { --trajectory-act: var(--amv-danger); }
 
 .table tbody tr[data-timeline-focus='outside'] {
   opacity: 0.24;
 }
 
 .table tbody tr:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):not([data-selected='true']):hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 .table tbody tr[data-request-only='true']:hover {
@@ -206,11 +211,11 @@
 }
 
 .table tbody tr:not([data-collapsed-summary]):focus-visible {
-  box-shadow: inset 0 0 0 1px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
 
 .table tbody tr[data-selected='true'] {
-  background: var(--dsw-alias-interactive-bg-active);
+  background: var(--amv-accent-soft);
 }
 
 .requestBoundaryControl {
@@ -359,8 +364,8 @@
   top: 0;
   right: 0;
   left: 0;
-  height: 2px;
-  background: var(--dsw-alias-border-l1);
+  height: 1px;
+  background: var(--amv-border-strong);
   content: '';
   pointer-events: none;
   transform: translateY(-50%);
@@ -382,11 +387,13 @@
   align-items: center;
   box-sizing: border-box;
   width: max-content;
-  padding: 1px 5px;
-  border-radius: 0 0 2px;
-  color: var(--dsw-alias-label-tertiary);
-  background: var(--dsw-alias-bg-module-platform);
-  font: 8px/10px var(--ds-font-family-code);
+  padding: 2px 8px 1px;
+  border-radius: 0 0 6px;
+  color: var(--amv-muted);
+  background: var(--amv-bg-deep);
+  font: 500 10px/12px var(--ds-font-family-code);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   user-select: none;
   white-space: nowrap;
@@ -407,12 +414,8 @@
 }
 
 .turnLabelActive {
-  color: color-mix(
-    in srgb,
-    var(--dsw-static-blue-500) 55%,
-    var(--dsw-alias-label-tertiary)
-  );
-  background: var(--trajectory-turn-accent);
+  color: var(--amv-accent);
+  background: color-mix(in srgb, var(--amv-accent) 12%, var(--amv-bg-deep));
 }
 
 .eventInner {
@@ -428,7 +431,7 @@
   flex: none;
   align-items: flex-end;
   justify-content: flex-end;
-  width: 76px;
+  width: 96px;
 }
 
 .kindSlot:where(:lang(zh)) {
@@ -452,14 +455,15 @@
   flex: none;
   align-items: center;
   box-sizing: border-box;
-  height: 19px;
-  padding: 0 5px;
-  border: 1px solid transparent;
-  border-radius: var(--dsw-radius-xs);
-  font-size: 10px;
-  line-height: 16px;
-  font-weight: 650;
-  letter-spacing: 0.035em;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--trajectory-pill-border, var(--amv-border-strong));
+  border-radius: 999px;
+  color: var(--trajectory-pill-fg, var(--amv-text-2));
+  background: var(--trajectory-pill-bg, var(--amv-raised));
+  font: 500 11px/16px var(--ds-font-family-code);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   user-select: none;
 }
 
@@ -477,7 +481,7 @@
 
 .kindTagLabel {
   display: inline-block;
-  max-width: 72px;
+  max-width: 80px;
   overflow: hidden;
   opacity: 1;
   white-space: nowrap;
@@ -503,13 +507,13 @@
   }
 
   .kindSlot {
-    width: 19px;
+    width: 20px;
   }
 
   .kindTag,
   .table .kindSlot .message {
     justify-content: center;
-    width: 19px;
+    width: 20px;
     padding-right: 0;
     padding-left: 0;
   }
@@ -578,28 +582,30 @@
   }
 }
 
+/* Role pills: tinted status pills. user = teal, assistant/system = neutral,
+   context = faint, tool = its activity colour. */
 .user {
-  color: var(--dsw-alias-state-business-primary);
-  background: var(--dsw-alias-state-business-tertiary);
+  --trajectory-pill-fg: var(--amv-accent);
+  --trajectory-pill-bg: color-mix(in srgb, var(--amv-accent) 12%, transparent);
+  --trajectory-pill-border: color-mix(in srgb, var(--amv-accent) 35%, transparent);
 }
 
 .systemNeutral {
-  color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-bg-module-platform);
+  --trajectory-pill-fg: var(--amv-text-2);
+  --trajectory-pill-bg: var(--amv-raised);
+  --trajectory-pill-border: var(--amv-border-strong);
 }
 
 .contextGreen {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-success-primary) 68%,
-    var(--dsw-alias-label-secondary)
-  );
-  background: var(--dsw-alias-state-success-tertiary);
+  --trajectory-pill-fg: var(--amv-faint);
+  --trajectory-pill-bg: transparent;
+  --trajectory-pill-border: var(--amv-border);
 }
 
 .compacted {
-  color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-bg-module-platform);
+  --trajectory-pill-fg: var(--amv-text-2);
+  --trajectory-pill-bg: var(--amv-raised);
+  --trajectory-pill-border: var(--amv-border-strong);
 }
 
 .compactedSummary {
@@ -672,38 +678,20 @@
 }
 
 .assistantVioletBright {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-brand-primary-new-colorprimary-new-color) 60%,
-    var(--dsw-alias-state-error-secondary)
-  );
-  background: color-mix(
-    in srgb,
-    color-mix(
-      in srgb,
-      var(--dsw-alias-brand-primary-new-colorprimary-new-color) 55%,
-      var(--dsw-alias-state-error-secondary)
-    ) 15%,
-    var(--dsw-alias-bg-layer-1)
-  );
+  --trajectory-pill-fg: var(--amv-text-2);
+  --trajectory-pill-bg: var(--amv-raised);
+  --trajectory-pill-border: var(--amv-border-strong);
 }
 
-.toolAmber {
-  color: var(--dsw-alias-state-warn-label);
-  background: var(--dsw-alias-state-warn-tertiary);
+.toolAmber,
+.subtoolAmber {
+  --trajectory-pill-fg: var(--trajectory-act, var(--amv-act-wait));
+  --trajectory-pill-bg: color-mix(in srgb, var(--trajectory-act, var(--amv-act-wait)) 12%, transparent);
+  --trajectory-pill-border: color-mix(in srgb, var(--trajectory-act, var(--amv-act-wait)) 35%, transparent);
 }
 
 .subtoolAmber {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-label) 62%,
-    var(--dsw-alias-label-tertiary)
-  );
-  background: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-tertiary) 58%,
-    var(--dsw-alias-bg-layer-1)
-  );
+  opacity: 0.8;
 }
 
 .contentText {
@@ -730,11 +718,11 @@
 }
 
 .table tbody tr[data-collapsed-summary]:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 .table tbody tr[data-collapsed-summary]:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
 
 .collapsedTurnContent {
@@ -784,14 +772,13 @@
 }
 
 .toolCallNameTypeface {
-  color: var(--dsw-alias-label-primary);
-  font: 400 12px/18px Menlo, Consolas, 'Liberation Mono', 'PingFang SC',
-    'Microsoft YaHei';
+  color: var(--trajectory-act, var(--amv-text));
+  font: 500 12px/18px var(--ds-font-family-code);
 }
 
 .toolCallPayload {
   margin-left: 7px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
   font: 400 12px/18px var(--ds-font-family-code);
 }
 
@@ -811,21 +798,21 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
 }
 
 .noOutputText {
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-faint);
 }
 
 .arrow {
   flex: none;
   margin-right: 8px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-faint);
 }
 
 .error {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
 .overview dd.error {
@@ -953,7 +940,7 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  height: 34px;
+  height: 30px;
   padding: 0 8px;
   overflow-x: auto;
   overflow-y: hidden;

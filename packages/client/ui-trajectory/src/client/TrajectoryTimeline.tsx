@@ -14,6 +14,7 @@ import {
   type TrajectoryTimelineMode,
   type TrajectoryTimeRange,
 } from './timeline.ts'
+import { trajectoryActivityOf } from './trajectory-activity.ts'
 import css from './TrajectoryTimeline.module.css'
 
 const MINIMUM_DRAG_PX = 3
@@ -707,6 +708,9 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                       data-timeline-record-index={span.index}
                       data-assistant-timing={ttftFraction === null ? undefined : 'true'}
                       data-error={span.isError || undefined}
+                      data-activity={span.kind === 'tool' || span.kind === 'subtool'
+                        ? trajectoryActivityOf(span.toolName ?? '', span.isError)
+                        : undefined}
                       data-equal-duration={mode === 'time' || undefined}
                       data-current={span.index === selectedIndex || undefined}
                       data-hovered={hover?.recordIndex === span.index || undefined}

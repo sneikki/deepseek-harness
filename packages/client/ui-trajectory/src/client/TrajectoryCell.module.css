@@ -9,99 +9,86 @@
   padding: 0 8px 0 20px;
   gap: 24px;
   border-radius: var(--dsw-radius-md);
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--amv-border);
+  background: var(--amv-surface);
   min-width: 0;
+  transition: background-color var(--amv-dur-1) var(--amv-ease);
+}
+
+.root:hover {
+  background: var(--amv-raised);
 }
 
 .selected {
-  border-color: transparent;
-  box-shadow: inset 0 0 0 2px var(--dsw-alias-state-business-primary);
+  border-color: var(--amv-accent-ring);
+  background: var(--amv-accent-soft);
 }
 
 .index {
   flex: none;
   width: 24px;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-tertiary);
+  font: 400 12px/18px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  color: var(--amv-faint);
 }
 
 .tagSlot {
   flex: none;
-  width: 80px;
+  width: 92px;
   display: flex;
   align-items: center;
   min-width: 0;
 }
 
+/* Status pill: tinted by role; colours come from --pill-* set per kind. */
 .tag {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  height: 22px;
+  height: 20px;
   max-width: 100%;
-  padding: 0 4px;
-  border-radius: var(--dsw-radius-xs);
-  font: var(--dsw-font-xs-strong-13);
+  padding: 0 8px;
+  border: 1px solid var(--pill-border, var(--amv-border-strong));
+  border-radius: 999px;
+  color: var(--pill-fg, var(--amv-text-2));
+  background: var(--pill-bg, var(--amv-raised));
+  font: 500 11px/16px var(--ds-font-family-code);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.tagSystem {
-  color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-bg-module-platform);
+.tagSystem,
+.tagMessage {
+  --pill-fg: var(--amv-text-2);
+  --pill-bg: var(--amv-raised);
+  --pill-border: var(--amv-border-strong);
 }
 
 .tagUser {
-  color: var(--dsw-alias-state-success-primary);
-  background: var(--dsw-alias-state-success-tertiary);
+  --pill-fg: var(--amv-accent);
+  --pill-bg: color-mix(in srgb, var(--amv-accent) 12%, transparent);
+  --pill-border: color-mix(in srgb, var(--amv-accent) 35%, transparent);
 }
 
 .tagContext {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-success-primary) 68%,
-    var(--dsw-alias-label-secondary)
-  );
-  background: var(--dsw-alias-state-success-tertiary);
+  --pill-fg: var(--amv-faint);
+  --pill-bg: transparent;
+  --pill-border: var(--amv-border);
 }
 
-.tagMessage {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-brand-primary-new-colorprimary-new-color) 60%,
-    var(--dsw-alias-state-error-secondary)
-  );
-  background: color-mix(
-    in srgb,
-    color-mix(
-      in srgb,
-      var(--dsw-alias-brand-primary-new-colorprimary-new-color) 55%,
-      var(--dsw-alias-state-error-secondary)
-    ) 15%,
-    var(--dsw-alias-bg-layer-1)
-  );
-}
-
-.tagTool {
-  color: var(--dsw-alias-state-warn-label);
-  background: var(--dsw-alias-state-warn-tertiary);
-}
-
-/* run_code sub-dispatch cells: the business tint plus an indent so the
-   nesting under the parent Tool cell reads at a glance. */
+.tagTool,
 .tagSubtool {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-label) 62%,
-    var(--dsw-alias-label-tertiary)
-  );
-  background: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-tertiary) 58%,
-    var(--dsw-alias-bg-layer-1)
-  );
+  --pill-fg: var(--amv-act-wait);
+  --pill-bg: color-mix(in srgb, var(--amv-act-wait) 12%, transparent);
+  --pill-border: color-mix(in srgb, var(--amv-act-wait) 35%, transparent);
 }
 
+.tagSubtool {
+  opacity: 0.8;
+}
+
+/* run_code sub-dispatch cells are indented under the parent Tool cell. */
 .root[data-kind='subtool'] {
   padding-left: 28px;
 }
@@ -112,8 +99,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-primary);
+  font: 400 13px/18px var(--dsw-font-family);
+  color: var(--amv-text);
 }
 
 /* Same column geometry as TrajectoryTurnHeader: 4×71 + 3×12 = 320. */
@@ -132,7 +119,8 @@
   flex: none;
   width: 71px;
   text-align: left;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-tertiary);
+  font: 400 12px/18px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  color: var(--amv-muted);
   white-space: nowrap;
 }

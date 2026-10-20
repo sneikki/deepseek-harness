@@ -8,7 +8,8 @@
   box-sizing: border-box;
   width: 100%;
   height: 44px;
-  background: var(--dsw-alias-button-ghost-active-fill);
+  border-bottom: 1px solid var(--amv-border);
+  background: var(--amv-bg-deep);
 }
 
 .inner {
@@ -25,8 +26,11 @@
 
 .title {
   flex: none;
-  font: var(--dsw-font-xs-strong-13);
-  color: var(--dsw-alias-label-primary);
+  font: 500 11px/16px var(--ds-font-family-code);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--amv-muted);
 }
 
 .columns {
@@ -43,6 +47,8 @@
   flex: none;
   width: 71px;
   text-align: left;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-secondary);
+  font: 500 11px/16px var(--dsw-font-family);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
