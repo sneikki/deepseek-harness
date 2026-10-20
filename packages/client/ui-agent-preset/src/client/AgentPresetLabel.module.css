@@ -3,15 +3,16 @@
 .label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   max-width: 180px;
-  padding: 0 2px 0 0;
-  height: 22px;
-  border-radius: var(--dsw-radius-xs);
-  background: var(--dsw-alias-fill-tsp-secondary);
+  padding: 3px 10px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 999px;
+  background: var(--amv-raised);
   font-size: 12px;
-  line-height: 22px;
-  color: var(--dsw-alias-label-tertiary);
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--amv-text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -19,7 +20,6 @@
 
 .icon {
   flex: none;
-  opacity: 0.7;
 }
 
 /* First sacrifice when the title row (the enclosing inline-size container)
