@@ -18,3 +18,13 @@
   font-size: 12px;
   line-height: 18px;
 }
+
+/* v2 canvas: the row is an r12 panel with a mono label, like a timeline entry. */
+.row {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+.title { font-family: var(--ds-font-family-code); font-size: 13px; }
