@@ -1214,6 +1214,7 @@ describe('timeline projection', () => {
       ],
       turnBoundaries: [{ turn: 1, time: 0 }],
       subagents: [],
+      wallToDomain: expect.any(Function),
     })
   })
 
