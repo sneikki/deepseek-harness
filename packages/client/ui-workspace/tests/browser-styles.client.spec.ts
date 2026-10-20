@@ -110,7 +110,7 @@ describe('WorkspaceBrowser.module.css list', () => {
     expect(rowDeclarations('.sessionRow .title')?.get('margin')).toBe('0 6px 0 4px')
     expect(rowDeclarations('.searchResultRow')?.get('min-height')).toBe('48px')
     expect(rowDeclarations('.sessionRow.selected')?.get('background'))
-      .toBe('var(--amv-accent-soft)')
+      .toBe('var(--amv-surface)')
   })
 
   it('marquees a clipped session title on row hover', () => {
