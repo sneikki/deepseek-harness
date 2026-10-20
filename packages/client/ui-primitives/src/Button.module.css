@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--dsw-radius-md);
   cursor: pointer;
   font-size: 14px;
@@ -13,11 +13,20 @@
   color: var(--dsw-alias-label-primary);
   background: transparent;
   padding: 0 14px;
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: var(--amv-dur-1);
+  transition-timing-function: var(--amv-ease);
 }
 
+/* Disabled stays legible: dimmed, not faded into the ground. */
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.5;
+}
+
+/* Press is a 2 % shrink, not a bounce, so dense rows stay calm. */
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .md {
@@ -33,31 +42,42 @@
   border-radius: var(--dsw-radius-sm);
 }
 
+/* Primary: accent fill, text in the brand-invert step (dark on dark teal, white on deep teal). */
 .primary {
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--amv-accent);
+  color: var(--dsw-alias-brand-primary-invert);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--dsw-alias-button-primary-hover);
+  background: var(--amv-accent-hover);
 }
 
-.ghost:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.ghost:active:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-active);
-}
-
-/* Outlined actions use the same neutral stroke as settings links. */
+/* Secondary and ghost sit raised with a strong stroke, so they read as controls on any surface. */
+.ghost,
 .outline {
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  background: transparent;
+  background: var(--amv-raised);
+  border-color: var(--amv-border-strong);
 }
 
+.ghost:hover:not(:disabled),
 .outline:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-border);
+}
+
+.ghost:active:not(:disabled),
+.outline:active:not(:disabled) {
+  background: var(--amv-border-strong);
+}
+
+/* Danger: red outline and label, tinted fill on hover. */
+.danger {
+  background: transparent;
+  border-color: var(--amv-danger);
+  color: var(--amv-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--amv-danger) 12%, transparent);
 }
 
 .toolbar {
@@ -74,4 +94,14 @@
   height: 16px;
   align-items: center;
   justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
 }

@@ -12,12 +12,17 @@
   border: 0;
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-alias-border-l3);
+  background: var(--amv-border-strong);
   cursor: pointer;
+  transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
 
 .switch[aria-checked='true'] {
-  background: var(--dsw-alias-brand-primary);
+  background: var(--amv-accent);
+}
+
+body[data-ds-dark-theme] .switch[aria-checked='true'] {
+  background: color-mix(in srgb, var(--amv-accent) 55%, var(--amv-bg));
 }
 
 .switch:disabled {
@@ -37,7 +42,7 @@
   border-radius: 50%;
   corner-shape: round;
   background: var(--dsw-alias-label-primary-foreground);
-  transition: transform 120ms ease;
+  transition: transform var(--amv-dur-1) var(--amv-ease);
 }
 
 .switch[aria-checked='false'] .thumb {
