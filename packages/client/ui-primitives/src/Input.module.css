@@ -5,15 +5,15 @@
   gap: 6px;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--amv-border-strong);
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-surface);
   transition: border-color var(--amv-dur-1) var(--amv-ease), box-shadow var(--amv-dur-1) var(--amv-ease);
 }
 
 .wrap:focus-within {
   border-color: var(--amv-accent);
-  outline: 3px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 14%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--amv-accent)) 25%, transparent);
 }
 
 .icon {
@@ -33,9 +33,9 @@
   background: transparent;
   font-size: 14px;
   line-height: 22px;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .input::placeholder {
-  color: var(--dsw-alias-label-dimmed);
+  color: var(--amv-faint);
 }

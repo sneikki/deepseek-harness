@@ -12,8 +12,8 @@
   box-sizing: border-box;
   width: 244px;
   padding: 12px 16px;
-  border: 1px solid var(--amv-border-strong);
-  border-radius: var(--dsw-radius-lg);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
   background: var(--amv-surface);
   box-shadow: var(--amv-shadow-pop);
   animation: amv-scale-in var(--amv-dur-2) var(--amv-ease);
@@ -55,10 +55,10 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--amv-border-strong);
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-bg-layer-1);
-  color: var(--dsw-alias-label-primary);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+  color: var(--amv-text);
   box-shadow: var(--amv-shadow-pop);
   opacity: 1;
   transition: opacity var(--dsh-hover-preview-fade) linear;

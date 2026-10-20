@@ -9,13 +9,13 @@
      max-content sizes by the label alone, capped at half the viewport. */
   width: max-content;
   max-width: 50vw;
-  padding: 3px 7px;
-  border: 1px solid var(--amv-border-strong);
-  border-radius: var(--dsw-radius-sm);
-  background: var(--dsw-alias-tooltip-bg);
+  padding: 4px 8px;
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+  background: var(--amv-raised);
   box-shadow: var(--amv-shadow-pop);
-  color: var(--dsw-static-neutral-bluish-00);
-  font-size: 13px;
+  color: var(--amv-text);
+  font-size: 12px;
   line-height: 20px;
   white-space: pre-line;
   /* Unbreakable tokens (URLs, paths) must not push past max-width. */

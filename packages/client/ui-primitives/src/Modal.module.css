@@ -40,9 +40,9 @@
   width: min(380px, 100%);
   padding: 0 0 24px;
   overflow: hidden;
-  border: 1px solid var(--amv-border-strong);
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+  background: var(--amv-surface);
   box-shadow: var(--amv-shadow-pop);
   animation: amv-scale-in var(--amv-dur-2) var(--amv-ease);
 }
@@ -76,7 +76,7 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 500; /* figma wt510, rendered 500 */
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .close {
@@ -87,14 +87,15 @@
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
 }
 
 .close:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
+  color: var(--amv-text);
 }
 
 /* Description and body share the 332px content column (24px side pads). */
@@ -104,7 +105,7 @@
   font-size: 14px;
   line-height: 22px;
   font-weight: 400;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text-2);
 }
 
 .body {

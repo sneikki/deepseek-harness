@@ -2,17 +2,17 @@
   position: relative;
   display: grid;
   padding: 4px;
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-bg-module-platform);
+  border-radius: 10px;
+  border: 1px solid var(--amv-border);
+  background: var(--amv-surface);
 }
 
 .indicator {
   position: absolute;
   inset: 4px auto 4px 4px;
   box-sizing: border-box;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-bg-layer-3);
+  border-radius: 8px;
+  background: var(--amv-raised);
   transition: transform 180ms ease;
   pointer-events: none;
 }
@@ -22,22 +22,22 @@
   justify-content: center;
   height: 34px;
   padding: 0 12px;
-  border-radius: var(--dsw-radius-md);
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   line-height: 20px;
   background: transparent;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
   transition: color 180ms ease;
 }
 
 .tab:hover,
 .tab[aria-selected='true'] {
   background: transparent;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .tab[aria-selected='true'] {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tab:focus-visible {
