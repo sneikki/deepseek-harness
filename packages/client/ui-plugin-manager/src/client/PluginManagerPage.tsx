@@ -340,7 +340,7 @@ function RowsSection({ rows, t, resolveText, toggle, configure }: {
                 key={row.rowId}
                 className={css.row}
                 data-plugin-row={row.entryId ?? row.rowId}
-                {...row.phase === 'failed' ? { 'data-state': 'failed' } : row.enabled ? {} : { 'data-state': 'off' }}
+                {...row.phase === 'failed' ? { 'data-state': 'failed' } : !row.enabled ? { 'data-state': 'off' } : row.phase === 'active' ? {} : { 'data-state': 'busy' }}
               >
                 <div className={css.rowLine}>
                   <span className={css.rowIcon} aria-hidden="true"><PackageArtwork key={row.meta?.icon} src={row.meta?.icon} row /></span>
