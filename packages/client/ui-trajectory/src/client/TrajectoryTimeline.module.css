@@ -14,7 +14,7 @@
 .plot {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  height: 50px;
+  height: 50px; /* overridden inline by the stacked-track layout */
   overflow: hidden;
   background: var(--amv-bg-deep);
 }
@@ -34,26 +34,6 @@
   justify-content: flex-end;
   height: 10px;
   text-align: right;
-}
-
-.labels span:nth-child(1) {
-  top: 7px;
-}
-
-.labels span:nth-child(2) {
-  top: 21px;
-}
-
-.labels span:nth-child(3) {
-  top: 35px;
-}
-
-.labels span:nth-child(4) {
-  top: 49px;
-}
-
-.plot[data-subagents='true'] {
-  height: 64px;
 }
 
 .track {
@@ -158,7 +138,7 @@
 
 .span {
   position: absolute;
-  top: calc(var(--trajectory-span-lane) * 14px);
+  top: var(--trajectory-span-top);
   left: calc(var(--trajectory-span-left) + var(--trajectory-span-gap));
   width: max(
     2px,
@@ -168,7 +148,7 @@
       - var(--trajectory-span-gap)
     )
   );
-  height: 10px;
+  height: var(--trajectory-span-height);
   min-width: 2px;
   border-radius: 3px;
   background: var(--amv-muted);
@@ -328,10 +308,10 @@
 /* Lane 4: one bar per subagent, start to settle; running stays open-ended. */
 .subagent {
   position: absolute;
-  top: calc(3 * 14px);
+  top: var(--trajectory-span-top);
   left: var(--trajectory-span-left);
   width: max(6px, var(--trajectory-span-width));
-  height: 10px;
+  height: var(--trajectory-span-height);
   border-radius: 3px;
   background: var(--amv-success);
   opacity: 0.9;
@@ -371,4 +351,16 @@
   .subagent[data-timeline-subagent='running'] {
     animation: none;
   }
+}
+
+.overflow {
+  position: absolute;
+  z-index: 3;
+  right: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--amv-bg-deep);
+  color: var(--amv-muted);
+  font: 400 9px/8px var(--ds-font-family-code);
+  pointer-events: none;
 }
