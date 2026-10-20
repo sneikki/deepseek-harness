@@ -77,9 +77,11 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
+/* A whole-pixel outline instead of the 0.5px elevation stroke: the half-pixel
+   stroke rasterizes unevenly, so the focused edge read thicker on some sides. */
 .card:focus-within {
-  --dsw-elevation-stroke-color: var(--amv-accent);
-  outline: 3px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 14%, transparent);
+  --dsw-elevation-stroke-color: transparent;
+  outline: 1px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
 }
 
 /* No-workspace trigger state: an inset 1px dashed outline marks the card as a
