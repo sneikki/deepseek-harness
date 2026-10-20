@@ -592,7 +592,8 @@ function clientConfig(
         const { code, exports: cssExports } = transform({
           filename: fileId,
           code: source,
-          cssModules: { pattern: '[hash]_[local]' },
+          // animation:false keeps @keyframes names unhashed so modules can use ui-theme's global amv-* keyframes; local names reused across modules (spin, wide-in, toolSpin) have identical bodies.
+          cssModules: { pattern: '[hash]_[local]', animation: false },
           minify: true,
         })
         const classMap: Record<string, string> = {}

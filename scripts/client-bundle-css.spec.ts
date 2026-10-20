@@ -51,6 +51,24 @@ describe('client bundle CSS Modules', () => {
   })
 })
 
+describe('client bundle CSS Modules keyframes', () => {
+  it('keeps animation names unhashed so global amv-* keyframes resolve', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-client-css-keyframes-'))
+    try {
+      await writeFile(join(root, 'Fixture.module.css'), '.root { animation: amv-pulse 1s; }\n')
+      const plugin = bundlePlugin('dsh-css-modules-inline')
+      const virtualId = plugin.resolveId?.('./Fixture.module.css', join(root, 'index.ts'))
+      if (typeof virtualId !== 'string' || plugin.load === undefined) throw new Error('hooks missing')
+
+      const output = await plugin.load.call({ addWatchFile: () => undefined }, virtualId)
+
+      expect(output).toMatch(/animation:\s*1s amv-pulse|animation:amv-pulse/)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('client bundle global CSS', () => {
   it('compiles a side-effect stylesheet into a watched style injector', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-client-global-css-watch-'))
