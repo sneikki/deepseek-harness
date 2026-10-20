@@ -22,6 +22,7 @@ import { displayToolName, formatElapsedSeconds } from './trajectory-record.ts'
 import type { TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
 import { summarizeToolArgs } from './trajectory-noise.ts'
+import { correlateTrajectorySubagents } from './trajectory-subagent.ts'
 
 /** One Message or Step group inside a turn. */
 export interface TrajectoryGroupModel {
@@ -568,10 +569,10 @@ export function deriveTrajectoryLayout(
     }
   }
 
-  return [
+  return correlateTrajectorySubagents([
     ...[...turns.entries()].map(([turn, entry]) => toTurnModel(turn, entry, t)),
     ...standaloneCompactions.map(entry => toTurnModel(null, entry, t)),
-  ].sort((left, right) => firstCellIndex(left) - firstCellIndex(right))
+  ].sort((left, right) => firstCellIndex(left) - firstCellIndex(right)))
 }
 
 /**

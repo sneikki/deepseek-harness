@@ -11,7 +11,11 @@ import type { AssistantMetricDetail, TrajectoryCellKind, TrajectoryCellProps } f
 import {
   deriveTrajectoryTimeline,
   formatTimelineOffset,
+  layoutTimelineLanes,
+  TIMELINE_EMPTY_PLOT_HEIGHT,
+  type TrajectoryTimelineLanes,
   type TrajectoryTimelineMode,
+  type TrajectoryTimelineSubagent,
   type TrajectoryTimeRange,
 } from './timeline.ts'
 import { trajectoryActivityOf } from './trajectory-activity.ts'
@@ -132,6 +136,46 @@ function timelineTooltipLabel(
   return [heading, range, timing].filter(value => value !== null && value !== '').join('\n')
 }
 
+function spanBox(
+  layout: TrajectoryTimelineLanes | null,
+  lane: number,
+  track: number,
+): Record<string, string> {
+  const geometry = layout?.lanes[lane]
+  if (geometry === undefined) return { '--trajectory-span-top': `${lane * 14}px`, '--trajectory-span-height': '10px' }
+  return {
+    '--trajectory-span-top': `${geometry.top + track * geometry.pitch}px`,
+    '--trajectory-span-height': `${geometry.bar}px`,
+  }
+}
+
+function subagentTooltipLabel(
+  { lifecycle }: TrajectoryTimelineSubagent,
+  t: TrajectoryTranslate,
+): string {
+  const durationMs = lifecycle.startedAt !== null && lifecycle.endedAt !== null
+    ? lifecycle.endedAt - lifecycle.startedAt
+    : null
+  const status = {
+    running: t('timeline.subagentRunning'),
+    finished: t('timeline.subagentFinished'),
+    failed: t('timeline.subagentFailed'),
+    interrupted: t('timeline.subagentInterrupted'),
+  }[lifecycle.status]
+  return [
+    `${lifecycle.description} · ${lifecycle.shortId}`,
+    [
+      status,
+      durationMs === null ? null : t('timeline.total', { duration: formatTimelineOffset(durationMs, t) }),
+      lifecycle.reportCount === 0
+        ? null
+        : lifecycle.reportCount === 1
+          ? t('timeline.subagentReport')
+          : t('timeline.subagentReports', { count: lifecycle.reportCount }),
+    ].filter(part => part !== null).join(' · '),
+  ].join('\n')
+}
+
 /** Props for the fixed full-domain overview above the trajectory ledger. */
 export interface TrajectoryTimelineProps {
   t: TrajectoryTranslate
@@ -191,12 +235,13 @@ function rangeFraction(
   }
 }
 
-function LaneLabels({ t }: { t: TrajectoryTranslate }) {
+function LaneLabels({ t, layout }: { t: TrajectoryTranslate; layout?: TrajectoryTimelineLanes }) {
+  const names = [t('column.input'), t('column.model'), t('column.tools'), t('timeline.subagents')]
   return (
     <div className={css.labels} aria-hidden="true">
-      <span>{t('column.input')}</span>
-      <span>{t('column.model')}</span>
-      <span>{t('column.tools')}</span>
+      {names.slice(0, layout?.lanes.length ?? 3).map((name, lane) => (
+        <span key={name} style={{ top: 7 + (layout?.lanes[lane]?.top ?? lane * 14) }}>{name}</span>
+      ))}
     </div>
   )
 }
@@ -254,6 +299,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   onRecordFocus,
 }: TrajectoryTimelineProps) {
   const model = useMemo(() => deriveTrajectoryTimeline(turns, mode), [mode, turns])
+  const layout = useMemo(() => model === null ? null : layoutTimelineLanes(model), [model])
   const detailByIndex = useMemo(
     () => new Map(turns.flatMap(turn =>
       turn.groups.flatMap(group =>
@@ -390,7 +436,10 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   if (model === null) {
     return (
       <section ref={rootRef} className={css.root} aria-label={t('timeline.aria')}>
-        <div className={css.plot}>
+        <div
+          className={css.plot}
+          style={{ '--trajectory-plot-height': `${TIMELINE_EMPTY_PLOT_HEIGHT}px` } as CSSProperties}
+        >
           <LaneLabels t={t} />
           <div className={css.track}>
             <span className={css.empty}>{t('timeline.noTimingData')}</span>
@@ -586,8 +635,8 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
 
   return (
     <section ref={rootRef} className={css.root} aria-label={t('timeline.aria')}>
-      <div className={css.plot}>
-        <LaneLabels t={t} />
+      <div className={css.plot} style={{ '--trajectory-plot-height': `${layout?.plotHeight ?? TIMELINE_EMPTY_PLOT_HEIGHT}px` } as CSSProperties}>
+        <LaneLabels t={t} {...layout === null ? {} : { layout }} />
         <div
           ref={trackRef}
           className={css.track}
@@ -673,6 +722,17 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                 />
               ))}
           </div>
+          {layout?.lanes.map((lane, index) => lane.overflow === 0 ? null : (
+            <span
+              key={index}
+              className={css.overflow}
+              data-timeline-overflow={index}
+              aria-hidden="true"
+              style={{ top: 7 + lane.top + (lane.tracks - 1) * lane.pitch - 2 }}
+            >
+              +{lane.overflow}
+            </span>
+          ))}
           <div
             className={css.lanes}
             data-animate-viewport={animateViewport || undefined}
@@ -727,7 +787,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                         '--trajectory-span-left': `${left * 100}%`,
                         '--trajectory-span-width': `${widthPercent}%`,
                         '--trajectory-span-gap': `min(${widthPercent * 0.08}%, 1px)`,
-                        '--trajectory-span-lane': span.lane,
+                        ...spanBox(layout, span.lane, layout?.spanTrack.get(span) ?? 0),
                         ...(ttftFraction === null
                           ? {}
                           : { '--trajectory-assistant-ttft': `${ttftFraction * 100}%` }),
@@ -736,6 +796,29 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                   </Tooltip>
                 )
               })}
+            {model.subagents
+              .filter(bar => bar.end >= domainStart && bar.start <= domainStart + domainDuration)
+              .map(bar => (
+                <Tooltip
+                  key={bar.index}
+                  label={() => subagentTooltipLabel(bar, t)}
+                  side="bottom"
+                  delayMs={TIMELINE_TOOLTIP_DELAY_MS}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={css.subagent}
+                    data-timeline-subagent={bar.lifecycle.status}
+                    data-timeline-record-index={bar.index}
+                    data-hovered={hover?.recordIndex === bar.index || undefined}
+                    style={{
+                      '--trajectory-span-left': `${(bar.start - model.start) / fullDuration * 100}%`,
+                      '--trajectory-span-width': `${(bar.end - bar.start) / fullDuration * 100}%`,
+                      ...spanBox(layout, 3, layout?.subagentTrack.get(bar) ?? 0),
+                    } as CSSProperties}
+                  />
+                </Tooltip>
+              ))}
           </div>
         </div>
       </div>
