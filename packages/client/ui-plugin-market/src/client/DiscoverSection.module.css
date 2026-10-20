@@ -434,3 +434,151 @@
 .link:hover {
   text-decoration: underline;
 }
+
+/* v2 canvas: mono entity names, panel cards, status pills, chips. Presentation only; later rules win. */
+.card {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+  background: var(--amv-surface);
+  transition: border-color var(--amv-dur-1) var(--amv-ease);
+}
+
+.card:hover {
+  border-color: var(--amv-border-strong);
+  background: var(--amv-surface);
+}
+
+.cards {
+  gap: 10px;
+}
+
+.cardOpen::after {
+  border-radius: 14px;
+}
+
+.icon {
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-raised);
+}
+
+.cardOpen,
+.detailTitle,
+.strong,
+.marketName {
+  font-family: var(--ds-font-family-code);
+}
+
+.detailTitle {
+  font-size: 22px;
+  line-height: 30px;
+}
+
+.description {
+  color: var(--amv-text-2);
+}
+
+.meta,
+.facts dd {
+  font-family: var(--ds-font-family-code);
+}
+
+.sectionTitle,
+.facts dt {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
+}
+
+/* Labels and version tags: mono chips; state tones become pills (default amber attention, success teal, warning amber). */
+.titleRow [data-tone],
+.tags [data-tone],
+.versionRow [data-tone] {
+  padding: 2px 8px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--amv-text-2);
+}
+
+.versionRow [data-tone='info'],
+.versionRow [data-tone='success'] {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.versionRow [data-tone='warning'] {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--amv-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+  color: var(--amv-warning);
+}
+
+.versionRow [data-tone='neutral'] {
+  background: var(--amv-raised);
+  color: var(--amv-muted);
+}
+
+.facts {
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+
+.facts div {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.facts div:last-child {
+  border-bottom: 0;
+}
+
+.facts code {
+  padding: 3px 8px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  background: var(--amv-raised);
+  color: var(--amv-accent);
+}
+
+.notice {
+  border: 1px solid color-mix(in srgb, var(--amv-warning) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+}
+
+.notice > svg {
+  color: var(--amv-warning);
+}
+
+.sourceRow,
+.versionRow {
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.empty {
+  margin-top: 8px;
+  border: 1px dashed var(--amv-border-strong);
+  border-radius: 14px;
+}
+
+.link {
+  color: var(--amv-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
