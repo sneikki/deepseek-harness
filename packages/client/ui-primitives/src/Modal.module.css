@@ -26,7 +26,7 @@
   position: absolute;
   inset: 0;
   background: var(--dsw-alias-bg-mask-1);
-  animation: modalEnter var(--ds-transition-duration) var(--ds-ease-in-out);
+  animation: amv-fade-in var(--amv-dur-2) var(--amv-ease);
 }
 
 /* Dialogs use the prominent elevation on the secondary layer. */
@@ -40,16 +40,11 @@
   width: min(380px, 100%);
   padding: 0 0 24px;
   overflow: hidden;
-  border: 0;
-  border-radius: var(--dsw-radius-panel);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: var(--dsw-radius-lg);
   background: var(--dsw-alias-bg-layer-2);
-  box-shadow: var(--dsw-elevation-prominent);
-  animation: modalEnter var(--ds-transition-duration) var(--ds-ease-in-out);
-}
-
-@keyframes modalEnter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  box-shadow: var(--amv-shadow-pop);
+  animation: amv-scale-in var(--amv-dur-2) var(--amv-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
