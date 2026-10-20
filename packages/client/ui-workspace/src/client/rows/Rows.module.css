@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border-radius: 10px;
+  border-radius: var(--dsw-radius-md);
   padding: 0 8px;
   transition: background var(--amv-dur-1) var(--amv-ease), box-shadow var(--amv-dur-1) var(--amv-ease);
   padding-inline-start: calc(8px + var(--dsh-workspace-indent, 0px));

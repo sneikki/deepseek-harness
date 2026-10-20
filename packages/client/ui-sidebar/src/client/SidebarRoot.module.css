@@ -350,7 +350,7 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--amv-border-strong);
-  border-radius: 9px;
+  border-radius: var(--dsw-radius-sm);
 }
 
 /* The toggle is flush with .logoRow, which clips its own overflow, so an outward ring loses
@@ -429,7 +429,7 @@
   margin: 0 2px 12px;
   box-sizing: border-box;
   border: 1px solid var(--amv-accent-ring);
-  border-radius: 10px;
+  border-radius: var(--dsw-radius-md);
   background: var(--amv-accent-tint);
   color: var(--amv-text);
   font-size: 14px;
@@ -537,7 +537,7 @@
   gap: 12px;
   box-sizing: border-box;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--dsw-radius-md);
   background: transparent;
   color: var(--amv-muted);
   font: inherit;
@@ -631,7 +631,7 @@
 .settingsArea button,
 .footerActions button {
   min-height: 40px;
-  border-radius: 10px;
+  border-radius: var(--dsw-radius-md);
   color: var(--amv-muted);
   transition: background var(--amv-dur-1) var(--amv-ease), color var(--amv-dur-1) var(--amv-ease);
 }

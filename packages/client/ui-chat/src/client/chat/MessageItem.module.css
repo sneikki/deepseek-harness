@@ -26,7 +26,7 @@
   max-width: 100%;
   background: var(--amv-accent-soft);
   border: 1px solid var(--amv-accent-ring);
-  border-radius: 12px;
+  border-radius: var(--dsw-radius-lg);
   animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
   /* 42px single-line bubble at the default size: 22 line + 10 vertical
      padding each side; the Settings font-size preference moves size and line

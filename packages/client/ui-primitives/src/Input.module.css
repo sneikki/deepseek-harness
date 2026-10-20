@@ -13,7 +13,7 @@
 
 .wrap:focus-within {
   border-color: var(--amv-accent);
-  box-shadow: 0 0 0 3px var(--amv-accent-tint);
+  outline: 3px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 14%, transparent);
 }
 
 .icon {

@@ -79,7 +79,7 @@
 
 .card:focus-within {
   --dsw-elevation-stroke-color: var(--amv-accent);
-  box-shadow: var(--dsw-elevation-soft), 0 0 0 3px var(--amv-accent-tint);
+  outline: 3px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 14%, transparent);
 }
 
 /* No-workspace trigger state: an inset 1px dashed outline marks the card as a
