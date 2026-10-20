@@ -24,8 +24,10 @@
      the bubble widens with a user-dragged or adaptive column; percentage
      keeps narrow windows sane. */
   max-width: 100%;
-  background: var(--dsw-specific-bubble);
-  border-radius: var(--dsw-radius-xl);
+  background: var(--amv-accent-soft);
+  border: 1px solid var(--amv-accent-ring);
+  border-radius: 12px;
+  animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
   /* 42px single-line bubble at the default size: 22 line + 10 vertical
      padding each side; the Settings font-size preference moves size and line
      height together through the body-published axis. */
@@ -361,4 +363,8 @@
   color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.45));
   font-size: 12px;
   line-height: 15px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble { animation: none; }
 }

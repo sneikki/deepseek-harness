@@ -213,7 +213,10 @@ button.crumb:hover {
   font-weight: 500;
   color: var(--dsw-alias-label-tertiary);
   cursor: pointer;
+  transition: color var(--amv-dur-1) var(--amv-ease);
 }
+
+.tab:hover { color: var(--dsw-alias-label-secondary); }
 
 .tab::after {
   content: '';
@@ -223,18 +226,20 @@ button.crumb:hover {
   left: 0;
   height: 2px;
   border-radius: 2px;
-  background: transparent;
+  background: var(--amv-accent);
+  transform: scaleX(0);
+  transition: transform var(--amv-dur-3) var(--amv-ease);
 }
 
 /* Selected tab is blue, not ink: brand-primary resolves to neutral black in
    this token sheet, so the selected state rides the business blue — the
    nearest semantic token that stays blue in both themes. */
 .tabActive {
-  color: var(--dsw-alias-state-business-primary);
+  color: var(--amv-accent);
 }
 
 .tabActive::after {
-  background: var(--dsw-alias-state-business-primary);
+  transform: scaleX(1);
 }
 
 .viewArea {

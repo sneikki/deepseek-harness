@@ -14,8 +14,14 @@
   font-size: var(--dsh-content-font-size, 14px);
   cursor: pointer;
   text-align: left;
-  transition: color 100ms ease;
+  font-family: var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--amv-dur-1) var(--amv-ease);
 }
+
+.root[data-outcome='completed'] { color: color-mix(in srgb, var(--amv-success) 75%, var(--dsw-alias-label-tertiary)); }
+.root[data-outcome='failed'] { color: var(--amv-danger); }
+.root[data-outcome]:hover:not(:disabled) { filter: brightness(1.15); }
 
 .root:disabled {
   cursor: default;
