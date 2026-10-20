@@ -1,54 +1,71 @@
+/* Turn row: status pill with mono duration, then one square per tool call
+   coloured by activity (--amv-act-*; failed call = --amv-danger). */
 .root {
+  --turn-tone: var(--amv-muted);
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
   min-width: 0;
-  height: calc(33px + var(--dsh-content-font-delta, 0px));
+  min-height: calc(33px + var(--dsh-content-font-delta, 0px));
   padding: 0 0 8px;
   border: none;
   border-bottom: 0.5px solid var(--dsw-alias-border-l2);
   background: none;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-text-2);
   font: inherit;
   font-size: var(--dsh-content-font-size, 14px);
   cursor: pointer;
   text-align: left;
   font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
-  transition: color var(--amv-dur-1) var(--amv-ease);
 }
 
-.root[data-outcome='completed'] { color: color-mix(in srgb, var(--amv-success) 75%, var(--dsw-alias-label-tertiary)); }
-.root[data-outcome='failed'] { color: var(--amv-danger); }
-.root[data-outcome]:hover:not(:disabled) { filter: brightness(1.15); }
+.root[data-outcome='completed'] { --turn-tone: var(--amv-success); }
+.root[data-outcome='failed'] { --turn-tone: var(--amv-danger); }
 
 .root:disabled {
   cursor: default;
 }
 
-.root:hover:not(:disabled) {
-  color: var(--dsw-alias-label-secondary);
-}
-
-.chevron {
+.pill {
   flex: none;
-  width: 14px;
-  height: 14px;
-  margin-left: 4px;
-  color: inherit;
-  transition: transform 100ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--turn-tone) 32%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--turn-tone) 10%, transparent);
+  color: var(--turn-tone);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background var(--amv-dur-1) var(--amv-ease);
 }
 
-.root[data-open] .chevron {
-  transform: rotate(180deg);
+.root[data-outcome='completed'] .pill,
+.root[data-outcome='failed'] .pill {
+  color: color-mix(in srgb, var(--turn-tone) 70%, var(--amv-text));
+}
+
+.root:hover:not(:disabled) .pill {
+  background: color-mix(in srgb, var(--turn-tone) 16%, transparent);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 
 .label {
   min-width: 0;
   overflow: hidden;
   font-size: inherit;
-  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -58,8 +75,43 @@
   font-variant-numeric: tabular-nums;
 }
 
+.strip {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.cell {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--amv-raised);
+}
+
+.cell[data-activity='code'] { background: var(--amv-act-code); }
+.cell[data-activity='review'] { background: var(--amv-act-review); }
+.cell[data-activity='deploy'] { background: var(--amv-act-deploy); }
+.cell[data-activity='proof'] { background: var(--amv-act-proof); }
+.cell[data-activity='error'] { background: var(--amv-danger); }
+.cell[data-activity='other'] { background: var(--amv-act-wait); }
+
+.chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--amv-muted);
+  transition: transform 100ms ease;
+}
+
+.root[data-open] .chevron {
+  transform: rotate(180deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .root,
+  .pill,
   .chevron {
     transition: none;
   }
