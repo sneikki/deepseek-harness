@@ -46,9 +46,26 @@ describe('deriveAgentTree', () => {
       root: proj([entry('l1', 1), entry('l2', 2), entry('l3', 3)]),
     }, lifecycles)
     expect(rows.map(row => row.status)).toEqual(['done', 'running', 'unknown'])
-    expect(rows[0]).toMatchObject({ startedAt: 100, endedAt: 400 })
-    expect(rows[1]).toMatchObject({ startedAt: 200, endedAt: null })
-    expect(rows[2]).toMatchObject({ startedAt: 3, endedAt: null })
+    expect(rows[0]).toMatchObject({ endedAt: 400 })
+    expect(rows[1]).toMatchObject({ endedAt: null })
+    expect(rows[2]).toMatchObject({ endedAt: null })
+    // One start source: the bar start is the catalog's, not the lifecycle's.
+    expect(rows.map(row => row.startedAt)).toEqual([1, 2, 3])
+    expect(rows.map(row => row.loaded)).toEqual([false, false, false])
+  })
+
+  it('does not apply a lifecycle to depth 2, and projection timing wins at depth 1', () => {
+    const lifecycles = [
+      { ...life('d1', 1, true), status: 'failed' as const, startedAt: 100, endedAt: 400 },
+      { ...life('d2', 2, true), status: 'finished' as const, startedAt: 100, endedAt: 400 },
+    ]
+    const rows = deriveAgentTree('root', {}, {
+      root: proj([entry('d1', 1)]),
+      d1: proj([entry('d2', 2)], { settledMs: 1, lastTurnEnd: { at: 9, reason: 'completed' } }),
+    }, lifecycles)
+    expect(rows.map(row => [row.sessionId, row.status, row.loaded])).toEqual([
+      ['d1', 'done', true], ['d2', 'unknown', false],
+    ])
   })
 
   it('maps every turn-end kind to a status', () => {

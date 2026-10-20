@@ -48,6 +48,8 @@ export interface AgentTreeRow {
   hasChildren: boolean
   /** Ledger record index of the start call; depth-1 rows only. */
   startIndex: number | null
+  /** Whether the child's projection is present; false rows show interim lifecycle data and are worth loading. */
+  loaded: boolean
 }
 
 const LIFECYCLE_STATUS = {
@@ -131,13 +133,15 @@ export function deriveAgentTree(
         status: running
           ? 'running'
           : timing !== undefined ? endStatus(timing) : fallback === undefined ? 'unknown' : LIFECYCLE_STATUS[fallback.status],
-        startedAt: fallback?.startedAt ?? entry.createdAt,
+        // One start source (never the lifecycle's) so the bar does not jump when the projection arrives.
+        startedAt: entry.createdAt,
         endedAt: running ? null : timing?.lastTurnEnd?.at ?? fallback?.endedAt ?? null,
         activeMs: timing === undefined
           ? null
           : timing.settledMs + (timing.active === undefined ? 0 : Math.max(0, timing.active.through - timing.active.since)),
         hasChildren: children.length > 0,
         startIndex: links.get(entry.id) ?? null,
+        loaded: projection !== undefined,
       })
       walk(entry.id, depth + 1, new Map())
     }

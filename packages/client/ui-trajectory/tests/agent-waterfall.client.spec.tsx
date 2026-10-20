@@ -10,7 +10,7 @@ afterEach(cleanup)
 
 const row = (sessionId: string, depth: number, extra: Partial<AgentTreeRow> = {}): AgentTreeRow => ({
   sessionId, depth, label: `agent-${sessionId}`, shortId: sessionId.padEnd(8, '0'), status: 'done',
-  startedAt: 0, endedAt: 500, activeMs: 300, hasChildren: false, startIndex: null, ...extra,
+  startedAt: 0, endedAt: 500, activeMs: 300, hasChildren: false, startIndex: null, loaded: true, ...extra,
 })
 const rows = [
   row('a', 1, { hasChildren: true, startIndex: 7 }),

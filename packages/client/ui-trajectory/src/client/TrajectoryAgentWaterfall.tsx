@@ -159,7 +159,7 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
             const rawLeft = fraction(startDomain)
             const rawRight = timed && endDomain !== null ? fraction(endDomain) : rawLeft
             // Entirely outside the visible window (earlier history or zoomed away): label only.
-            const drawn = timed && rawRight > 0 && rawLeft < 1
+            const drawn = timed && endDomain !== null && rawRight > 0 && rawLeft < 1
             const left = clamp01(rawLeft)
             const right = clamp01(rawRight)
             const wallMs = timed && row.endedAt !== null ? row.endedAt - startedAt : null

@@ -18,6 +18,7 @@ import {
   analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
+import { createProjectionLoader } from './projection-loader.ts'
 import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
@@ -94,7 +95,7 @@ export interface TrajectoryViewInjected {
   /** Open a subagent's own session. */
   openSession: (sessionId: string) => void
   /** Read a session's projections (timing, catalog) without opening it. */
-  loadProjection: (sessionId: string) => void
+  loadProjection: (sessionId: string) => Promise<boolean>
 }
 
 interface UsageLike {
@@ -371,15 +372,11 @@ export function TrajectoryView({
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
   )
-  // Unloaded children carry no timing: read their projections once each (their own children follow).
-  const requestedProjections = useRef(new Set<string>())
+  // Rows without a projection get theirs read (bounded, once, one retry); nested children follow.
+  const [projectionLoader] = useState(() => createProjectionLoader(loadProjection))
   useEffect(() => {
-    for (const row of agentRows) {
-      if (row.status !== 'unknown' || requestedProjections.current.has(row.sessionId)) continue
-      requestedProjections.current.add(row.sessionId)
-      loadProjection(row.sessionId)
-    }
-  }, [agentRows, loadProjection])
+    for (const row of agentRows) if (!row.loaded) projectionLoader.request(row.sessionId)
+  }, [agentRows, projectionLoader])
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
