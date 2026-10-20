@@ -3,16 +3,17 @@
   display: inline-flex;
 }
 
-/* Compact translucent dropdown card shared by feature menus. */
+/* Compact dropdown card shared by feature menus. */
 .list,
 .submenu {
   /* min-widths below are the design's outer card widths — include the pad. */
   box-sizing: border-box;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--amv-border-strong);
+  border: 1px solid var(--amv-popup-border);
+  border-radius: 12px;
   box-shadow: var(--amv-shadow-pop);
   /* Enter fades and scales from the trigger side; origin follows data-side/data-align. */
   animation: amv-scale-in var(--amv-dur-2) var(--amv-ease);
@@ -98,7 +99,7 @@
   flex-direction: column;
   margin-top: 3px;
   padding-top: 3px;
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  border-top: 1px solid var(--amv-border);
 }
 
 .itemWrap {
@@ -111,27 +112,27 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  min-height: 34px;
-  padding: 6px 8px;
+  min-height: 32px;
+  padding: 4px 8px;
   border: none;
-  border-radius: var(--dsw-radius-md);
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   font-size: 13px;
   line-height: 20px;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text-2);
   text-align: left;
 }
 
 .item:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 /* Arrow navigation moves real focus, so the row the keyboard is on carries the
    same fill the pointer gets: the fill is the row's focus indication, and the
    browser's default ring would double it. */
 .item:focus-visible:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
   outline: none;
 }
 
@@ -174,8 +175,13 @@
   line-height: 15px;
 }
 
+.item:hover:not(:disabled):not(.danger) {
+  color: var(--amv-text);
+}
+
 .item:disabled {
-  opacity: 0.4;
+  color: var(--amv-faint);
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -222,18 +228,20 @@
 
 .check {
   flex: none;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-accent);
 }
 
 /* Selected cell keeps the plain fill (marker is the trailing check); the
  * class remains as a hook for owner-side emphasis. */
 .selected {
   background: transparent;
+  color: var(--amv-text);
 }
 
 /* Fill-mode selection: the row holds the hover fill instead of a check. */
 .selectedFill {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
+  color: var(--amv-text);
 }
 
 /* Destructive row: error text/icon, danger hover fill. */
@@ -256,18 +264,21 @@
 
 /* Heading row: non-interactive small grey text, padding aligned with items. */
 .label {
-  padding: 6px 8px;
+  padding: 6px 8px 4px;
   font-size: 11px;
   line-height: 15px;
-  color: var(--dsw-alias-label-tertiary);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 /* Separator cell (figma 122:9481): py 4 / px 2 around the hairline. l2, not
  * l1, for the same reason as .footer: l1 is near-invisible on this surface. */
 .separator {
-  height: 0.5px;
-  margin: 3px 2px;
-  background: var(--dsw-alias-border-l2);
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--amv-border);
 }
 
 /* A data separator directly followed by a row that starts a group draws one

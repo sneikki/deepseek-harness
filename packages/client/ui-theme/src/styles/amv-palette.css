@@ -33,6 +33,7 @@ body {
   --amv-raised: #f0f2f4;
   --amv-border: #dde1e4;
   --amv-border-strong: #c9cfd3;
+  --amv-popup-border: #c9cfd3;
   --amv-text: #0f1214;
   --amv-text-2: #3f464b;
   --amv-muted: #5c646a;
@@ -143,6 +144,7 @@ body[data-ds-dark-theme] {
   --amv-raised: #1b2024;
   --amv-border: #262c30;
   --amv-border-strong: #343b40;
+  --amv-popup-border: #343b40;
   --amv-text: #e6e9eb;
   --amv-text-2: #afb2b5;
   --amv-muted: #7f878d;

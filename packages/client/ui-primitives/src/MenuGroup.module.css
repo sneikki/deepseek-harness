@@ -22,10 +22,12 @@
   z-index: 1;
   padding: 4px 7px 2px;
   background: transparent;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 11px;
   line-height: 16px;
   font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .heading[data-stuck] {
