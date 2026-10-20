@@ -233,6 +233,7 @@ function standaloneProps(
   }
   return {
     sessionId: SID,
+    openSession: () => {},
     useChat: bindSnapshotSelector(createSnapshotStore(EMPTY_CHAT_SNAPSHOT)),
     useSessions: emptySessions(),
     usePanelInfo, useResource,
