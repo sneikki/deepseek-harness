@@ -253,6 +253,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
 }
 .sessionRow[data-tone='running'] .slot { color: var(--amv-accent); }
