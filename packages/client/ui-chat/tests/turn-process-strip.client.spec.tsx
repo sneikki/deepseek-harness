@@ -15,7 +15,7 @@ describe('turn process activity strip', () => {
       },
       turnProcess: { foldable: false, open: true, hasContent: false, setOpen: () => {} },
       t,
-    } as never
+    } as unknown as Parameters<typeof TurnProcessNodeView>[0]
     const { container } = render(<TurnProcessNodeView {...props} />)
     const cells = [...container.querySelectorAll<HTMLElement>('[data-activity]')]
     expect(cells.map(c => c.dataset.activity)).toEqual(['code', 'error'])
