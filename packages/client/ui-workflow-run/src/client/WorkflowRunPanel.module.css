@@ -19,7 +19,7 @@
 }
 
 .runHeader:focus-visible {
-  outline: 2px solid var(--amv-accent-ring);
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -2px;
 }
 
@@ -86,7 +86,7 @@
 }
 
 .phaseHeader:focus-visible {
-  outline: 2px solid var(--amv-accent-ring);
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -2px;
   border-radius: 10px;
 }
@@ -244,7 +244,7 @@
 }
 
 .memberButton:focus-visible .memberLabelWrap {
-  outline: 2px solid var(--amv-accent-ring);
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -1px;
 }
 

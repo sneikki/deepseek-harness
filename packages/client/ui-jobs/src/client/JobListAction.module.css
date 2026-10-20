@@ -143,7 +143,7 @@
    the inner padding frames the row and both trailing controls on the fill,
    and the hover wash sits on the card so the controls never escape it. */
 .rowLineLive {
-  padding: 4px 8px 4px 2px;
+  padding: 3px 7px 3px 1px;
   border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
   border-radius: 10px;
   background: var(--amv-accent-tint);
@@ -264,7 +264,7 @@
 
 .row:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
+  box-shadow: inset 0 0 0 2px var(--dsw-focus-ring-color, var(--amv-accent));
 }
 
 /* A row with no observable output offers no interaction. */
