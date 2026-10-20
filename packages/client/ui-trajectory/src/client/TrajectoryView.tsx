@@ -18,6 +18,8 @@ import {
   analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
+import { deriveAgentTree } from './trajectory-agent-tree.ts'
+import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
   type TrajectoryTurnModel,
@@ -89,6 +91,8 @@ export interface TrajectoryViewInjected {
   loadImage: MessageImageLoader
   setActualDuration: (actualDuration: boolean) => void
   setShowThinking: (showThinking: boolean) => void
+  /** Open a subagent's own session. */
+  openSession: (sessionId: string) => void
 }
 
 interface UsageLike {
@@ -136,8 +140,8 @@ function addUsage(
 }
 
 export function TrajectoryView({
-  useSession, useTrajectory, useDuration, useThinking, loadOlder, loadImage, setActualDuration,
-  setShowThinking,
+  sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
+  setActualDuration, setShowThinking, openSession,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
@@ -353,6 +357,12 @@ export function TrajectoryView({
     () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
     [finalized, timelinePartial, t],
   )
+  const sessionsById = useSessions(state => state.byId)
+  const sessionProjections = useSessions(state => state.projectionsBySession)
+  const agentRows = useMemo(
+    () => deriveAgentTree(sessionId, sessionsById, sessionProjections, trajectorySubagentLifecycles(timelineTurns)),
+    [sessionId, sessionsById, sessionProjections, timelineTurns],
+  )
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
@@ -563,6 +573,8 @@ export function TrajectoryView({
         onRangeChange={handleTimelineRangeChange}
         onRecordSelect={handleTimelineRecordSelect}
         onRecordFocus={handleTimelineRecordFocus}
+        agentRows={agentRows}
+        onOpenSession={openSession}
       />
       <div className={css.ledger}>
         <TrajectoryTable

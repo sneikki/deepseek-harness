@@ -1,0 +1,196 @@
+.root {
+  border-top: 1px solid var(--amv-border);
+  background: var(--amv-bg-deep);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--amv-muted);
+  font: 500 11px/1 var(--ds-font-family-code);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.headerChevron,
+.chevron {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.12s;
+}
+
+.headerChevron[data-open],
+.chevron[data-open] {
+  transform: rotate(45deg);
+}
+
+.rows {
+  max-height: 220px; /* ~10 rows of 22px */
+  overflow-y: auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  height: 22px;
+  align-items: center;
+}
+
+.row[data-selectable] {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--amv-text-2) 6%, transparent);
+}
+
+.row[data-current] {
+  background: color-mix(in srgb, var(--amv-accent) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--amv-accent);
+}
+
+.row[data-search-match='false'],
+.row[data-selected='false'] {
+  opacity: 0.35;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding-right: 6px;
+  box-sizing: border-box;
+}
+
+.chevron {
+  flex: none;
+  padding: 0;
+  border-top: 0;
+  border-left: 0;
+  background: none;
+  color: var(--amv-muted);
+  cursor: pointer;
+}
+
+.chevronSpace {
+  flex: none;
+  width: 5px;
+}
+
+.icon {
+  --agent-color: var(--amv-muted);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--agent-color) 18%, transparent);
+  color: var(--agent-color);
+  font: 700 9px/1 var(--ds-font-family-code);
+}
+
+.icon[data-status='done'] { --agent-color: var(--amv-success); }
+.icon[data-status='failed'] { --agent-color: var(--amv-danger); }
+.icon[data-status='running'] {
+  --agent-color: var(--amv-accent);
+  border: 1.5px solid color-mix(in srgb, var(--agent-color) 30%, transparent);
+  border-top-color: var(--agent-color);
+  background: none;
+  animation: agent-spin 0.9s linear infinite;
+}
+.icon[data-status='interrupted'],
+.icon[data-status='unknown'] {
+  border: 1.5px solid color-mix(in srgb, var(--amv-muted) 60%, transparent);
+  background: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--amv-text-2);
+  font: 12px/1 var(--ds-font-family-code);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.id {
+  flex: none;
+  color: var(--amv-muted);
+  font: 10px/1 var(--ds-font-family-code);
+}
+
+.openButton {
+  flex: none;
+  margin-left: auto;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--amv-muted);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.row:hover .openButton,
+.openButton:focus-visible {
+  opacity: 1;
+}
+
+.track {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bar {
+  --agent-color: var(--amv-success);
+  position: absolute;
+  top: 8px;
+  left: var(--agent-left);
+  width: max(3px, var(--agent-width));
+  height: 6px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--agent-color) 35%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--agent-color) 14%, transparent);
+}
+
+.bar[data-status='failed'] { --agent-color: var(--amv-danger); }
+.bar[data-status='running'] {
+  --agent-color: var(--amv-accent);
+  animation: agent-pulse 1.6s ease-in-out infinite;
+}
+.bar[data-status='interrupted'],
+.bar[data-status='unknown'] { --agent-color: var(--amv-muted); }
+
+.duration {
+  position: absolute;
+  top: 5px;
+  left: var(--agent-left);
+  padding-left: 6px;
+  color: var(--amv-muted);
+  font: 11px/12px var(--ds-font-family-code);
+  white-space: nowrap;
+}
+
+@keyframes agent-spin { to { transform: rotate(360deg); } }
+@keyframes agent-pulse { 50% { opacity: 0.45; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar[data-status='running'],
+  .icon[data-status='running'] { animation: none; }
+}

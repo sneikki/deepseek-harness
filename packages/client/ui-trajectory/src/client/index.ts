@@ -14,6 +14,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { createTrajectoryDurationStore } from './duration-store.ts'
 import { createTrajectoryThinkingStore } from './thinking-store.ts'
 import { createTrajectoryStringWrappingStore } from './string-wrapping-store.ts'
@@ -50,7 +51,7 @@ export type {
 } from './trajectory-contract.ts'
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
-export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'locale']
+export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale']
 
 /**
  * Client plugin body: register the trajectory view tab. The registration
@@ -119,6 +120,10 @@ export function apply(ctx: Context): void {
         ),
         setActualDuration: (value) => { duration.set(value) },
         setShowThinking: (value) => { thinking.set(value) },
+        openSession: (id) => {
+          const sessionId = id as SessionId
+          ctx.uiWorkspace.openSession(ctx.sessions.subagentAddress(sessionId) ?? sessionId)
+        },
       }
     },
   }, TrajectoryView))
