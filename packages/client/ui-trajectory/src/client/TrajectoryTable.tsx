@@ -2306,6 +2306,13 @@ export function TrajectoryTable({
   const [codeWrappingOnOpen, setCodeWrappingOnOpen] = useState(false)
   // Boxes the user flipped away from their default: collapsed normally, open while a search shows only hits.
   const [flippedCards, setFlippedCards] = useState<ReadonlySet<string>>(new Set())
+  // Flips mean "away from the default", and search flips the default: start clean on each mode change.
+  const searching = searchMatchIndexes !== null
+  const [flipsForSearch, setFlipsForSearch] = useState(searching)
+  if (flipsForSearch !== searching) {
+    setFlipsForSearch(searching)
+    setFlippedCards(new Set())
+  }
   const toggleCard = useCallback((key: string) => {
     setFlippedCards((current) => {
       const next = new Set(current)
@@ -2347,7 +2354,9 @@ export function TrajectoryTable({
     return cell === undefined ? record : { ...record, cell }
   }, [streamingCellsByIndex])
   // A thinking row shows the running/error state of its step's assistant record.
-  const cardExpanded = (key: string) => (searchMatchIndexes !== null) !== flippedCards.has(key)
+  // A calls-only box has no body, so it never opens.
+  const cardExpanded = (key: string, cell: TrajectoryCellProps) =>
+    !cardIsCompact(cell) && (searchMatchIndexes !== null) !== flippedCards.has(key)
   const currentOwner = (record: TableRecord): TableRecord =>
     currentRecord(ownerRecord(recordById, record) ?? record)
   const selectedTemplate = useMemo(() => selectedRecordId === null
@@ -2407,8 +2416,9 @@ export function TrajectoryTable({
     [records, requestGroups],
   )
   const projectedVirtualRows = useMemo(
-    () => groupTrajectoryVirtualRows(records),
-    [records],
+    // Estimate from the cells the rows render, so a streaming step is sized as drawn.
+    () => groupTrajectoryVirtualRows(streamingCells.length === 0 ? records : records.map(currentRecord)),
+    [records, streamingCells, currentRecord],
   )
   const virtualRowStructure = useStableVirtualRowStructure(projectedVirtualRows)
   const virtualizationEnabled = hasOlderRecords
@@ -2966,7 +2976,7 @@ export function TrajectoryTable({
                         ? rowVirtualizer.measureElement
                         : undefined}
                       data-index={virtualizationEnabled ? virtualIndex : undefined}
-                      data-card-expanded={cardExpanded(rowKey) || undefined}
+                      data-card-expanded={cardExpanded(rowKey, record.cell) || undefined}
                       tabIndex={isRequestOnly || singleToolNotice ? -1 : 0}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
@@ -3144,7 +3154,7 @@ export function TrajectoryTable({
                                   {...(record.cell.timeSeconds !== null && record.cell.timeSeconds > 0
                                     ? { meta: formatBoxDuration(record.cell.timeSeconds * 1000, t) }
                                     : {})}
-                                  expanded={cardExpanded(rowKey)}
+                                  expanded={cardExpanded(rowKey, record.cell)}
                                   onToggle={() => { toggleCard(rowKey) }}
                                   t={t}
                                 />

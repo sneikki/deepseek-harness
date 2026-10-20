@@ -641,7 +641,8 @@
 }
 
 .card:not([data-expanded]) .cardSection[data-section='output'],
-.card:not([data-expanded]) .cardSection[data-section='text'] {
+.card:not([data-expanded]) .cardSection[data-section='text'],
+.card:not([data-expanded]) .cardSection[data-section='input']:last-child {
   flex: 1 1 0;
   min-height: 0;
 }

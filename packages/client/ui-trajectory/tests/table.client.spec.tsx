@@ -13,7 +13,7 @@ import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/Traje
 import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/layout.ts'
 import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
 import { correlateTrajectorySubagents } from '../src/client/trajectory-subagent.ts'
-import { CARD_COMPACT_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
+import { CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
 import { t, tZh } from './locale.client.ts'
 
 const loadImage: MessageImageLoader = async () => 'blob:trajectory'
@@ -1640,6 +1640,74 @@ describe('ledger boxes: clipping, search, subagents', () => {
     expect(within(rowOf(1)).getByText(/end-1/)).toBeTruthy()
     fireEvent.click(within(rowOf(1)).getByRole('button', { name: 'Show less' }))
     expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+  })
+
+  it('sizes a streaming calls-only step as the box it renders, not as the compact placeholder', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+    const callsOnly = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 0.1,
+    })
+    const cells = Array.from({ length: 500 }, (_, index) => callsOnly(index + 1))
+    const bottomSpacer = async (streamingCells: TrajectoryCellProps[]) => {
+      const view = render(
+        <TrajectoryTable turns={turnOf(cells)} streamingCells={streamingCells} {...FOLD_PROPS} />,
+      )
+      await waitFor(() => {
+        expect(view.container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeTruthy()
+      })
+      const td = view.container.querySelector('tr[data-virtual-spacer="bottom"] td') as HTMLElement
+      const height = Number(td.style.getPropertyValue('--trajectory-virtual-spacer-height').replace('px', ''))
+      view.unmount()
+      return height
+    }
+    const compact = await bottomSpacer([])
+    const streaming = await bottomSpacer([{ ...callsOnly(500), text: 'streamed words arrive' }])
+
+    // The last (unrendered) row grows from the compact to the regular box height.
+    expect(streaming - compact).toBe(CARD_ROW_HEIGHT - CARD_COMPACT_ROW_HEIGHT)
+  })
+
+  it('never opens a calls-only box, search hit or not', () => {
+    const callsOnly: TrajectoryCellProps = {
+      index: 1, kind: 'message', text: '', callsBadge: '→ bash', timeSeconds: 0.1,
+    }
+    render(<TrajectoryTable turns={turnOf([callsOnly])} searchMatchIndexes={new Set([1])} {...FOLD_PROPS} />)
+
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+    expect(within(rowOf(1)).queryByRole('button', { name: 'Show less' })).toBeNull()
+  })
+
+  it('drops card flips when search starts or ends', () => {
+    const long = (index: number): TrajectoryCellProps => ({
+      index, kind: 'message', text: '', previewMarkdown: `needle ${'word '.repeat(130)}end-${index}`,
+      outputDetail: `needle ${'word '.repeat(130)}end-${index}`, timeSeconds: 0.1,
+    })
+    const turns = turnOf([long(1), long(2)])
+    const view = render(<TrajectoryTable turns={turns} searchMatchIndexes={new Set([1, 2])} {...FOLD_PROPS} />)
+    fireEvent.click(within(rowOf(1)).getByRole('button', { name: 'Show less' }))
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+
+    view.rerender(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBeNull()
+    view.rerender(<TrajectoryTable turns={turns} searchMatchIndexes={new Set([1, 2])} {...FOLD_PROPS} />)
+    expect(rowOf(1).getAttribute('data-card-expanded')).toBe('true')
+  })
+
+  it('shows See all when a lone input section is cut', () => {
+    const tool: TrajectoryCellProps = {
+      index: 1, kind: 'tool', toolName: 'edit', text: 'edit', previewMarkdown: 'path: x',
+      inputDetail: JSON.stringify({ path: 'x', content: 'c'.repeat(400) }), timeSeconds: 0.1,
+    }
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === 'input' ? 100 : 20
+    })
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['section'] === undefined ? 60 : 40
+    })
+    render(<TrajectoryTable turns={turnOf([tool])} {...FOLD_PROPS} />)
+
+    expect(within(rowOf(1)).getByRole('button', { name: 'See all' })).toBeTruthy()
   })
 
   it('renders the subagent lifecycle in box headers and notices', () => {

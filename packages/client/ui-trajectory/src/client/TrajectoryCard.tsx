@@ -26,8 +26,10 @@ interface CardSection {
   lead?: ReactNode
   /** Bounded preview shown while collapsed. */
   preview: ReactNode
-  /** Complete text shown while expanded. */
-  full: string
+  /** Plain text of the preview: the re-measure signal, cheap to compare. */
+  previewText: string
+  /** Complete text shown while expanded; computed only when read. */
+  full: () => string
   tone: 'primary' | 'output' | 'error' | 'empty'
   /** The preview was cut before the text ended. */
   truncated: boolean
@@ -62,7 +64,8 @@ export function cardSections(
       preview: empty
         ? cell.kind === 'message' ? t('record.noOutput') : '—'
         : displayText,
-      full: content.fullText ?? cardFullText(cell),
+      previewText: `${callsBadge ?? ''}${displayText}`,
+      full: () => content.fullText ?? cardFullText(cell),
       tone: empty && cell.kind === 'message' ? 'empty' : 'primary',
       truncated: isTruncated(displayText),
     }]
@@ -79,7 +82,8 @@ export function cardSections(
           {args}
         </>
       ),
-      full: cardFullInput(cell) || args,
+      previewText: args,
+      full: () => cardFullInput(cell) || args,
       tone: 'primary',
       truncated: isTruncated(args),
     })
@@ -90,7 +94,8 @@ export function cardSections(
       key: 'output',
       label: t('column.output'),
       preview: resultText,
-      full: cardFullOutput(cell) || resultText,
+      previewText: resultText,
+      full: () => cardFullOutput(cell) || resultText,
       tone: cell.isError === true ? 'error' : noOutput ? 'empty' : 'output',
       truncated: isTruncated(resultText),
     })
@@ -130,16 +135,18 @@ export function TrajectoryCard({
   badgeTitle,
   meta,
   lifecycle,
-  expanded,
+  expanded: expandedRequest,
   onToggle,
   t,
 }: TrajectoryCardProps) {
   const compact = cardIsCompact(cell)
+  // A calls-only box has no body to open.
+  const expanded = expandedRequest && !compact
   const sections = compact ? [] : cardSections(cell, content, t)
   const bodyRef = useRef<HTMLDivElement>(null)
   const clipped = useClippedContent(
     bodyRef,
-    sections.map(section => section.full).join('\u0000'),
+    sections.map(section => section.previewText).join('\u0000'),
     '[data-clip]',
   )
   const more = (!expanded && clipped) || sections.some(section => section.truncated)
@@ -175,7 +182,7 @@ export function TrajectoryCard({
               )}
               <span className={css.cardText}>
                 {section.lead}
-                {expanded ? section.full : section.preview}
+                {expanded ? section.full() : section.preview}
               </span>
             </div>
           ))}
