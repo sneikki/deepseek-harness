@@ -239,7 +239,7 @@
 }
 
 /* State at a glance: running teal, waiting-for-user violet, error red. */
-.sessionRow[data-tone='running'] .time { color: var(--amv-accent); }
+.sessionRow[data-tone='running'] .time { color: var(--amv-accent-text); }
 .sessionRow[data-tone='attention'] .time { color: var(--amv-warning); }
 .sessionRow[data-tone='error'] .time { color: var(--amv-danger); }
 

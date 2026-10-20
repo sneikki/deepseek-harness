@@ -36,4 +36,4 @@
   border-radius: 12px;
   background: var(--amv-surface);
 }
-.link { color: var(--amv-accent); }
+.link { color: var(--amv-accent-text); }
