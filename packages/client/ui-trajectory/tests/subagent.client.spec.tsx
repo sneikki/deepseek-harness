@@ -76,6 +76,50 @@ describe('subagent correlation', () => {
     expect(cells.filter(c => c.subagent !== undefined)).toHaveLength(1)
   })
 
+  it.each([
+    ['ran out of room before it finished.', 'failed'],
+    ['declined the task.', 'failed'],
+    ['ended abnormally (weird) before it finished.', 'failed'],
+    ['failed before it finished.', 'failed'],
+    ['was stopped before it finished.', 'interrupted'],
+    ['finished and will do no further work unless you send it more.', 'finished'],
+    ['finished. It cannot receive follow-up messages.', 'finished'],
+  ] as const)('maps the settle wording "%s" to %s', (wording, status) => {
+    const { list } = lifecycles([
+      ...call('subagent', 'c1', { description: 'Job', prompt: 'p' }, `started subagent ${A}`),
+      notice('subagent-settled', A, `Background subagent ${A} ${wording}`),
+    ])
+    expect(list[0]?.status).toBe(status)
+  })
+
+  it('flips running to finished when the settle notice arrives live', () => {
+    const start = call('subagent', 'c1', { description: 'Job', prompt: 'p' }, `started subagent ${A}`)
+    expect(lifecycles(start).list[0]).toMatchObject({ status: 'running', endIndex: null })
+    const settled = lifecycles([...call('subagent', 'c1', { description: 'Job', prompt: 'p' }, `started subagent ${A}`), done(A)])
+    expect(settled.list[0]).toMatchObject({ status: 'finished' })
+    expect(settled.cells.find(c => c.subagent?.phase === 'start')?.subagent?.status).toBe('finished')
+  })
+
+  it('ignores a settle or report whose start is not in the loaded history', () => {
+    const { list, cells } = lifecycles([
+      done(A),
+      notice('agent-message', A, `Agent ${A} sent a message:`),
+      ...call('subagent', 'c1', { description: 'Later', prompt: 'p' }, `started subagent ${A}`),
+    ])
+    expect(list).toMatchObject([{ id: A, status: 'running', reportCount: 0 }])
+    expect(cells.filter(c => c.subagent !== undefined)).toHaveLength(1)
+  })
+
+  it('ignores a control call that has no result yet or failed', () => {
+    const { list } = lifecycles([
+      ...call('subagent', 'c1', { description: 'One', prompt: 'p' }, `started subagent ${A}`),
+      done(A),
+      ...call('send_message', 'c2', { agent_id: A, message: 'pending' }, null),
+      ...call('send_message', 'c3', { agent_id: A, message: 'bad' }, 'Error: no such agent', true),
+    ])
+    expect(list[0]).toMatchObject({ status: 'finished', controlCount: 2 })
+  })
+
   it('handles forks, failure and a stop notice per agent', () => {
     const { list } = lifecycles([
       ...call('subagent_fork', 'c1', { description: 'Fork', prompt: 'p' }, `started subagent ${A}`),
@@ -128,6 +172,26 @@ describe('subagent timeline lane', () => {
     expect(model.subagents[1]?.end).toBe(model.end)
     expect(model.subagents[0]?.end).toBeLessThan(model.end + 1)
     expect(model.subagents[0]?.index).toBe(model.subagents[0]?.lifecycle.startIndex)
+  })
+
+  it('falls back to the recorded end when the settle record has no span', () => {
+    seq = 0
+    const turns = deriveTrajectoryLayout({ nodes: nodes as Nodes, partial: null, runningCalls: [] }, t)
+    const cellsOf = (list: typeof turns) => list.flatMap(turn => turn.groups.flatMap(group => group.cells))
+    const settle = cellsOf(turns).find(cell => cell.subagent?.phase === 'finish')!
+    const hidden = turns.map(turn => ({
+      ...turn,
+      groups: turn.groups.map(group => ({
+        ...group,
+        cells: group.cells.map(cell => cell === settle ? { ...cell, requestOnly: true } : cell),
+      })),
+    }))
+    const model = deriveTrajectoryTimeline(hidden, 'actual')!
+    expect(model.spans.some(span => span.index === settle.index)).toBe(false)
+    const bar = model.subagents.find(s => s.lifecycle.description === 'Finish lead')!
+    const before = cellsOf(hidden).filter(cell => (cell.startedAt ?? Infinity) <= settle.startedAt! && cell !== settle)
+    const lastEnd = Math.max(...model.spans.filter(span => before.some(cell => cell.index === span.index)).map(span => span.end))
+    expect(bar.end).toBe(lastEnd)
   })
 
   it('renders the lane, titles bars and focuses the start row on click', () => {

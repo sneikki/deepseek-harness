@@ -12,6 +12,7 @@ import {
   deriveTrajectoryTimeline,
   formatTimelineOffset,
   layoutTimelineLanes,
+  TIMELINE_EMPTY_PLOT_HEIGHT,
   type TrajectoryTimelineLanes,
   type TrajectoryTimelineMode,
   type TrajectoryTimelineSubagent,
@@ -166,7 +167,11 @@ function subagentTooltipLabel(
     [
       status,
       durationMs === null ? null : t('timeline.total', { duration: formatTimelineOffset(durationMs, t) }),
-      lifecycle.reportCount === 0 ? null : t('timeline.subagentReports', { count: lifecycle.reportCount }),
+      lifecycle.reportCount === 0
+        ? null
+        : lifecycle.reportCount === 1
+          ? t('timeline.subagentReport')
+          : t('timeline.subagentReports', { count: lifecycle.reportCount }),
     ].filter(part => part !== null).join(' · '),
   ].join('\n')
 }
@@ -431,7 +436,10 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   if (model === null) {
     return (
       <section ref={rootRef} className={css.root} aria-label={t('timeline.aria')}>
-        <div className={css.plot}>
+        <div
+          className={css.plot}
+          style={{ '--trajectory-plot-height': `${TIMELINE_EMPTY_PLOT_HEIGHT}px` } as CSSProperties}
+        >
           <LaneLabels t={t} />
           <div className={css.track}>
             <span className={css.empty}>{t('timeline.noTimingData')}</span>
@@ -627,7 +635,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
 
   return (
     <section ref={rootRef} className={css.root} aria-label={t('timeline.aria')}>
-      <div className={css.plot} style={{ height: layout?.plotHeight }}>
+      <div className={css.plot} style={{ '--trajectory-plot-height': `${layout?.plotHeight ?? TIMELINE_EMPTY_PLOT_HEIGHT}px` } as CSSProperties}>
         <LaneLabels t={t} {...layout === null ? {} : { layout }} />
         <div
           ref={trackRef}
@@ -792,7 +800,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
               .filter(bar => bar.end >= domainStart && bar.start <= domainStart + domainDuration)
               .map(bar => (
                 <Tooltip
-                  key={bar.lifecycle.id}
+                  key={bar.index}
                   label={() => subagentTooltipLabel(bar, t)}
                   side="bottom"
                   delayMs={TIMELINE_TOOLTIP_DELAY_MS}
@@ -806,7 +814,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                     style={{
                       '--trajectory-span-left': `${(bar.start - model.start) / fullDuration * 100}%`,
                       '--trajectory-span-width': `${(bar.end - bar.start) / fullDuration * 100}%`,
-                      ...spanBox(layout, 3, layout?.subagentTrack[model.subagents.indexOf(bar)] ?? 0),
+                      ...spanBox(layout, 3, layout?.subagentTrack.get(bar) ?? 0),
                     } as CSSProperties}
                   />
                 </Tooltip>

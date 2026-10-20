@@ -67,6 +67,12 @@ function stringArg(args: Record<string, unknown>, key: string): string | undefin
   return typeof value === 'string' && value !== '' ? value : undefined
 }
 
+/** Only the exact finished wording is success; any other settle wording is a failure (stopped = interrupted). */
+function settleStatus(summary: string): TrajectorySubagentStatus {
+  if (/^Background subagent \S+ finished[ .]/.test(summary)) return 'finished'
+  return /^Background subagent \S+ was stopped before/.test(summary) ? 'interrupted' : 'failed'
+}
+
 interface Draft {
   id: string
   description: string
@@ -117,7 +123,8 @@ function correlate(turns: readonly TrajectoryTurnModel[]): Correlation {
       if (draft === undefined) continue
       draft.controls++
       link(cell, draft, 'control')
-      if (cell.isError === true) continue
+      // Only a delivered call (result present, no error) moves the lifecycle.
+      if (cell.outputDetail === undefined || cell.isError === true) continue
       // A message wakes a settled agent; an interrupt marks a still-running one.
       if (cell.toolName === 'send_message') draft.status = 'running'
       else if (draft.status === 'running') draft.status = 'interrupted'
@@ -131,9 +138,7 @@ function correlate(turns: readonly TrajectoryTurnModel[]): Correlation {
       link(cell, draft, 'report')
     } else if (source.kind === 'subagent-settled') {
       draft.end = cell
-      draft.status = /\bfailed\b/.test(source.summary ?? '')
-        ? 'failed'
-        : /\bstopped\b/.test(source.summary ?? '') ? 'interrupted' : 'finished'
+      draft.status = settleStatus(source.summary ?? '')
       link(cell, draft, 'finish')
     }
   }

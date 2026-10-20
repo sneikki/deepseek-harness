@@ -89,18 +89,28 @@ export function deriveTrajectoryTimeline(
   const model = deriveSpans(turns, mode)
   if (model === null) return null
   const byIndex = new Map(model.spans.map(span => [span.index, span]))
+  const startedAt = new Map(turns.flatMap(turn =>
+    turn.groups.flatMap(group => group.cells.map(cell => [cell.index, cell.startedAt] as const))))
   const subagents = trajectorySubagentLifecycles(turns).flatMap((lifecycle) => {
     const first = byIndex.get(lifecycle.startIndex)
     if (first === undefined) return []
-    const last = lifecycle.endIndex === null ? undefined : byIndex.get(lifecycle.endIndex)
-    return [{
-      lifecycle,
-      index: first.index,
-      start: first.start,
-      end: lifecycle.endIndex === null
-        ? model.end
-        : Math.max(first.end, last?.end ?? first.end),
-    }]
+    let end = model.end
+    if (lifecycle.endIndex !== null) {
+      // The settle record may have no span (no recorded time): fall back to the
+      // last span that began no later than the recorded end.
+      const { endedAt } = lifecycle
+      const last = byIndex.get(lifecycle.endIndex)
+        ?? (endedAt === null
+          ? undefined
+          : model.spans.reduce<TrajectoryTimelineSpan | undefined>((best, span) => {
+            const at = startedAt.get(span.index)
+            return at != null && at <= endedAt && (best === undefined || span.end > best.end)
+              ? span
+              : best
+          }, undefined))
+      end = Math.max(first.end, last?.end ?? first.end)
+    }
+    return [{ lifecycle, index: first.index, start: first.start, end }]
   })
   return { ...model, subagents }
 }
@@ -271,6 +281,15 @@ export function packTimelineTracks(
   return { tracks, count: Math.max(1, ends.length), overflow }
 }
 
+/** Track geometry in px: a lone track keeps roomy bars, stacked tracks go compact. */
+const SINGLE_TRACK = { pitch: 14, bar: 10, height: 14 }
+const STACKED_TRACK = { pitch: 8, bar: 6, tail: 4 }
+const PLOT_PADDING = 8
+const BASE_LANES = 3
+
+/** Plot height with the three base lanes at one track each. */
+export const TIMELINE_EMPTY_PLOT_HEIGHT = BASE_LANES * SINGLE_TRACK.height + PLOT_PADDING
+
 /** Vertical geometry of one timeline lane, in px inside the lane area. */
 export interface TrajectoryTimelineLane {
   top: number
@@ -287,7 +306,7 @@ export interface TrajectoryTimelineLane {
 export interface TrajectoryTimelineLanes {
   lanes: readonly TrajectoryTimelineLane[]
   spanTrack: ReadonlyMap<TrajectoryTimelineSpan, number>
-  subagentTrack: readonly number[]
+  subagentTrack: ReadonlyMap<TrajectoryTimelineSubagent, number>
   /** Total plot height in px: lane area plus its top and bottom padding. */
   plotHeight: number
 }
@@ -303,25 +322,26 @@ export function layoutTimelineLanes(model: TrajectoryTimelineModel): TrajectoryT
   }))
   if (model.subagents.length > 0) groups.push({ items: model.subagents })
   const spanTrack = new Map<TrajectoryTimelineSpan, number>()
-  let subagentTrack: readonly number[] = []
+  const subagentTrack = new Map<TrajectoryTimelineSubagent, number>()
   let top = 0
   const lanes = groups.map((group, lane): TrajectoryTimelineLane => {
     const packed = packTimelineTracks(group.items)
     group.items.forEach((item, position) => {
-      if (lane < 3) spanTrack.set(item as TrajectoryTimelineSpan, packed.tracks[position] ?? 0)
+      const track = packed.tracks[position] ?? 0
+      if (lane < BASE_LANES) spanTrack.set(item as TrajectoryTimelineSpan, track)
+      else subagentTrack.set(item as TrajectoryTimelineSubagent, track)
     })
-    if (lane === 3) subagentTrack = packed.tracks
     const single = packed.count === 1
     const result: TrajectoryTimelineLane = {
       top,
       tracks: packed.count,
       overflow: packed.overflow,
-      pitch: single ? 14 : 8,
-      bar: single ? 10 : 6,
-      height: single ? 14 : packed.count * 8 + 4,
+      pitch: single ? SINGLE_TRACK.pitch : STACKED_TRACK.pitch,
+      bar: single ? SINGLE_TRACK.bar : STACKED_TRACK.bar,
+      height: single ? SINGLE_TRACK.height : packed.count * STACKED_TRACK.pitch + STACKED_TRACK.tail,
     }
     top += result.height
     return result
   })
-  return { lanes, spanTrack, subagentTrack, plotHeight: top + 8 }
+  return { lanes, spanTrack, subagentTrack, plotHeight: top + PLOT_PADDING }
 }

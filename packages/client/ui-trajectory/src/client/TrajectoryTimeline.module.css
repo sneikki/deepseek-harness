@@ -14,7 +14,7 @@
 .plot {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  height: 50px; /* overridden inline by the stacked-track layout */
+  height: var(--trajectory-plot-height);
   overflow: hidden;
   background: var(--amv-bg-deep);
 }
