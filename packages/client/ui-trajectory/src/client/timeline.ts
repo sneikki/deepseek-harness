@@ -404,8 +404,3 @@ export function layoutTimelineLanes(model: TrajectoryTimelineModel): TrajectoryT
   })
   return { lanes, spanTrack, plotHeight: top + PLOT_PADDING }
 }
-
-/** STUB: replaced by the data-layer unit on rebase (take theirs). Wall-clock ms to the active timeline domain. */
-export function wallToDomain(wall: number): number {
-  return wall
-}

@@ -12,7 +12,6 @@ import {
   deriveTrajectoryTimeline,
   formatTimelineOffset,
   layoutTimelineLanes,
-  wallToDomain,
   TIMELINE_EMPTY_PLOT_HEIGHT,
   type TrajectoryTimelineLanes,
   type TrajectoryTimelineMode,
@@ -281,7 +280,10 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   agentRows = EMPTY_AGENT_ROWS,
   onOpenSession,
 }: TrajectoryTimelineProps) {
-  const model = useMemo(() => deriveTrajectoryTimeline(turns, mode), [mode, turns])
+  // Finished descendants cover their waits, so duration mode keeps them.
+  const covered = useMemo(() => agentRows.flatMap(row =>
+    row.startedAt !== null && row.endedAt !== null ? [{ start: row.startedAt, end: row.endedAt }] : []), [agentRows])
+  const model = useMemo(() => deriveTrajectoryTimeline(turns, mode, covered), [mode, turns, covered])
   const layout = useMemo(() => model === null ? null : layoutTimelineLanes(model), [model])
   const detailByIndex = useMemo(
     () => new Map(turns.flatMap(turn =>
@@ -789,7 +791,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
           domainStart={domainStart}
           domainDuration={domainDuration}
           domainEnd={model.end}
-          toDomain={wallToDomain}
+          toDomain={model.wallToDomain}
           onRecordSelect={onRecordSelect}
           onOpenSession={onOpenSession}
           selectedIndex={selectedIndex}
