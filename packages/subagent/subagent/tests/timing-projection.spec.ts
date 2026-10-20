@@ -121,7 +121,7 @@ describe('subagent timing projection', () => {
     expect(subagentTimingProjectionDefinition.apply(
       descriptor,
       event('turn/end', 3, 4),
-    )).toEqual({ ...descriptor, lastTurnEnd: { at: 4, reason: 'completed' } })
+    )).toEqual({ ...descriptor, lastTurnCompleted: true, lastTurnEnd: { at: 4, reason: 'completed' } })
     expect(fold([
       event('turn/start', 0, 100),
       event('turn/end', 1, 200),
@@ -157,5 +157,16 @@ describe('subagent timing projection', () => {
     ])
     expect(view).toEqual({ settledMs: 0 })
     expect(view).not.toHaveProperty('lastTurnEnd')
+  })
+
+  it('is stateVersion 4 and its recorded end survives the state schema', () => {
+    expect(subagentTimingProjectionDefinition.stateVersion).toBe(4)
+    const state = subagentTimingProjectionDefinition.apply(
+      subagentTimingProjectionDefinition.init(),
+      event('subagent/descriptor', 0, 110),
+    )
+    const closed = subagentTimingProjectionDefinition.apply(state, event('turn/end', 1, 200, { kind: 'blocked' }))
+    expect(subagentTimingProjectionDefinition.stateSchema.parse(closed)).toEqual(closed)
+    expect(closed.lastTurnEnd).toEqual({ at: 200, reason: 'blocked' })
   })
 })
