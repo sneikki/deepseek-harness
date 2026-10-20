@@ -87,7 +87,7 @@
 
 .cell {
   --cell-color: var(--amv-act-wait);
-  width: 20px;
+  min-width: 20px;
   height: 20px;
   display: inline-flex;
   align-items: center;
@@ -97,6 +97,18 @@
   background: color-mix(in srgb, var(--cell-color) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--cell-color) 35%, transparent);
   box-sizing: border-box;
+}
+
+.cell[data-run] {
+  gap: 3px;
+  padding: 0 5px;
+}
+
+.cellCount {
+  font-family: var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .cellIcon {

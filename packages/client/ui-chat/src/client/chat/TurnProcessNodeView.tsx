@@ -7,6 +7,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeViewProps } from '../contract/slots.ts'
 import { turnProcessAlwaysOpen, type TurnActivity } from '../contract/turn-process.ts'
+import { groupActivityRuns } from './activity-runs.ts'
 import { formatRunDuration } from './message-chrome.ts'
 import a11yCss from './accessibility.module.css'
 import css from './TurnProcessNodeView.module.css'
@@ -83,11 +84,13 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
         </span>
         {node.data.activity.length > 0 && (
           <span className={css.strip} aria-hidden>
-            {node.data.activity.map((kind, index) => {
+            {groupActivityRuns(node.data.activity).map(({ kind, count }, index) => {
               const Icon = ACTIVITY_ICON[kind]
+              const label = t(`message.turnProcess.activity.${kind}`)
               return (
-                <span key={index} className={css.cell} data-activity={kind} title={t(`message.turnProcess.activity.${kind}`)}>
+                <span key={index} className={css.cell} data-activity={kind} data-run={count > 1 ? '' : undefined} title={count > 1 ? `${count} × ${label}` : label}>
                   <Icon className={css.cellIcon} />
+                  {count > 1 && <span className={css.cellCount}>{count}×</span>}
                 </span>
               )
             })}
