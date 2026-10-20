@@ -26,7 +26,7 @@
   max-width: 100%;
   background: var(--amv-surface);
   border: 1px solid var(--amv-border);
-  border-radius: var(--dsw-radius-lg);
+  border-radius: 14px;
   animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
   /* 42px single-line bubble at the default size: 22 line + 10 vertical
      padding each side; the Settings font-size preference moves size and line
@@ -34,7 +34,7 @@
   padding: 10px 16px;
   font-size: var(--dsh-content-font-size, 14px);
   line-height: calc(22px + var(--dsh-content-font-delta, 0px));
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
   /* The projected user text is inline runs; the bubble owns wrapping so a
      decorated single-line message stays one line. */
   white-space: pre-wrap;
