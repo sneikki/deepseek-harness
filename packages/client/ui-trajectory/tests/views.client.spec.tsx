@@ -233,6 +233,7 @@ function standaloneProps(
   }
   return {
     sessionId: SID,
+    openSession: () => {},
     useChat: bindSnapshotSelector(createSnapshotStore(EMPTY_CHAT_SNAPSHOT)),
     useSessions: emptySessions(),
     usePanelInfo, useResource,
@@ -305,6 +306,7 @@ async function bench(snapshot = historySnapshot(NODES)) {
   // inject); its settings scope needs a connection handle.
   ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
   ctx.provide('configForms', { developerTools: { enabled: createSnapshotStore(true) }, get: () => stubConfigForm().scope } as never)
+  ctx.provide('uiWorkspace', { openSession: vi.fn() } as never)
   await runtime.mount(localePlugin)
   const provide = vi.spyOn(ctx.uiSession, 'provide')
   const feature = await runtime.mount({ inject: [...inject], apply })

@@ -367,7 +367,6 @@ export interface TrajectoryTimelineLane {
 export interface TrajectoryTimelineLanes {
   lanes: readonly TrajectoryTimelineLane[]
   spanTrack: ReadonlyMap<TrajectoryTimelineSpan, number>
-  subagentTrack: ReadonlyMap<TrajectoryTimelineSubagent, number>
   /** Total plot height in px: lane area plus its top and bottom padding. */
   plotHeight: number
 }
@@ -383,16 +382,13 @@ export function layoutTimelineLanes(model: TrajectoryTimelineModel): TrajectoryT
   const groups: { items: readonly TrajectoryTimeRange[] }[] = [0, 1, 2].map(lane => ({
     items: model.spans.filter(span => span.lane === lane && !subagentStarts.has(span.index)),
   }))
-  if (model.subagents.length > 0) groups.push({ items: model.subagents })
   const spanTrack = new Map<TrajectoryTimelineSpan, number>()
-  const subagentTrack = new Map<TrajectoryTimelineSubagent, number>()
   let top = 0
-  const lanes = groups.map((group, lane): TrajectoryTimelineLane => {
+  const lanes = groups.map((group): TrajectoryTimelineLane => {
     const packed = packTimelineTracks(group.items)
     group.items.forEach((item, position) => {
       const track = packed.tracks[position] ?? 0
-      if (lane < BASE_LANES) spanTrack.set(item as TrajectoryTimelineSpan, track)
-      else subagentTrack.set(item as TrajectoryTimelineSubagent, track)
+      spanTrack.set(item as TrajectoryTimelineSpan, track)
     })
     const single = packed.count === 1
     const result: TrajectoryTimelineLane = {
@@ -406,5 +402,5 @@ export function layoutTimelineLanes(model: TrajectoryTimelineModel): TrajectoryT
     top += result.height
     return result
   })
-  return { lanes, spanTrack, subagentTrack, plotHeight: top + PLOT_PADDING }
+  return { lanes, spanTrack, plotHeight: top + PLOT_PADDING }
 }

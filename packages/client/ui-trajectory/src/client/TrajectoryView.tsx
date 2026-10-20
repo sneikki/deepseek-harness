@@ -18,6 +18,8 @@ import {
   analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
+import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
+import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
   type TrajectoryTurnModel,
@@ -89,6 +91,8 @@ export interface TrajectoryViewInjected {
   loadImage: MessageImageLoader
   setActualDuration: (actualDuration: boolean) => void
   setShowThinking: (showThinking: boolean) => void
+  /** Open a subagent's own session. */
+  openSession: (sessionId: string) => void
 }
 
 interface UsageLike {
@@ -135,9 +139,16 @@ function addUsage(
   }
 }
 
+function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTreeRow[]): boolean {
+  return left.length === right.length && left.every((row, index) => {
+    const other = right[index]
+    return other !== undefined && (Object.keys(row) as (keyof AgentTreeRow)[]).every(key => row[key] === other[key])
+  })
+}
+
 export function TrajectoryView({
-  useSession, useTrajectory, useDuration, useThinking, loadOlder, loadImage, setActualDuration,
-  setShowThinking,
+  sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
+  setActualDuration, setShowThinking, openSession,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
@@ -353,6 +364,11 @@ export function TrajectoryView({
     () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
     [finalized, timelinePartial, t],
   )
+  const timelineLifecycles = useMemo(() => trajectorySubagentLifecycles(timelineTurns), [timelineTurns])
+  const agentRows = useSessions(
+    state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
+    equalAgentRows,
+  )
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
@@ -563,6 +579,8 @@ export function TrajectoryView({
         onRangeChange={handleTimelineRangeChange}
         onRecordSelect={handleTimelineRecordSelect}
         onRecordFocus={handleTimelineRecordFocus}
+        agentRows={agentRows}
+        onOpenSession={openSession}
       />
       <div className={css.ledger}>
         <TrajectoryTable

@@ -15,11 +15,14 @@ import {
   TIMELINE_EMPTY_PLOT_HEIGHT,
   type TrajectoryTimelineLanes,
   type TrajectoryTimelineMode,
-  type TrajectoryTimelineSubagent,
   type TrajectoryTimeRange,
 } from './timeline.ts'
 import { trajectoryActivityOf } from './trajectory-activity.ts'
+import type { AgentTreeRow } from './trajectory-agent-tree.ts'
+import { TrajectoryAgentWaterfall } from './TrajectoryAgentWaterfall.tsx'
 import css from './TrajectoryTimeline.module.css'
+
+const EMPTY_AGENT_ROWS: readonly AgentTreeRow[] = []
 
 const MINIMUM_DRAG_PX = 3
 const MINIMUM_ZOOM_OPERATIONS = 4
@@ -149,33 +152,6 @@ function spanBox(
   }
 }
 
-function subagentTooltipLabel(
-  { lifecycle }: TrajectoryTimelineSubagent,
-  t: TrajectoryTranslate,
-): string {
-  const durationMs = lifecycle.startedAt !== null && lifecycle.endedAt !== null
-    ? lifecycle.endedAt - lifecycle.startedAt
-    : null
-  const status = {
-    running: t('timeline.subagentRunning'),
-    finished: t('timeline.subagentFinished'),
-    failed: t('timeline.subagentFailed'),
-    interrupted: t('timeline.subagentInterrupted'),
-  }[lifecycle.status]
-  return [
-    `${lifecycle.description} · ${lifecycle.shortId}`,
-    [
-      status,
-      durationMs === null ? null : t('timeline.total', { duration: formatTimelineOffset(durationMs, t) }),
-      lifecycle.reportCount === 0
-        ? null
-        : lifecycle.reportCount === 1
-          ? t('timeline.subagentReport')
-          : t('timeline.subagentReports', { count: lifecycle.reportCount }),
-    ].filter(part => part !== null).join(' · '),
-  ].join('\n')
-}
-
 /** Props for the fixed full-domain overview above the trajectory ledger. */
 export interface TrajectoryTimelineProps {
   t: TrajectoryTranslate
@@ -194,6 +170,10 @@ export interface TrajectoryTimelineProps {
   onRecordSelect?: (index: number) => void
   /** Bring the nearest record into view after clicking timeline whitespace. */
   onRecordFocus?: (index: number) => void
+  /** Subagent tree rows rendered as the waterfall under the plot. */
+  agentRows?: readonly AgentTreeRow[]
+  /** Open one subagent's own session. */
+  onOpenSession?: (sessionId: string) => void
 }
 
 function orderedRange(left: number, right: number): FractionRange {
@@ -236,7 +216,7 @@ function rangeFraction(
 }
 
 function LaneLabels({ t, layout }: { t: TrajectoryTranslate; layout?: TrajectoryTimelineLanes }) {
-  const names = [t('column.input'), t('column.model'), t('column.tools'), t('timeline.subagents')]
+  const names = [t('column.input'), t('column.model'), t('column.tools')]
   return (
     <div className={css.labels} aria-hidden="true">
       {names.slice(0, layout?.lanes.length ?? 3).map((name, lane) => (
@@ -297,8 +277,13 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   onRangeChange,
   onRecordSelect,
   onRecordFocus,
+  agentRows = EMPTY_AGENT_ROWS,
+  onOpenSession,
 }: TrajectoryTimelineProps) {
-  const model = useMemo(() => deriveTrajectoryTimeline(turns, mode), [mode, turns])
+  // Finished descendants cover their waits, so duration mode keeps them.
+  const covered = useMemo(() => agentRows.flatMap(row =>
+    row.startedAt !== null && row.endedAt !== null ? [{ start: row.startedAt, end: row.endedAt }] : []), [agentRows])
+  const model = useMemo(() => deriveTrajectoryTimeline(turns, mode, covered), [mode, turns, covered])
   const layout = useMemo(() => model === null ? null : layoutTimelineLanes(model), [model])
   const detailByIndex = useMemo(
     () => new Map(turns.flatMap(turn =>
@@ -796,42 +781,24 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                   </Tooltip>
                 )
               })}
-            {model.subagents
-              .filter(bar => bar.index === selectedIndex
-                || (bar.end >= domainStart && bar.start <= domainStart + domainDuration))
-              .map(bar => (
-                <Tooltip
-                  key={bar.index}
-                  label={() => subagentTooltipLabel(bar, t)}
-                  side="bottom"
-                  delayMs={TIMELINE_TOOLTIP_DELAY_MS}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={css.subagent}
-                    data-timeline-subagent={bar.lifecycle.status}
-                    data-timeline-record-index={bar.index}
-                    data-current={bar.index === selectedIndex || undefined}
-                    data-hovered={hover?.recordIndex === bar.index || undefined}
-                    data-search-match={searchMatchIndexes === null
-                      ? undefined
-                      : searchMatchIndexes.has(bar.index) ? 'true' : 'false'}
-                    data-selected={activeRange === null
-                      ? undefined
-                      : bar.start <= activeRange.end && bar.end >= activeRange.start
-                        ? 'true'
-                        : 'false'}
-                    style={{
-                      '--trajectory-span-left': `${(bar.start - model.start) / fullDuration * 100}%`,
-                      '--trajectory-span-width': `${(bar.end - bar.start) / fullDuration * 100}%`,
-                      ...spanBox(layout, 3, layout?.subagentTrack.get(bar) ?? 0),
-                    } as CSSProperties}
-                  />
-                </Tooltip>
-              ))}
           </div>
         </div>
       </div>
+      {agentRows.length > 0 && (
+        <TrajectoryAgentWaterfall
+          t={t}
+          rows={agentRows}
+          domainStart={domainStart}
+          domainDuration={domainDuration}
+          domainEnd={model.end}
+          toDomain={model.wallToDomain}
+          onRecordSelect={onRecordSelect}
+          onOpenSession={onOpenSession}
+          selectedIndex={selectedIndex}
+          searchMatchIndexes={searchMatchIndexes}
+          activeRange={activeRange}
+        />
+      )}
     </section>
   )
 })

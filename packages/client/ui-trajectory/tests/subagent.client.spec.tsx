@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 /** Subagent lifecycle correlation on real-shaped nodes, and the timeline lane. */
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup } from '@testing-library/react'
 import { PartialArguments } from '@deepseek-ai/dsh-util-values'
 import { deriveTrajectoryLayout } from '../src/client/layout.ts'
 import { deriveTrajectoryTimeline, layoutTimelineLanes } from '../src/client/timeline.ts'
-import { TrajectoryTimeline } from '../src/client/TrajectoryTimeline.tsx'
 import { trajectorySubagentLifecycles } from '../src/client/trajectory-subagent.ts'
 import { t } from './locale.client.ts'
 
@@ -174,18 +173,18 @@ describe('subagent timeline lane', () => {
     expect(model.subagents[0]?.index).toBe(model.subagents[0]?.lifecycle.startIndex)
   })
 
-  it('keeps subagent start calls out of the Tools lane but not the Agents lane', () => {
+  it('keeps subagent start calls out of the Tools lane and adds no lane', () => {
     seq = 0
     const withBash = [...nodes, ...call('bash', 'c3', { command: 'ls' }, 'ok')]
     const turns = deriveTrajectoryLayout({ nodes: withBash as Nodes, partial: null, runningCalls: [] }, t)
     const model = deriveTrajectoryTimeline(turns, 'sequence')!
     const starts = model.subagents.map(s => s.lifecycle.startIndex)
     expect(starts).toHaveLength(2)
-    const { spanTrack, subagentTrack } = layoutTimelineLanes(model)
+    const { spanTrack, lanes } = layoutTimelineLanes(model)
+    expect(lanes).toHaveLength(3)
     const placed = [...spanTrack.keys()]
     expect(placed.some(span => starts.includes(span.index))).toBe(false)
     expect(placed.filter(span => span.lane === 2).map(span => span.toolName)).toEqual(['bash'])
-    expect(model.subagents.every(bar => subagentTrack.has(bar))).toBe(true)
   })
 
   it('falls back to the recorded end when the settle record has no span', () => {
@@ -206,42 +205,5 @@ describe('subagent timeline lane', () => {
     const before = cellsOf(hidden).filter(cell => (cell.startedAt ?? Infinity) <= settle.startedAt! && cell !== settle)
     const lastEnd = Math.max(...model.spans.filter(span => before.some(cell => cell.index === span.index)).map(span => span.end))
     expect(bar.end).toBe(lastEnd)
-  })
-
-  it('renders the lane, titles bars and focuses the start row on click', () => {
-    seq = 0
-    const turns = deriveTrajectoryLayout({ nodes: nodes as Nodes, partial: null, runningCalls: [] }, t)
-    const onRecordSelect = vi.fn()
-    const view = render(
-      <TrajectoryTimeline t={t} turns={turns} mode="sequence" range={null}
-        onRangeChange={vi.fn()} onRecordSelect={onRecordSelect} />,
-    )
-    expect(screen.getByText('Agents')).toBeTruthy()
-    const bars = view.container.querySelectorAll<HTMLElement>('[data-timeline-subagent]')
-    expect([...bars].map(b => b.dataset.timelineSubagent)).toEqual(['finished', 'running'])
-    const plot = screen.getByLabelText('Timeline overview; drag horizontally to focus events')
-    fireEvent.pointerDown(bars[1]!, { button: 0, clientX: 10, pointerId: 1 })
-    fireEvent.pointerUp(plot, { button: 0, clientX: 10, pointerId: 1 })
-    expect(onRecordSelect).toHaveBeenCalledWith(Number(bars[1]!.dataset.timelineRecordIndex))
-  })
-
-  it('draws no Tools span for a start call and keeps its bar selected', () => {
-    seq = 0
-    const turns = deriveTrajectoryLayout({ nodes: nodes as Nodes, partial: null, runningCalls: [] }, t)
-    const start = trajectorySubagentLifecycles(turns)[0]!.startIndex
-    const view = render(
-      <TrajectoryTimeline t={t} turns={turns} mode="sequence" range={null}
-        onRangeChange={vi.fn()} selectedIndex={start} />,
-    )
-    expect(view.container.querySelector(`[data-timeline-span][data-timeline-record-index="${start}"]`)).toBeNull()
-    const bar = view.container.querySelector<HTMLElement>(`[data-timeline-subagent][data-timeline-record-index="${start}"]`)
-    expect(bar?.dataset.current).toBe('true')
-  })
-
-  it('shows no lane without subagents', () => {
-    seq = 0
-    const turns = deriveTrajectoryLayout({ nodes: nodes.slice(0, 1) as Nodes, partial: null, runningCalls: [] }, t)
-    const view = render(<TrajectoryTimeline t={t} turns={turns} mode="sequence" range={null} onRangeChange={vi.fn()} />)
-    expect(view.container.querySelector('[data-timeline-subagent]')).toBeNull()
   })
 })
