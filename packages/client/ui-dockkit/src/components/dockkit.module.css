@@ -844,7 +844,7 @@
  */
 .tabStrip {
   gap: 2px;
-  align-items: stretch;
+  align-items: center;
   height: 38px;
   padding: 0 6px 0 var(--dsh-dockkit-strip-inline-start, 12px);
   border-bottom: 1px solid var(--amv-border);
@@ -852,6 +852,7 @@
 
 .stripTabs {
   align-items: stretch;
+  align-self: stretch;
 }
 
 .stripChrome {
@@ -877,6 +878,7 @@
 }
 
 .tab {
+  align-self: stretch;
   height: auto;
   padding: 0 12px;
   color: var(--amv-text-2);
@@ -889,7 +891,7 @@
   content: '';
   position: absolute;
   right: 8px;
-  bottom: -1px;
+  bottom: 0;
   left: 8px;
   height: 2px;
   background: var(--amv-accent);
@@ -981,4 +983,10 @@
   .tab::after {
     transition: none;
   }
+}
+
+/* The split control's tooltip wrapper is an inline span; as a flex box it
+   centres its 30px button on the strip. */
+.tabStrip > span {
+  display: flex;
 }

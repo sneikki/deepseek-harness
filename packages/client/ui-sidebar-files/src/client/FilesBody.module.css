@@ -255,7 +255,7 @@
 .other,
 .note,
 .statusLine {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .other:hover {
