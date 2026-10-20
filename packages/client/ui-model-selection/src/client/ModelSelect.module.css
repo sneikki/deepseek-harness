@@ -41,7 +41,7 @@
 }
 
 .trigger:disabled {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   cursor: default;
 }
 
@@ -62,7 +62,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 /* The Models glyph replaces the text when the composer row cannot fit it. */
@@ -282,7 +282,7 @@
   display: grid;
   place-items: center;
   flex: 0 0 14px;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .check svg {

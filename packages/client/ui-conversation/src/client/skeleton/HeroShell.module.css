@@ -70,7 +70,7 @@
   border-radius: 999px;
   corner-shape: round;
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font-family: var(--ds-font-family-code);
   font-size: 11px;
   line-height: 18px;

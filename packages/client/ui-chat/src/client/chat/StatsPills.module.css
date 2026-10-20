@@ -20,7 +20,7 @@
   border: 1px solid var(--amv-border);
   border-radius: var(--dsw-radius-sm);
   background: transparent;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font: inherit;
   font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
@@ -58,7 +58,7 @@ button.pill[aria-expanded='true'] {
 }
 
 .sep {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   margin: 0 6px;
 }
 

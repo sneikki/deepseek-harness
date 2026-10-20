@@ -107,7 +107,7 @@
 }
 
 .item.active .itemIcon {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .itemIcon svg {
@@ -170,7 +170,7 @@
    quiet. */
 .drillHintText {
   display: none;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   font-size: 10px;
   line-height: 16px;
   white-space: nowrap;
@@ -296,5 +296,5 @@
 .crumbSeparator {
   flex: none;
   display: inline-flex;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }

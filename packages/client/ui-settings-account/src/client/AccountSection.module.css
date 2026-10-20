@@ -230,7 +230,7 @@
   font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 .divider { border-top-color: var(--amv-border); }
 .linkButton {

@@ -211,7 +211,7 @@
 }
 
 .header .path > span > span:last-child {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .body {
@@ -249,7 +249,7 @@
 }
 
 .row[aria-expanded='true'] .icon {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .other,

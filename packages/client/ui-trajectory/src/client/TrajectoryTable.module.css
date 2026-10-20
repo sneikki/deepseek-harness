@@ -414,7 +414,7 @@
 }
 
 .turnLabelActive {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   background: color-mix(in srgb, var(--amv-accent) 12%, var(--amv-bg-deep));
 }
 
@@ -597,7 +597,7 @@
 }
 
 .contextGreen {
-  --trajectory-pill-fg: var(--amv-faint);
+  --trajectory-pill-fg: var(--amv-muted);
   --trajectory-pill-bg: transparent;
   --trajectory-pill-border: var(--amv-border);
 }
@@ -802,13 +802,13 @@
 }
 
 .noOutputText {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .arrow {
   flex: none;
   margin-right: 8px;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
 }
 
 .error {

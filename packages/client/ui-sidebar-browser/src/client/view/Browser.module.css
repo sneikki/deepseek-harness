@@ -274,7 +274,7 @@
 }
 
 .tool:disabled {
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   border-color: transparent;
 }
 

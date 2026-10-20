@@ -81,5 +81,5 @@
 
 /* v2 canvas: the mark reads teal. */
 .mark {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }

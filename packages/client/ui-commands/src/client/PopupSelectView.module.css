@@ -100,7 +100,7 @@
   display: inline-flex;
   flex: none;
   margin-left: auto;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .check svg {

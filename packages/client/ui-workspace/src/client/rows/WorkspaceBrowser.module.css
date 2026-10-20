@@ -26,12 +26,12 @@
   padding: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--amv-faint);
+  color: var(--amv-muted);
   transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
 }
 
 /* Header buttons stay quiet until the header (or the button) is hovered. */
-.sectionHeader:hover .iconButton { color: var(--amv-muted); }
+.sectionHeader:hover .iconButton { color: var(--amv-text-2); }
 
 /* The action cluster animates its width and the search pill rounds its corners,
  * so both clip an outer ring; these controls keep theirs inside instead. */

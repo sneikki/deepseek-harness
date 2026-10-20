@@ -41,7 +41,7 @@
 .triggerActive {
   border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .pulseDot {
@@ -90,7 +90,7 @@
 
 .triggerActive:hover,
 .triggerActive:focus-visible {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .switcherTrigger:hover,

@@ -296,7 +296,7 @@
   padding: 0 4px;
   border-radius: 6px;
   background: var(--amv-accent-tint);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font-size: 11px;
   line-height: 18px;
   font-weight: 600;

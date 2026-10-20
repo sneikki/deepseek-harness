@@ -216,7 +216,7 @@
   border-radius: 6px;
   padding: 3px 8px;
   background: var(--amv-raised);
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
 }
 
 .cardTrailing {
@@ -379,7 +379,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;

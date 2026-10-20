@@ -197,7 +197,7 @@
 }
 
 .memberButton .memberLabel {
-  color: var(--amv-accent);
+  color: var(--amv-accent-text);
   font-weight: 500;
   text-decoration: none;
 }
