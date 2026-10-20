@@ -40,7 +40,7 @@
   width: min(380px, 100%);
   padding: 0 0 24px;
   overflow: hidden;
-  border: 1px solid var(--amv-border);
+  border: 1px solid var(--amv-popup-border);
   border-radius: 14px;
   background: var(--amv-surface);
   box-shadow: var(--amv-shadow-pop);

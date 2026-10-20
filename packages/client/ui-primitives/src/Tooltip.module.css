@@ -10,7 +10,7 @@
   width: max-content;
   max-width: 50vw;
   padding: 4px 8px;
-  border: 1px solid var(--amv-border);
+  border: 1px solid var(--amv-popup-border);
   border-radius: 8px;
   background: var(--amv-raised);
   box-shadow: var(--amv-shadow-pop);

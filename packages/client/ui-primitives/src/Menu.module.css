@@ -3,7 +3,7 @@
   display: inline-flex;
 }
 
-/* Compact translucent dropdown card shared by feature menus. */
+/* Compact dropdown card shared by feature menus. */
 .list,
 .submenu {
   /* min-widths below are the design's outer card widths — include the pad. */
@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--amv-border);
+  border: 1px solid var(--amv-popup-border);
   border-radius: 12px;
   box-shadow: var(--amv-shadow-pop);
   /* Enter fades and scales from the trigger side; origin follows data-side/data-align. */
@@ -126,7 +126,6 @@
 
 .item:hover:not(:disabled) {
   background: var(--amv-raised);
-  color: var(--amv-text);
 }
 
 /* Arrow navigation moves real focus, so the row the keyboard is on carries the
@@ -176,8 +175,13 @@
   line-height: 15px;
 }
 
+.item:hover:not(:disabled):not(.danger) {
+  color: var(--amv-text);
+}
+
 .item:disabled {
   color: var(--amv-faint);
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
