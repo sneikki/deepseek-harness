@@ -216,3 +216,37 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* v2 canvas composition: r12 panels, mono values, outline/teal buttons. */
+.card,
+.balanceCard {
+  padding: 14px 16px;
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+.name { font-family: var(--ds-font-family-code); }
+.amount {
+  font-family: var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--amv-accent);
+}
+.divider { border-top-color: var(--amv-border); }
+.linkButton {
+  min-height: 34px;
+  height: auto;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 10px;
+  background: var(--amv-raised);
+  color: var(--amv-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.linkButton:hover { background: color-mix(in srgb, var(--amv-accent) 8%, var(--amv-raised)); }
+.primary {
+  border-color: transparent;
+  background: var(--amv-accent);
+  color: var(--amv-bg);
+}
+.primary:hover { background: var(--amv-accent-hover); }

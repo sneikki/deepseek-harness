@@ -134,3 +134,18 @@
   font-size: 11px;
   color: var(--dsw-alias-label-tertiary);
 }
+
+/* v2 canvas: r12 panel, mono provider/model names, id chip as route. */
+.models {
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+.models legend { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--amv-muted); }
+.modelGroup + .modelGroup { border-top-color: var(--amv-border); }
+.providerName { font-family: var(--ds-font-family-code); color: var(--amv-muted); }
+.model { border-radius: 10px; }
+.model:hover { background: var(--amv-raised); }
+.modelName,
+.route { font-family: var(--ds-font-family-code); }
+.modelName { font-size: 12px; }
