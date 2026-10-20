@@ -244,3 +244,121 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Canvas timeline item: a 22px status circle (done green check, running
+   teal spinner, error red) on a 1px --amv-border line that joins this row's
+   icon to the next tool row's. The business glyph and the hover chevron are
+   hidden (not removed); a trailing chevron fades in on hover and rotates when
+   open, in space the row always reserves, so nothing shifts. */
+.card { position: relative; }
+.root {
+  --tool-status: var(--amv-success);
+  --tool-kind: var(--amv-act-deploy);
+}
+
+.root[data-state='running'],
+.root[data-state='preparing'] { --tool-status: var(--amv-accent); }
+.root[data-state='error'] { --tool-status: var(--amv-danger); }
+.root[data-state='stopped'] { --tool-status: var(--amv-warning); }
+
+/* The line is drawn only toward a following tool row (flow items of the chat
+   are siblings of each other, not of this root). 6px = the flow gap. */
+.card::before {
+  content: '';
+  position: absolute;
+  left: 10.5px;
+  top: 23px;
+  bottom: -6px;
+  width: 1px;
+  background: var(--amv-border);
+  display: none;
+}
+:global([data-chat-flow-kind='tool-call']):has(+ [data-chat-flow-kind='tool-call']) .card {
+  padding-bottom: 4px; /* room for the line between the circles */
+}
+:global([data-chat-flow-kind='tool-call']):has(+ [data-chat-flow-kind='tool-call']) .card::before {
+  display: block;
+}
+
+.root .leading {
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  corner-shape: round;
+  z-index: 1;
+  border: 1px solid color-mix(in srgb, var(--tool-status) 35%, transparent);
+  background: color-mix(in srgb, var(--tool-status) 12%, var(--amv-bg));
+  color: var(--tool-status);
+  transition: border-color var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
+}
+.root .leading > * { display: none; }
+.root .leading::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--tool-glyph) center / contain no-repeat;
+  mask: var(--tool-glyph) center / contain no-repeat;
+  --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3l2.4 2.4 4.6-5.1' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.root[data-state='ok'] .leading {
+  background: var(--tool-status);
+  border-color: var(--tool-status);
+  color: var(--amv-bg-deep);
+}
+.root[data-state='error'] .leading::before {
+  --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 3l6 6M9 3l-6 6' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.root[data-state='stopped'] .leading::before {
+  --tool-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect x='3' y='3' width='6' height='6' rx='1'/%3E%3C/svg%3E");
+}
+.root:is([data-state='running'], [data-state='preparing']) .leading::before {
+  width: 12px;
+  height: 12px;
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+  box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--tool-status) 25%, transparent);
+  border-top-color: var(--tool-status);
+  border-radius: 50%;
+  corner-shape: round;
+  animation: toolSpin 800ms linear infinite;
+}
+@keyframes toolSpin { to { transform: rotate(360deg); } }
+
+.root[data-expandable]::after {
+  content: '';
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  background: var(--amv-faint);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+  transition: opacity var(--amv-dur-1) var(--amv-ease), transform var(--amv-dur-2) var(--amv-ease);
+}
+.root[data-expandable]:hover::after,
+.root[aria-expanded='true']::after { opacity: 1; }
+.root[aria-expanded='true']::after { transform: rotate(180deg); }
+
+.card {
+  animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .root .leading::before { animation: none; }
+}
+
+/* Tool name: Geist Mono, coloured by activity. */
+.root .title {
+  font-family: var(--ds-font-family-code);
+  font-size: calc(var(--dsh-content-font-size-secondary, 13px) - 1px);
+  font-weight: 500;
+  color: var(--tool-kind);
+}
+
+.bodyWrap { margin-left: 28px; }
