@@ -14,7 +14,7 @@
 .plot {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  height: 50px;
+  height: var(--trajectory-plot-height);
   overflow: hidden;
   background: var(--amv-bg-deep);
 }
@@ -34,18 +34,6 @@
   justify-content: flex-end;
   height: 10px;
   text-align: right;
-}
-
-.labels span:nth-child(1) {
-  top: 7px;
-}
-
-.labels span:nth-child(2) {
-  top: 21px;
-}
-
-.labels span:nth-child(3) {
-  top: 35px;
 }
 
 .track {
@@ -150,7 +138,7 @@
 
 .span {
   position: absolute;
-  top: calc(var(--trajectory-span-lane) * 14px);
+  top: var(--trajectory-span-top);
   left: calc(var(--trajectory-span-left) + var(--trajectory-span-gap));
   width: max(
     2px,
@@ -160,7 +148,7 @@
       - var(--trajectory-span-gap)
     )
   );
-  height: 10px;
+  height: var(--trajectory-span-height);
   min-width: 2px;
   border-radius: 3px;
   background: var(--amv-muted);
@@ -315,4 +303,80 @@
     var(--amv-accent) 18%,
     transparent
   );
+}
+
+/* Lane 4: one bar per subagent, start to settle; running stays open-ended. */
+.subagent {
+  position: absolute;
+  top: var(--trajectory-span-top);
+  left: var(--trajectory-span-left);
+  width: max(6px, var(--trajectory-span-width));
+  height: var(--trajectory-span-height);
+  border-radius: 3px;
+  background: var(--amv-success);
+  opacity: 0.9;
+}
+
+.subagent[data-timeline-subagent='failed'] {
+  background: var(--amv-danger);
+}
+
+.subagent[data-timeline-subagent='interrupted'] {
+  background: var(--amv-warning);
+}
+
+.subagent[data-timeline-subagent='running'] {
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(
+    to right,
+    var(--amv-accent) 0,
+    var(--amv-accent) 80%,
+    transparent 100%
+  );
+  animation: subagent-pulse 1.6s ease-in-out infinite;
+}
+
+.subagent[data-selected='false'] {
+  opacity: 0.2;
+}
+
+.subagent[data-search-match='false'] {
+  opacity: 0.14;
+}
+
+.subagent[data-hovered='true'] {
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--amv-bg-deep),
+    0 0 0 2px color-mix(in srgb, var(--amv-accent) 80%, transparent);
+}
+
+.subagent[data-current='true'] {
+  z-index: 1;
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--amv-bg-deep),
+    0 0 0 2px var(--amv-accent);
+}
+
+@keyframes subagent-pulse {
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subagent[data-timeline-subagent='running'] {
+    animation: none;
+  }
+}
+
+.overflow {
+  position: absolute;
+  z-index: 3;
+  right: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--amv-bg-deep);
+  color: var(--amv-muted);
+  font: 400 9px/8px var(--ds-font-family-code);
+  pointer-events: none;
 }

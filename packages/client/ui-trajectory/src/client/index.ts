@@ -30,6 +30,12 @@ import { TrajectoryView, type TrajectoryViewInjected } from './TrajectoryView.ts
 
 export type { TrajectoryKey } from './locales.ts'
 export type {
+  TrajectorySubagentInfo,
+  TrajectorySubagentLifecycle,
+  TrajectorySubagentPhase,
+  TrajectorySubagentStatus,
+} from './trajectory-subagent.ts'
+export type {
   TrajectoryContribution,
   TrajectoryConversationViewNode,
   TrajectoryRequestHeaderState,
