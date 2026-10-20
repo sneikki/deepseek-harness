@@ -176,3 +176,115 @@
 .titleIcon {
   flex: none;
 }
+
+/*
+ * v2 canvas: mono tree. 30px rows with mono names, muted folder glyphs, the
+ * current directory's expanded state held by an accent ink, and the root path
+ * as one mono chip. Tokens only.
+ */
+.header {
+  gap: 6px;
+  height: 44px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.header .path {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  margin-right: auto;
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+}
+
+.header .path > span {
+  margin-right: 0;
+}
+
+.header .path > span > span:first-child:not(:last-child) {
+  color: var(--amv-muted);
+}
+
+.header .path > span > span:last-child {
+  color: var(--amv-accent);
+}
+
+.body {
+  padding: 8px 0 8px 8px;
+}
+
+.level .level {
+  padding-left: 6px;
+  margin-left: 15px;
+  border-left: 1px solid var(--amv-border);
+}
+
+.row {
+  min-height: 30px;
+  padding: 0 10px;
+  color: var(--amv-text);
+  font-family: var(--ds-font-family-code);
+  font-size: 12.5px;
+  border-radius: 8px;
+  transition: background var(--amv-dur-1) var(--amv-ease);
+}
+
+.row:hover {
+  background: var(--amv-raised);
+}
+
+.row:focus-visible {
+  outline: none;
+  background: var(--amv-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
+}
+
+.icon {
+  color: var(--amv-muted);
+}
+
+.row[aria-expanded='true'] .icon {
+  color: var(--amv-accent);
+}
+
+.other,
+.note,
+.statusLine {
+  color: var(--amv-muted);
+}
+
+.other:hover {
+  background: transparent;
+}
+
+.note {
+  font-family: var(--ds-font-family-code);
+}
+
+.tool {
+  width: 30px;
+  height: 30px;
+  color: var(--amv-text-2);
+  border: 1px solid var(--amv-border);
+  border-radius: 8px;
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
+}
+
+.tool:hover,
+.tool[aria-pressed='true'] {
+  color: var(--amv-text);
+  background: var(--amv-raised);
+}
+
+.tool:active {
+  transform: scale(0.96);
+}
+
+.titleIcon {
+  color: var(--amv-muted);
+}

@@ -836,3 +836,157 @@
 .floatResize:hover::after {
   border-color: var(--dsw-alias-label-tertiary);
 }
+
+/*
+ * v2 canvas: the strip is a tab bar. 38px row on a hairline, tabs are plain
+ * 13px/500 text and the active one carries a 2px accent underline. Hover is a
+ * text colour change only; no filled chip.
+ */
+.tabStrip {
+  gap: 2px;
+  align-items: center;
+  height: 38px;
+  padding: 0 6px 0 var(--dsh-dockkit-strip-inline-start, 12px);
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.stripTabs {
+  align-items: stretch;
+  align-self: stretch;
+}
+
+.stripChrome {
+  align-self: stretch;
+  gap: 2px;
+  height: auto;
+}
+
+.slot {
+  width: 2px;
+  height: auto;
+}
+
+.slot::before,
+.slotCaret::before {
+  display: none;
+}
+
+.slotCaret {
+  background: var(--amv-accent);
+  border-radius: 1px;
+  width: 2px;
+}
+
+.tab {
+  align-self: stretch;
+  height: auto;
+  padding: 0 12px;
+  color: var(--amv-text-2);
+  font-weight: 500;
+  border-radius: 0;
+  transition: color var(--amv-dur-1) var(--amv-ease);
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  background: var(--amv-accent);
+  border-radius: 2px 2px 0 0;
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition:
+    opacity var(--amv-dur-2) var(--amv-ease),
+    transform var(--amv-dur-2) var(--amv-ease);
+}
+
+.tab:hover,
+.tab.floatTitle:hover {
+  color: var(--amv-text);
+  background: transparent;
+}
+
+.tabActive {
+  color: var(--amv-text);
+  background: transparent;
+}
+
+.tabActive::after {
+  opacity: 1;
+  transform: none;
+}
+
+.tab.tabQuiet::after {
+  display: none;
+}
+
+.tabTitle {
+  gap: 7px;
+}
+
+.tabClose {
+  top: 50%;
+  right: 6px;
+  margin-top: -10px;
+  color: var(--amv-muted);
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
+}
+
+.tabClose:hover {
+  color: var(--amv-text);
+  background: var(--amv-raised);
+}
+
+.addTab,
+.iconButton {
+  color: var(--amv-text-2);
+  border-radius: 8px;
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
+}
+
+.addTab {
+  align-self: center;
+}
+
+.addTab:hover,
+.iconButton:hover:not(:disabled) {
+  color: var(--amv-text);
+  background: var(--amv-raised);
+}
+
+.iconButton {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--amv-border);
+}
+
+.iconButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.menu {
+  border-color: var(--amv-border-strong);
+}
+
+.menuItem {
+  border-radius: 8px;
+}
+
+.menuItem:hover {
+  background: var(--amv-raised);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab::after {
+    transition: none;
+  }
+}
+
+/* The split control's tooltip wrapper is an inline span; as a flex box it
+   centres its 30px button on the strip. */
+.tabStrip > span {
+  display: flex;
+}

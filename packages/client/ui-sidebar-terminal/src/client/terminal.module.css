@@ -17,3 +17,9 @@
 .screen :global(.xterm .xterm-rows .xterm-cursor.xterm-cursor-underline) { border-bottom-color: var(--terminal-cursor); }
 .screen :global(.xterm .xterm-rows.xterm-focus .xterm-cursor.xterm-cursor-block.xterm-cursor-blink) { animation: terminal-cursor-blink 1s step-end infinite; }
 @keyframes terminal-cursor-blink { 0% { background-color: var(--terminal-cursor); color: var(--terminal-cursor-accent); } 50% { background-color: var(--terminal-cursor-cell-background); color: var(--terminal-cursor-cell-foreground); } }
+
+/* v2 canvas: status/error strips as tinted hairline bars. The screen keeps xterm's own theme. */
+.root { padding-top: 0; }
+.status { padding: 6px 12px; color: var(--amv-text-2); font-family: var(--ds-font-family-code); font-size: 12px; background: var(--amv-surface); border-top: 1px solid var(--amv-border); }
+.error { color: var(--amv-danger); font-family: var(--ds-font-family-code); font-size: 12px; background: color-mix(in srgb, var(--amv-danger) 10%, transparent); border-top: 1px solid color-mix(in srgb, var(--amv-danger) 35%, transparent); }
+.emptyMessage { color: var(--amv-text-2); }
