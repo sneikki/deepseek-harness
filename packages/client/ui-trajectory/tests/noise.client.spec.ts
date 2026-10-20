@@ -2,7 +2,9 @@
 
 import { describe, expect, it } from 'vitest'
 import type { TrajectoryTurnModel } from '../src/client/layout.ts'
-import { reduceTrajectoryNoise, summarizeToolArgs } from '../src/client/trajectory-noise.ts'
+import {
+  analyzeTrajectoryNoise, summarizeToolArgs, trajectoryRowMatchesFilter,
+} from '../src/client/trajectory-noise.ts'
 import type { TrajectoryCellProps } from '../src/client/trajectory-record.ts'
 import { t } from './locale.client.ts'
 
@@ -16,10 +18,8 @@ function turn(...cells: TrajectoryCellProps[]): TrajectoryTurnModel {
   return { turn: 1, groups: [{ title: 'Step 1', cells }] }
 }
 
-const ids = (turns: readonly TrajectoryTurnModel[]) =>
-  turns.flatMap(item => item.groups.flatMap(group => group.cells.map(c => c.index)))
-
-describe('reduceTrajectoryNoise', () => {
+describe('analyzeTrajectoryNoise', () => {
+  const none = new Set<number>()
   const layout = [
     turn(
       cell(1, { kind: 'user', previewMarkdown: 'go' }),
@@ -35,28 +35,52 @@ describe('reduceTrajectoryNoise', () => {
       cell(9, { previewMarkdown: 'done', outputDetail: 'done' }),
     ),
   ]
+  const hidden = (turns = layout, live = none) => [...analyzeTrajectoryNoise(turns, t, live).hidden]
 
   it('keeps the first repeated context, hides repeats, keeps different context', () => {
-    expect(ids(reduceTrajectoryNoise(layout, 'all', t).turns)).toEqual([1, 2, 4, 5, 7, 8, 9])
+    expect(hidden()).toContain(6)
+    expect(hidden()).not.toContain(2)
+    expect(hidden()).not.toContain(7)
   })
 
-  it('skips tool-call-only assistants but keeps ones with thinking or output', () => {
-    const kept = ids(reduceTrajectoryNoise(layout, 'all', t).turns)
-    expect(kept).not.toContain(3)
-    expect(kept).toContain(8)
+  it('hides tool-call-only assistants but keeps ones with thinking or output', () => {
+    expect(hidden()).toContain(3)
+    expect(hidden()).not.toContain(8)
   })
 
-  it('counts what remains, ignoring the chip', () => {
-    for (const filter of ['all', 'messages', 'tools'] as const) {
-      expect(reduceTrajectoryNoise(layout, filter, t).counts).toEqual({ all: 6, messages: 5, tools: 1 })
-    }
+  it('never hides a failed, still-running or live assistant', () => {
+    const only = { text: t('layout.toolCallOnly') }
+    const turns = [turn(
+      cell(1, { ...only, isError: true }),
+      cell(2, { ...only, assistantMetrics: { timingRecorded: true, completedTime: null, usageProvided: false } }),
+      cell(3, only),
+      cell(4, only),
+    )]
+    expect(hidden(turns, new Set([3]))).toEqual([4])
   })
 
-  it('filters by kind and drops emptied turns', () => {
-    const tools = reduceTrajectoryNoise(layout, 'tools', t).turns
-    expect(ids(tools)).toEqual([4])
-    expect(tools).toHaveLength(1)
-    expect(ids(reduceTrajectoryNoise(layout, 'messages', t).turns)).toEqual([1, 2, 7, 8, 9])
+  it('keeps context that differs only in source and tool-change notices', () => {
+    const notice = { sourceBlocks: [{ type: 'tool-addition', content: 'x' }] } as const
+    const turns = [turn(
+      cell(1, { kind: 'context', previewMarkdown: HOOK, messageSource: { kind: 'a' } as never }),
+      cell(2, { kind: 'context', previewMarkdown: HOOK, messageSource: { kind: 'b' } as never }),
+      cell(3, { kind: 'context', text: 'Tool added: x', ...notice }),
+      cell(4, { kind: 'context', text: 'Tool added: x', ...notice }),
+    )]
+    expect(hidden(turns)).toEqual([])
+  })
+
+  it('counts what remains, ignoring boundary markers', () => {
+    expect(analyzeTrajectoryNoise(layout, t, none).counts).toEqual({ all: 6, messages: 5, tools: 1 })
+  })
+
+  it('matches chips by kind and shows boundary markers only under All', () => {
+    const tool = cell(1, { kind: 'tool' })
+    const message = cell(2, {})
+    const marker = cell(3, { requestOnly: true })
+    expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'all'))).toEqual([true, true, true])
+    expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'tools'))).toEqual([true, false, false])
+    expect([tool, message, marker].map(c => trajectoryRowMatchesFilter(c, 'messages'))).toEqual([false, true, false])
   })
 })
 

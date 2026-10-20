@@ -14,7 +14,9 @@ import {
   type TrajectoryUsage,
 } from './TrajectoryTable.tsx'
 import { TrajectoryToolbar } from './TrajectoryToolbar.tsx'
-import { reduceTrajectoryNoise, type TrajectoryRowFilter } from './trajectory-noise.ts'
+import {
+  analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
+} from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
@@ -346,11 +348,6 @@ export function TrajectoryView({
     () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
     [finalized, timelinePartial, t],
   )
-  const [rowFilter, setRowFilter] = useState<TrajectoryRowFilter>('all')
-  const { turns: visibleTurns, counts: rowCounts } = useMemo(
-    () => reduceTrajectoryNoise(timelineTurns, rowFilter, t),
-    [timelineTurns, rowFilter, t],
-  )
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
@@ -389,6 +386,15 @@ export function TrajectoryView({
     ),
     [partialSearchTurns],
   )
+  const [rowFilter, setRowFilter] = useState<TrajectoryRowFilter>('all')
+  // Decided on the full layout, never on the text-stripped timeline partial:
+  // live cells (their text is still arriving) are exempt from hiding.
+  const noise = useMemo(
+    () => analyzeTrajectoryNoise(
+      timelineTurns, t, new Set(streamingCells.map(cell => cell.index)),
+    ),
+    [timelineTurns, streamingCells, t],
+  )
   const searchMatchRecordIds = useMemo(
     () => searchIndex.search(searchQuery),
     [searchIndex, searchIndexRevision, searchQuery],
@@ -400,19 +406,23 @@ export function TrajectoryView({
       for (const turn of turns) {
         for (const group of turn.groups) {
           for (const cell of group.cells) {
-            if (searchMatchRecordIds.has(trajectoryRecordId(cell))) indexes.add(cell.index)
+            if (
+              searchMatchRecordIds.has(trajectoryRecordId(cell))
+              && !noise.hidden.has(cell.index)
+              && trajectoryRowMatchesFilter(cell, rowFilter)
+            ) indexes.add(cell.index)
           }
         }
       }
     }
     return indexes
-  }, [searchLayouts, searchMatchRecordIds])
+  }, [searchLayouts, searchMatchRecordIds, noise, rowFilter])
   const timelineRange = timelineSelection
   const timelineFocusIndexes = useMemo(
     () => timelineRange === null
       ? null
-      : trajectoryTimelineFocusIndexes(visibleTurns, timelineRange, timelineMode),
-    [timelineMode, timelineRange, visibleTurns],
+      : trajectoryTimelineFocusIndexes(timelineTurns, timelineRange, timelineMode),
+    [timelineMode, timelineRange, timelineTurns],
   )
   const handleRecordSelect = useCallback((index: number) => {
     if (
@@ -434,7 +444,7 @@ export function TrajectoryView({
     setTimelineRecordFocus({ index })
   }, [])
   const collapsibleTurnIds = useMemo(
-    () => visibleTurns
+    () => timelineTurns
       .filter(turn =>
         turn.turn !== null
         &&
@@ -445,13 +455,13 @@ export function TrajectoryView({
           0,
         ) > 1)
       .flatMap(turn => turn.turn === null ? [] : [turn.turn]),
-    [visibleTurns],
+    [timelineTurns],
   )
   const allTurnsCollapsed = collapsibleTurnIds.length > 0
     && collapsibleTurnIds.every(turn => collapsedTurns.has(turn))
   const collapsibleAssistantIds = useMemo(() => {
     const ids: string[] = []
-    for (const turn of visibleTurns) {
+    for (const turn of timelineTurns) {
       const cells = turn.groups.flatMap(group => group.cells)
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i]
@@ -463,7 +473,7 @@ export function TrajectoryView({
       }
     }
     return ids
-  }, [visibleTurns])
+  }, [timelineTurns])
   const allAssistantsCollapsed = collapsibleAssistantIds.length > 0
     && collapsibleAssistantIds.every(index => collapsedAssistants.has(index))
 
@@ -534,14 +544,14 @@ export function TrajectoryView({
         onToggleAllAssistants={toggleAllAssistants}
         rowFilter={rowFilter}
         onRowFilterChange={setRowFilter}
-        rowCounts={rowCounts}
+        rowCounts={noise.counts}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         t={t}
       />
       <TrajectoryTimeline
         t={t}
-        turns={visibleTurns}
+        turns={timelineTurns}
         mode={timelineMode}
         range={timelineRange}
         hasEarlierRecords={hasOlderHistory}
@@ -562,10 +572,12 @@ export function TrajectoryView({
           renderSlot={renderSlot}
           loadImage={loadImage}
           requestNumbers={requestNumbers}
-          turns={visibleTurns}
+          turns={timelineTurns}
           streamingCells={streamingCells}
           timelineFocusIndexes={timelineFocusIndexes}
           searchMatchIndexes={searchMatchIndexes}
+          hiddenIndexes={noise.hidden}
+          rowFilter={rowFilter}
           onSelectedIndexChange={setSelectedTimelineIndex}
           onRecordSelect={handleRecordSelect}
           recordSelection={timelineRecordSelection}

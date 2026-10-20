@@ -38,6 +38,7 @@ import {
 import type { TrajectoryVirtualRow } from './trajectory-virtual-rows.ts'
 import type { TrajectoryTurnModel } from './layout.ts'
 import { trajectoryPreviewText } from './trajectory-preview.ts'
+import { trajectoryRowMatchesFilter, type TrajectoryRowFilter } from './trajectory-noise.ts'
 import type { TrajectoryKey, TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
 import { codeProgram, PTC_TOOL_NAME, type CodeProgram } from './code-program.ts'
@@ -407,6 +408,10 @@ export interface TrajectoryTableProps {
   timelineFocusIndexes?: ReadonlySet<number> | null
   /** Record indexes retained by the active live search, or null without a query. */
   searchMatchIndexes?: ReadonlySet<number> | null
+  /** Records that stay in the model (fold anchor, step metrics, inspector) but render no row. */
+  hiddenIndexes?: ReadonlySet<number> | null
+  /** Row-kind chip; anything but `all` shows a flat, unfolded ledger. */
+  rowFilter?: TrajectoryRowFilter
   /** Report the record currently selected in the local inspector. */
   onSelectedIndexChange?: (index: number | null) => void
   /** Report a direct user selection from a ledger row. */
@@ -523,6 +528,12 @@ function filterRecords(
     .filter(record =>
       record.cell.requestOnly !== true && matches.has(record.cell.index),
     )
+  return reflagRecords(filtered)
+}
+
+/** Recompute group/turn boundary flags after rows were removed from the sequence. */
+function reflagRecords(records: readonly TableRecord[]): TableRecord[] {
+  const filtered = records
     .map(record => ({ ...record, groupStart: false, turnStart: false, turnEnd: false }))
   const startedSections = new Set<number>()
   for (const [index, record] of filtered.entries()) {
@@ -532,12 +543,26 @@ function filterRecords(
       || previous.section !== record.section
       || previous.group !== record.group
     record.turnStart = !startedSections.has(record.section)
+      && record.cell.requestOnly !== true
       && record.cell.kind !== 'system'
       && (record.cell.kind !== 'compacted' || record.turn === null)
     if (record.turnStart) startedSections.add(record.section)
     record.turnEnd = next === undefined || next.section !== record.section
   }
   return filtered
+}
+
+function hideRecords(
+  records: readonly TableRecord[],
+  hidden: ReadonlySet<number> | null,
+  filter: TrajectoryRowFilter,
+): readonly TableRecord[] {
+  if (hidden === null && filter === 'all') return records
+  const shown = records.filter(record =>
+    record.collapsedSummary !== undefined
+    || (hidden?.has(record.cell.index) !== true
+      && trajectoryRowMatchesFilter(record.cell, filter)))
+  return shown.length === records.length ? records : reflagRecords(shown)
 }
 
 function requestKey(turn: number | null, group: string): string {
@@ -2093,6 +2118,8 @@ export function TrajectoryTable({
   streamingCells = [],
   timelineFocusIndexes = null,
   searchMatchIndexes = null,
+  hiddenIndexes = null,
+  rowFilter = 'all',
   onSelectedIndexChange,
   onRecordSelect,
   recordSelection = null,
@@ -2163,9 +2190,14 @@ export function TrajectoryTable({
   const requestGroups = useMemo(() => new Set(
     (sessionRequestNumbers ?? []).map(request => requestKey(request.turn, request.group)),
   ), [sessionRequestNumbers])
+  const shownRecords = useMemo(
+    () => hideRecords(allRecords, hiddenIndexes, rowFilter),
+    [allRecords, hiddenIndexes, rowFilter],
+  )
+  // The request label lands on the first shown row of its step.
   const requestBoundaries = useMemo(
-    () => indexRequestBoundaries(allRecords, requestGroups),
-    [allRecords, requestGroups],
+    () => indexRequestBoundaries(shownRecords, requestGroups),
+    [shownRecords, requestGroups],
   )
   const requestNumbers = useMemo(
     () => indexRequestNumbers(sessionRequestNumbers),
@@ -2173,13 +2205,18 @@ export function TrajectoryTable({
   )
   const records = useMemo(() => {
     if (searchMatchIndexes !== null) return filterRecords(allRecords, searchMatchIndexes)
+    if (rowFilter !== 'all') return shownRecords
     const turnRecords = collapsedTurns.size === 0
       ? allRecords
       : collapseTurnRecords(allRecords, collapsedTurns, requestGroups, t)
-    return collapsedAssistants.size === 0
+    const folded = collapsedAssistants.size === 0
       ? turnRecords
       : collapseAssistantRecords(turnRecords, collapsedAssistants, t)
-  }, [allRecords, collapsedAssistants, collapsedTurns, requestGroups, searchMatchIndexes, t])
+    return hideRecords(folded, hiddenIndexes, rowFilter)
+  }, [
+    allRecords, shownRecords, collapsedAssistants, collapsedTurns, hiddenIndexes,
+    requestGroups, rowFilter, searchMatchIndexes, t,
+  ])
   const projectedVirtualRows = useMemo(
     () => groupTrajectoryVirtualRows(records),
     [records],
