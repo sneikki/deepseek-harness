@@ -92,6 +92,28 @@ describe('TrajectoryTable with hidden rows', () => {
     expect(toggled).toEqual(ids)
   })
 
+  it('joins a hidden step to the fold line of the visible assistant before it', () => {
+    const layout: readonly TrajectoryTurnModel[] = [{
+      turn: 1,
+      groups: [
+        { title: 'Step 1', cells: [
+          { index: 1, kind: 'message', text: '', outputDetail: 'hi', previewMarkdown: 'hi', timeSeconds: 1, sourceSeq: 1 },
+          { index: 2, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 2, outputDetail: 'x' },
+        ] },
+        { title: 'Step 2', cells: [
+          { index: 3, kind: 'message', text: only, timeSeconds: 1, sourceSeq: 3 },
+          { index: 4, kind: 'tool', text: 'bash', toolName: 'bash', timeSeconds: 0.1, sourceSeq: 4, outputDetail: 'x' },
+        ] },
+      ],
+    }]
+    const ids = [1, 3].map(index => trajectoryRecordId(layout[0]!.groups.flatMap(g => g.cells).find(c => c.index === index)!))
+    render(ledger({
+      collapsedAssistants: new Set(ids),
+      hiddenIndexes: new Set([3]),
+    }, layout))
+    expect(screen.getByText('2 tool calls · bash ×2')).toBeTruthy()
+  })
+
   it('counts only shown rows in a folded turn summary', () => {
     render(ledger({
       collapsedTurns: new Set([1]),

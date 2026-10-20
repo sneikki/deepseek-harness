@@ -759,7 +759,7 @@ function collapseAssistantRecords(
     const id = trajectoryRecordId(record.cell)
     const hiddenStep = hidden?.has(record.cell.index) === true
     if (hiddenStep && previous?.foldedCalls !== undefined && previous.collapsedSummaryKind === 'assistant') {
-      // Consecutive hidden-assistant steps fold into one line.
+      // A hidden step joins the fold line right before it.
       const allCalls = [...previous.foldedCalls, ...calls]
       out.pop()
       out[out.length - 1] = {
@@ -780,7 +780,8 @@ function collapseAssistantRecords(
       turnEnd: last?.turnEnd ?? false,
       collapsedSummary: summarizeAssistantTools(calls, t),
       collapsedSummaryKind: 'assistant',
-      ...(hiddenStep ? { foldedAssistantIds: [id], foldedCalls: calls } : {}),
+      foldedAssistantIds: [id],
+      foldedCalls: calls,
     })
     i += calls.length
   }
