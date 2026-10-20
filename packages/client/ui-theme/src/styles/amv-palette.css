@@ -13,12 +13,44 @@
   --dsw-radius-lg: 12px;
   --dsw-radius-xl: 14px;
   --dsw-radius-panel: 14px;
+  /* Motion: one curve and three steps. Colour and position move, never jump. */
+  --amv-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --amv-ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+  --amv-dur-1: 120ms;
+  --amv-dur-2: 180ms;
+  --amv-dur-3: 260ms;
+  --ds-ease-in-out: var(--amv-ease);
 }
 
 body {
   --amv-accent: #1d8086;
   --amv-accent-hover: #166a6f;
   --amv-accent-tint: rgba(29, 128, 134, 0.12);
+  /* AMV semantic tokens (light): ramp, states, activities. */
+  --amv-bg-deep: #e6e9eb;
+  --amv-bg: #ffffff;
+  --amv-surface: #ffffff;
+  --amv-raised: #f0f2f4;
+  --amv-border: #dde1e4;
+  --amv-border-strong: #c9cfd3;
+  --amv-text: #0f1214;
+  --amv-text-2: #3f464b;
+  --amv-muted: #5c646a;
+  --amv-faint: #9aa2a8;
+  --amv-accent-soft: #e3f1f2;
+  --amv-accent-ring: #a9d3d6;
+  --amv-success: #1f7a4d;
+  --amv-attention: #6a4fc2;
+  --amv-warning: #946010;
+  --amv-danger: #b3433a;
+  --amv-pending: #5c646a;
+  --amv-act-code: #2f6fc7;
+  --amv-act-test: #8f7116;
+  --amv-act-review: #8a4fb0;
+  --amv-act-deploy: #b5561b;
+  --amv-act-proof: #1f7a4d;
+  --amv-act-wait: #b8bfc4;
+  --amv-shadow-pop: 0 12px 32px rgba(15, 18, 20, 0.14), 0 2px 6px rgba(15, 18, 20, 0.08);
   --dsw-alias-bg-base: #ffffff;
   --dsw-alias-bg-document-preview: #f2f4f5;
   --dsw-alias-bg-document-selection: color-mix(in srgb, var(--amv-accent) 30%, transparent);
@@ -80,9 +112,9 @@ body {
   --dsw-alias-state-idle-primary: #5c646a;
   --dsw-alias-state-success-primary: #1f7a4d;
   --dsw-alias-state-success-secondary: #1f7a4d;
-  --dsw-alias-state-warn-label: #946010;
-  --dsw-alias-state-warn-primary: #946010;
-  --dsw-alias-state-warn-secondary: #946010;
+  --dsw-alias-state-warn-label: var(--amv-warning);
+  --dsw-alias-state-warn-primary: var(--amv-warning);
+  --dsw-alias-state-warn-secondary: var(--amv-warning);
   --dsw-alias-switch-thumb: #ffffff;
   --dsw-alias-toast-bg: #0f1214;
   --dsw-alias-toast-label: #e6e9eb;
@@ -104,6 +136,31 @@ body[data-ds-dark-theme] {
   --amv-accent: #5ed5dc;
   --amv-accent-hover: #8fe3e8;
   --amv-accent-tint: rgba(94, 213, 220, 0.12);
+  /* AMV semantic tokens (dark): ramp, states, activities. */
+  --amv-bg-deep: #0b0e10;
+  --amv-bg: #0f1214;
+  --amv-surface: #161a1d;
+  --amv-raised: #1b2024;
+  --amv-border: #262c30;
+  --amv-border-strong: #343b40;
+  --amv-text: #e6e9eb;
+  --amv-text-2: #afb2b5;
+  --amv-muted: #7f878d;
+  --amv-faint: #5a6166;
+  --amv-accent-soft: #152224;
+  --amv-accent-ring: #224144;
+  --amv-success: #46b37a;
+  --amv-attention: #a78bfa;
+  --amv-warning: #e0a84a;
+  --amv-danger: #cd6a62;
+  --amv-pending: #7f878d;
+  --amv-act-code: #4d8ee6;
+  --amv-act-test: #d6b45c;
+  --amv-act-review: #cc9be0;
+  --amv-act-deploy: #e07f42;
+  --amv-act-proof: #46b37a;
+  --amv-act-wait: #4a535a;
+  --amv-shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
   --dsw-alias-bg-base: #0f1214;
   --dsw-alias-bg-document-preview: #0f1214;
   --dsw-alias-bg-document-selection: color-mix(in srgb, var(--amv-accent) 30%, transparent);
@@ -191,4 +248,40 @@ body[data-ds-dark-theme] {
   --dsw-specific-sidebar-nav-item-active: #152224;
   --dsw-specific-sidebar-nav-item-hover: #161a1d;
   --dsw-specific-tip: #1b2024;
+}
+
+/* Interactive feedback: colour, border and shadow ease instead of snapping.
+ * :where() keeps this at zero specificity, so any component transition wins. */
+:where(button, a, [role='button'], [role='menuitem'], [role='option'], [role='tab'], input, textarea, select) {
+  transition-property: background-color, border-color, color, box-shadow, opacity;
+  transition-duration: var(--amv-dur-1);
+  transition-timing-function: var(--amv-ease);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--amv-accent) 30%, transparent);
+}
+
+@keyframes amv-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes amv-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes amv-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes amv-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --amv-dur-1: 0ms;
+    --amv-dur-2: 0ms;
+    --amv-dur-3: 0ms;
+  }
 }
