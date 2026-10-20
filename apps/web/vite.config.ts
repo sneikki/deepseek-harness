@@ -34,11 +34,13 @@ function brandFontLicense(): Plugin {
   return {
     name: 'dsh-brand-font-license',
     async generateBundle() {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'assets/fonts/Montserrat-OFL.txt',
-        source: await readFile(src('../../packages/client/ui-theme/src/styles/Montserrat-OFL.txt')),
-      })
+      for (const name of ['Montserrat-OFL.txt', 'Geist-OFL.txt']) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `assets/fonts/${name}`,
+          source: await readFile(src(`../../packages/client/ui-theme/src/styles/${name}`)),
+        })
+      }
     },
   }
 }

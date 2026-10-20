@@ -13,6 +13,29 @@
 
 .leading {
   flex-shrink: 0;
+  color: var(--tool-act, var(--dsw-alias-label-secondary));
+  transition: color var(--amv-dur-1) var(--amv-ease);
+}
+
+/* Activity colour on the leading mark only; text stays neutral. */
+.root[data-variant='edit'],
+.root[data-variant='write'],
+.root[data-variant='code'] { --tool-act: var(--amv-act-code); }
+.root[data-variant='bash'] { --tool-act: var(--amv-act-deploy); }
+.root[data-variant='search'],
+.root[data-variant='read'] { --tool-act: var(--amv-act-review); }
+.root[data-tool='subagent'],
+.root[data-tool='spawn_teammate'],
+.root[data-tool^='task'] { --tool-act: var(--amv-attention); }
+.root[data-state='running'],
+.root[data-state='preparing'] { --tool-act: var(--amv-accent); }
+.root[data-state='error'] { --tool-act: var(--amv-danger); }
+
+.root {
+  animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .root { animation: none; }
 }
 
 .root[data-tool^='cordis_'] .title {

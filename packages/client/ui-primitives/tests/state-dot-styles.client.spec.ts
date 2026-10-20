@@ -21,12 +21,17 @@ describe('StateDot.module.css', () => {
     expect(css).toContain('.dot::after')
   })
 
-  it('uses success green for done', () => {
-    expect(css).toMatch(/\.dot\[data-state='done'\][^{]*\{[^}]*--dsw-alias-state-success-primary/su)
+  it.each([
+    ['done', '--amv-success'],
+    ['warning', '--amv-attention'],
+    ['error', '--amv-danger'],
+    ['idle', '--amv-faint'],
+  ])('paints the %s state with %s', (state, token) => {
+    expect(css).toMatch(new RegExp(`\\.dot\\[data-state='${state}'\\][^{]*\\{[^}]*${token}`, 'su'))
   })
 
-  it('uses the neutral state token for idle', () => {
-    expect(css).toMatch(/\.dot\[data-state='idle'\][^{]*\{[^}]*--dsw-alias-state-idle-primary/su)
+  it('paints the ongoing spinner with the accent', () => {
+    expect(css).toMatch(/\.spinner \{[^}]*--amv-accent/su)
   })
 
   it('keeps ongoing on the rotating spinner rather than a solid-dot rule', () => {

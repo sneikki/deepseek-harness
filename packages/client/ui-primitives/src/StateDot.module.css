@@ -15,20 +15,21 @@
 }
 
 .dot[data-state='done'] {
-  color: var(--dsw-alias-state-success-primary);
+  color: var(--amv-success);
 }
 
+/* Warning is the user-attention state: the agent waits on the user. */
 .dot[data-state='warning'] {
-  color: var(--dsw-alias-state-warn-primary);
+  color: var(--amv-attention);
 }
 
 .dot[data-state='error'] {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
-/* Idle is the absence of activity and uses the theme's neutral state step. */
+/* Idle is the absence of activity: the faintest neutral step. */
 .dot[data-state='idle'] {
-  color: var(--dsw-alias-state-idle-primary);
+  color: var(--amv-faint);
 }
 
 /* Ongoing is the sole non-dot state: a quiet full ring sits behind a centered
@@ -36,7 +37,7 @@
  * share one 1.5s period so pinning their start times aligns them together. */
 .spinner {
   flex: none;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-accent);
 }
 
 .spinnerMotion {
@@ -95,6 +96,7 @@
 }
 
 .step { display: inline-flex; flex: none; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 50%; corner-shape: round; border: 1.5px solid var(--dsw-alias-label-tertiary); color: var(--dsw-alias-label-primary-foreground); }
-.step[data-state='done'] { border-color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-primary); }
-.step[data-state='error'] { border-color: var(--dsw-alias-state-error-primary); background: var(--dsw-alias-state-error-primary); }
-.step[data-state='warning'] { border-color: var(--dsw-alias-state-warn-primary); }
+.step[data-state='done'] { border-color: var(--amv-success); background: var(--amv-success); }
+.step[data-state='error'] { border-color: var(--amv-danger); background: var(--amv-danger); }
+.step[data-state='warning'] { border-color: var(--amv-attention); }
+.step[data-state='idle'] { border-color: var(--amv-faint); }

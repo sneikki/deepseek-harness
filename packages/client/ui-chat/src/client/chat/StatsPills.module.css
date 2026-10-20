@@ -24,6 +24,7 @@
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
   font: inherit;
+  font-family: var(--ds-font-family-code);
   font-variant-numeric: tabular-nums;
   line-height: inherit;
   white-space: nowrap;

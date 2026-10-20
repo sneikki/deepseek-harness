@@ -57,10 +57,11 @@
      drawn as the elevation hairline so it costs no layout; the shadow is the
      soft elevation tier. Fill: the input surface token (elevated in dark). */
   border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
+  --dsw-elevation-stroke-color: var(--amv-border-strong);
   border-radius: var(--dsw-radius-panel);
   background: var(--dsw-specific-input-major);
-  box-shadow: var(--dsw-elevation-soft);
+  box-shadow: var(--dsw-elevation-soft), 0 0 0 0 transparent;
+  transition: box-shadow var(--amv-dur-2) var(--amv-ease);
   /* The draft text follows the Settings font-size preference (the textarea,
      mirror, and backdrop all inherit from here, so the three layers stay in
      step); the line height keeps the default 10px leading via the shared px
@@ -74,6 +75,11 @@
      (see ui-theme styles/scrollbar.css for the rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.card:focus-within {
+  --dsw-elevation-stroke-color: var(--amv-accent);
+  box-shadow: var(--dsw-elevation-soft), 0 0 0 3px var(--amv-accent-tint);
 }
 
 /* No-workspace trigger state: an inset 1px dashed outline marks the card as a
@@ -378,10 +384,9 @@
   border: none;
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-alias-button-info-fill);
-  /* Static white, not the foreground token: the arrow stays white on the blue
-     fill in both themes (design 34:10465). */
-  color: #fff;
+  background: var(--amv-accent);
+  /* Brand invert, not white: the dark-theme teal fill is too light for a white arrow. */
+  color: var(--dsw-alias-brand-primary-invert);
   cursor: pointer;
   transition: background-color 100ms ease;
   /* Opts out of the row's 2px downward shift (.row top pad): the send circle
@@ -391,7 +396,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--dsw-alias-button-info-hover);
+  background: var(--amv-accent-hover);
 }
 
 .primary:disabled {

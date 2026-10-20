@@ -12,9 +12,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
-  box-shadow: var(--dsw-elevation-prominent);
+  border: 1px solid var(--amv-border-strong);
+  box-shadow: var(--amv-shadow-pop);
+  /* Enter fades and scales from the trigger side; origin follows data-side/data-align. */
+  animation: amv-scale-in var(--amv-dur-2) var(--amv-ease);
+  transform-origin: top left;
   /* Elevated surface: the scrollbar thumb takes the l2 elevation tokens. The
      declaration sits on the card rather than on `.scrollable .viewport`
      because the elevation is a property of this surface, and the custom
@@ -25,6 +27,18 @@
 }
 
 /* Primary cards grow with their content between compact and readable bounds. */
+.list[data-side='top'] {
+  transform-origin: bottom left;
+}
+
+.list[data-align='end'] {
+  transform-origin: top right;
+}
+
+.list[data-side='top'][data-align='end'] {
+  transform-origin: bottom right;
+}
+
 .list {
   position: absolute;
   top: calc(100% + 4px);
@@ -273,6 +287,14 @@
   left: calc(100% + 10px);
   z-index: 101;
   min-width: 163px;
+  transform-origin: left bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list,
+  .submenu {
+    animation: none;
+  }
 }
 
 .submenu::before {

@@ -594,6 +594,8 @@ export function SessionNodeItem({
       )}
       role="treeitem"
       aria-selected={selected}
+      data-tone={row.archived ? undefined : node.pendingInteraction !== undefined ? 'attention'
+        : primaryStatus.state === 'ongoing' ? 'running' : primaryStatus.state === 'error' ? 'error' : undefined}
       aria-description={row.archived ? t('toast.archivedNotOpenable') : undefined}
       onClick={() => { onOpen(node.id) }}
       onPointerEnter={marquee.enter}

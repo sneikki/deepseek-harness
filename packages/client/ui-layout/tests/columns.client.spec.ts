@@ -11,7 +11,7 @@ describe('clampWidth', () => {
 
 describe('computeColumns', () => {
   it('gives each edge column its preference when the center has enough room', () => {
-    expect(computeColumns(1920, 280, 864)).toEqual({ sidebar: 280, center: 776, rightbar: 864 })
+    expect(computeColumns(1920, 236, 864)).toEqual({ sidebar: 236, center: 820, rightbar: 864 })
   })
 
   it('keeps only the left rail when both panels are closed', () => {
@@ -20,12 +20,12 @@ describe('computeColumns', () => {
 
   it('clamps sidebar preferences and limits the right panel to 70% of the frame', () => {
     expect(computeColumns(3000, 9999, 9999)).toEqual({ sidebar: 420, center: 480, rightbar: 2100 })
-    expect(computeColumns(1920, 1, 1)).toEqual({ sidebar: 264, center: 1356, rightbar: 300 })
+    expect(computeColumns(1920, 1, 1)).toEqual({ sidebar: 220, center: 1400, rightbar: 300 })
   })
 
   it.each([
-    [1300, 280, 620, 400],
-    [1100, 280, 420, 400],
+    [1300, 236, 664, 400],
+    [1100, 236, 464, 400],
     [1120, 420, 300, 400],
     [1119, 420, 0, 699],
     [1024, 420, 0, 604],
@@ -42,8 +42,8 @@ describe('computeColumns', () => {
   })
 
   it('restores a still-open preference when the frame widens', () => {
-    expect(computeColumns(1100, 280, 864).rightbar).toBe(420)
-    expect(computeColumns(1920, 280, 864).rightbar).toBe(864)
+    expect(computeColumns(1100, 236, 864).rightbar).toBe(464)
+    expect(computeColumns(1920, 236, 864).rightbar).toBe(864)
   })
 
   it('leaves a closed right track closed when the frame widens', () => {
