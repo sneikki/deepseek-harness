@@ -57,12 +57,6 @@
   50% { opacity: 0.35; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pulseDot,
-  .menu {
-    animation: none;
-  }
-}
 
 .switcherTrigger {
   gap: 4px;
@@ -205,6 +199,10 @@
 .row[aria-current] > .clickarea {
   background: var(--amv-accent-soft);
   box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
+}
+
+.row[aria-current]:focus-visible > .clickarea {
+  box-shadow: inset 0 0 0 2px var(--amv-accent);
 }
 
 .clickarea {
@@ -445,4 +443,19 @@
 
 .refresh:hover {
   background: var(--amv-raised);
+}
+
+/* No hover on touch: keep row controls visible so collapsed rows still hint at children. */
+@media (hover: none) {
+  .disclosure,
+  .sidebarButton {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot,
+  .menu {
+    animation: none;
+  }
 }
