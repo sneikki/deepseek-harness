@@ -215,7 +215,7 @@ function JobItem({ job, view, expanded, now, onToggle, kill, t }: {
   const body = live
     ? (
       <>
-        <StateDot state={dotState(job.status)} className={css.rowDot} />
+        <span className={css.rowDot}><StateDot state={dotState(job.status)} /></span>
         <span className={css.main}>
           <span className={css.primary}>
             <span className={css.label} title={job.label}>{job.label}</span>
@@ -234,7 +234,7 @@ function JobItem({ job, view, expanded, now, onToggle, kill, t }: {
     )
     : (
       <>
-        <StateDot state={dotState(job.status)} className={css.rowDot} />
+        <span className={css.rowDot}><StateDot state={dotState(job.status)} /></span>
         <span className={css.kind}>{job.kind}</span>
         <span className={css.label} title={job.label}>{job.label}</span>
         <span className={css.status} title={detail ?? status}>{detail ?? status}</span>

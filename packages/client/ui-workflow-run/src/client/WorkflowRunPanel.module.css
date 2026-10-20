@@ -11,13 +11,15 @@
   width: 100%;
   min-width: 0;
   height: 32px;
-  padding: 0 8px;
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-bg-module-platform);
+  padding: 0 10px;
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-surface);
+  color: var(--amv-text);
 }
 
 .runHeader:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -2px;
 }
 
@@ -37,8 +39,9 @@
   flex: none;
   max-width: 42%;
   color: inherit;
+  font-family: var(--ds-font-family-code);
   font-size: var(--dsh-content-font-size-secondary, 13px);
-  font-weight: 510;
+  font-weight: 500;
   line-height: calc(24px + var(--dsh-content-font-delta, 0px));
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -48,7 +51,7 @@
   overflow: hidden;
   flex: 1;
   min-width: 0;
-  color: inherit;
+  color: var(--amv-muted);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(18px + var(--dsh-content-font-delta-secondary, 0px));
   text-overflow: ellipsis;
@@ -60,10 +63,13 @@
   flex: none;
   height: 20px;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 999px;
   overflow: hidden;
   font-size: 11px;
-  font-weight: 510;
+  font-weight: 500;
   line-height: 16px;
   color: inherit;
   white-space: nowrap;
@@ -80,9 +86,9 @@
 }
 
 .phaseHeader:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -2px;
-  border-radius: var(--dsw-radius-md);
+  border-radius: 10px;
 }
 
 .phaseLeading {
@@ -101,8 +107,11 @@
   flex: 0 1 auto;
   min-width: 0;
   max-width: 42%;
-  color: inherit;
-  font-size: var(--dsh-content-font-size-secondary, 13px);
+  color: var(--amv-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   line-height: calc(24px + var(--dsh-content-font-delta, 0px));
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -112,7 +121,8 @@
   overflow: hidden;
   flex: 1;
   min-width: 0;
-  color: inherit;
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
   text-overflow: ellipsis;
@@ -125,7 +135,8 @@
   /* Column width scales with the text (~132/13 ≈ 10px per font-size px) so
      larger sizes keep the same status text visible instead of truncating. */
   width: calc(132px + var(--dsh-content-font-delta-secondary, 0px) * 10);
-  color: inherit;
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
   text-align: right;
@@ -139,7 +150,7 @@
   height: 2px;
   border-radius: 50%;
   corner-shape: round;
-  background: var(--dsw-alias-label-tertiary);
+  background: var(--amv-faint);
 }
 
 .phaseList {
@@ -147,7 +158,7 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding: 4px 0 0 16px;
+  padding: 8px 0 0 16px;
 }
 
 .phase {
@@ -159,7 +170,9 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding: 0 0 0 16px;
+  margin-left: 7px;
+  padding: 0 0 0 14px;
+  border-left: 1px solid var(--amv-border);
 }
 
 .memberRow,
@@ -172,9 +185,9 @@
   min-height: calc(24px + var(--dsh-content-font-delta, 0px));
   padding: 0;
   border: 0;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 6px;
   background: transparent;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
   font: inherit;
   text-align: left;
 }
@@ -184,7 +197,7 @@
 }
 
 .memberButton .memberLabel {
-  color: var(--dsw-alias-link);
+  color: var(--amv-accent);
   font-weight: 500;
   text-decoration: none;
 }
@@ -198,11 +211,32 @@
 .dotSlot {
   display: inline-flex;
   flex: none;
+  align-self: center;
   width: 16px;
-  height: calc(24px + var(--dsh-content-font-delta, 0px));
+  height: 16px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--amv-pending) 14%, transparent);
+}
+.dotSlot:has([data-state='ongoing']) {
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-accent) 14%, transparent);
+}
+.dotSlot:has([data-state='done']) {
+  border-color: color-mix(in srgb, var(--amv-success) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-success) 14%, transparent);
+}
+.dotSlot:has([data-state='warning']) {
+  border-color: color-mix(in srgb, var(--amv-attention) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-attention) 14%, transparent);
+}
+.dotSlot:has([data-state='error']) {
+  border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-danger) 14%, transparent);
 }
 
 .memberButton:focus-visible {
@@ -210,7 +244,7 @@
 }
 
 .memberButton:focus-visible .memberLabelWrap {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: 2px solid var(--dsw-focus-ring-color, var(--amv-accent));
   outline-offset: -1px;
 }
 
@@ -222,14 +256,15 @@
   height: calc(24px + var(--dsh-content-font-delta, 0px));
   align-items: center;
   padding: 0 2px;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 6px;
 }
 
 .memberLabel {
   overflow: hidden;
   flex: 1;
   min-width: 0;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
+  font-family: var(--ds-font-family-code);
   /* Body size, not the secondary tier: the member label is the panel's
      content (an agent's task), while the run/phase headers, counts, and
      statuses around it are chrome one step down. */
@@ -243,7 +278,8 @@
   flex: none;
   overflow: hidden;
   width: 64px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
   text-align: right;
@@ -252,7 +288,7 @@
 }
 
 .empty {
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
   padding: 0;
