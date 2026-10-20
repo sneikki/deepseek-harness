@@ -18,7 +18,6 @@ import {
   analyzeTrajectoryNoise, trajectoryRowMatchesFilter, type TrajectoryRowFilter,
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
-import { createProjectionLoader } from './projection-loader.ts'
 import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
@@ -94,8 +93,8 @@ export interface TrajectoryViewInjected {
   setShowThinking: (showThinking: boolean) => void
   /** Open a subagent's own session. */
   openSession: (sessionId: string) => void
-  /** Read a session's projections (timing, catalog) without opening it. */
-  loadProjection: (sessionId: string) => Promise<boolean>
+  /** Queue a child's projection (timing, catalog) read; deduplicated and bounded across mounts. */
+  requestProjection: (sessionId: string) => void
 }
 
 interface UsageLike {
@@ -151,7 +150,7 @@ function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTree
 
 export function TrajectoryView({
   sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
-  setActualDuration, setShowThinking, openSession, loadProjection,
+  setActualDuration, setShowThinking, openSession, requestProjection,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
@@ -372,11 +371,11 @@ export function TrajectoryView({
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
   )
-  // Rows without a projection get theirs read (bounded, once, one retry); nested children follow.
-  const [projectionLoader] = useState(() => createProjectionLoader(loadProjection))
+  // Rows without a projection, or with one that carries no timing (cache hints of a
+  // historical-format child), get it read (bounded, once, one retry); nested children follow.
   useEffect(() => {
-    for (const row of agentRows) if (!row.loaded) projectionLoader.request(row.sessionId)
-  }, [agentRows, projectionLoader])
+    for (const row of agentRows) if (!row.loaded || row.activeMs === null) requestProjection(row.sessionId)
+  }, [agentRows, requestProjection])
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'

@@ -15,6 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import { createChildProjectionReader, createProjectionLoader } from './projection-loader.ts'
 import { createTrajectoryDurationStore } from './duration-store.ts'
 import { createTrajectoryThinkingStore } from './thinking-store.ts'
 import { createTrajectoryStringWrappingStore } from './string-wrapping-store.ts'
@@ -50,6 +51,13 @@ export type {
   UseTrajectory,
 } from './trajectory-contract.ts'
 
+declare module '@deepseek-ai/dsh-api-session-controller/client' {
+  interface SessionReferenceSourceMap {
+    /** Agent-waterfall read of a child whose cached projection lacks timing. */
+    trajectoryAgents: unknown
+  }
+}
+
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
 export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale']
 
@@ -80,6 +88,8 @@ export function apply(ctx: Context): void {
   const duration = createTrajectoryDurationStore()
   const thinking = createTrajectoryThinkingStore()
   const stringWrapping = createTrajectoryStringWrappingStore()
+  // One loader for the plugin: attempts per child survive Trajectory mounts and session switches.
+  const projectionLoader = createProjectionLoader(createChildProjectionReader(ctx.sessions))
   registerTrajectoryMessageDefinitions(ctx)
   registerTrajectoryRequestHeaderDefinition(ctx)
   registerTrajectoryAssistantDefinition(ctx)
@@ -120,10 +130,7 @@ export function apply(ctx: Context): void {
         ),
         setActualDuration: (value) => { duration.set(value) },
         setShowThinking: (value) => { thinking.set(value) },
-        loadProjection: async (id) => {
-          await ctx.sessions.refreshProjections(id as SessionId)
-          return ctx.sessions.list.getSnapshot().projectionsBySession[id as SessionId]?.state === 'ready'
-        },
+        requestProjection: id => projectionLoader.request(id),
         openSession: (id) => {
           const sessionId = id as SessionId
           ctx.uiWorkspace.openSession(ctx.sessions.subagentAddress(sessionId) ?? sessionId)
