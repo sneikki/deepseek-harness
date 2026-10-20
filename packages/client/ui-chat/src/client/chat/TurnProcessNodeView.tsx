@@ -1,11 +1,10 @@
-import { memo, type ReactNode } from 'react'
+import { memo, type ComponentType, type ReactNode } from 'react'
 import {
   IconChevronDownOutlineRegular,
   IconCloseCircleFillRegular,
   IconEditOutlineRegular,
   IconSearchOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ComponentType } from 'react'
 import type { ChatNodeViewProps } from '../contract/slots.ts'
 import { turnProcessAlwaysOpen, type TurnActivity } from '../contract/turn-process.ts'
 import { formatRunDuration } from './message-chrome.ts'
