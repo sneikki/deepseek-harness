@@ -109,7 +109,7 @@
 .cell[data-activity='deploy'] { --cell-color: var(--amv-act-deploy); }
 .cell[data-activity='proof'] { --cell-color: var(--amv-act-proof); }
 .cell[data-activity='error'] { --cell-color: var(--amv-danger); }
-.cell[data-activity='other'] { --cell-color: var(--amv-act-wait); }
+.cell[data-activity='other'] { --cell-color: var(--amv-text-2); }
 
 .chevron {
   flex: none;

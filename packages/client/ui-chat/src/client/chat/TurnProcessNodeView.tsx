@@ -1,12 +1,9 @@
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import {
-  IconAgentPresetOutlineRegular,
   IconChevronDownOutlineRegular,
   IconCloseCircleFillRegular,
-  IconCodeOutlineRegular,
   IconEditOutlineRegular,
   IconSearchOutlineRegular,
-  IconSettingsOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ComponentType } from 'react'
 import type { ChatNodeViewProps } from '../contract/slots.ts'
@@ -15,12 +12,20 @@ import { formatRunDuration } from './message-chrome.ts'
 import a11yCss from './accessibility.module.css'
 import css from './TurnProcessNodeView.module.css'
 
-const ACTIVITY_ICON: Record<TurnActivity, ComponentType<{ className?: string | undefined }>> = {
+type IconProps = { className?: string | undefined }
+const svg = (className: string | undefined, d: ReactNode) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{d}</svg>
+)
+const TerminalIcon = ({ className }: IconProps) => svg(className, <><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2" /><path d="m4.75 6.25 2 1.75-2 1.75M8.5 10h2.75" /></>)
+const WrenchIcon = ({ className }: IconProps) => svg(className, <path d="M10.2 2.2a3.3 3.3 0 0 0-3.1 4.4L2.4 11.3a1.4 1.4 0 0 0 2 2l4.7-4.7a3.3 3.3 0 0 0 4.4-3.1l-2 2-1.9-.4-.4-1.9z" />)
+const RobotIcon = ({ className }: IconProps) => svg(className, <><rect x="2.5" y="5.25" width="11" height="8" rx="2" /><path d="M8 5.25V2.75M5.75 8.5v1M10.25 8.5v1M6 11.5h4" /></>)
+
+const ACTIVITY_ICON: Record<TurnActivity, ComponentType<IconProps>> = {
   review: IconSearchOutlineRegular,
-  deploy: IconCodeOutlineRegular,
-  other: IconSettingsOutlineRegular,
+  deploy: TerminalIcon,
+  other: WrenchIcon,
   code: IconEditOutlineRegular,
-  proof: IconAgentPresetOutlineRegular,
+  proof: RobotIcon,
   error: IconCloseCircleFillRegular,
 }
 
