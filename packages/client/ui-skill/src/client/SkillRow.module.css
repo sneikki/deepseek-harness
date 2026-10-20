@@ -12,12 +12,12 @@
   align-items: center;
   height: calc(24px + var(--dsh-content-font-delta, 0px));
   min-width: 0;
-  color: var(--dsw-alias-label-tertiary);
-  transition: color 100ms ease;
+  color: var(--amv-muted);
+  transition: color var(--amv-dur-1) var(--amv-ease);
 }
 
 .row:hover {
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
 }
 
 .row[data-expandable] {
@@ -69,6 +69,8 @@
 
 .title {
   flex: none;
+  font-family: var(--ds-font-family-code);
+  font-weight: 500;
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(24px + var(--dsh-content-font-delta, 0px));
 }
@@ -79,11 +81,12 @@
   height: 2px;
   border-radius: 1px;
   margin: 0 8px;
-  background: var(--dsw-alias-label-caption);
+  background: var(--amv-faint);
 }
 
 .summary {
   flex: 1 1 auto;
+  font-family: var(--ds-font-family-code);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,11 +96,11 @@
 }
 
 .errorSummary {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
 .stoppedSummary {
-  color: var(--dsw-alias-state-warn-label);
+  color: var(--amv-warning);
 }
 
 .bodyWrap {
@@ -111,22 +114,22 @@
   max-height: 260px;
   margin: 4px 0 4px 4px;
   overflow: hidden;
-  border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: var(--dsw-radius-lg);
-  background: var(--dsw-alias-markdown-code-block);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
 }
 
 .instructionsHeader {
   flex: none;
   padding: 8px 12px;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-markdown-code-block-banner);
+  border-bottom: 1px solid var(--amv-border);
+  background: transparent;
   font-size: 11px;
   font-weight: 500;
   line-height: 16px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.07em;
 }
 
 .instructions {
@@ -137,11 +140,11 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: var(--dsw-font-markdown-code-block-small);
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-text-2);
 }
 
 .instructions[data-error] {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--amv-danger);
 }
 
 .instructions::-webkit-scrollbar-thumb {
@@ -161,11 +164,11 @@
   gap: 4px;
   margin: 4px 0 2px 4px;
   padding: 2px 8px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
+  border: 1px solid var(--amv-border-strong);
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
+  color: var(--amv-text-2);
   font-size: 11px;
   line-height: 16px;
   cursor: pointer;
@@ -179,8 +182,8 @@
 }
 
 .inspectButton:hover {
-  background: var(--dsw-alias-interactive-bg-hover-solid);
-  color: var(--dsw-alias-label-primary);
+  background: var(--amv-border);
+  color: var(--amv-text);
 }
 
 .visuallyHidden {
