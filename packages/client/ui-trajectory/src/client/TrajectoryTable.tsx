@@ -41,6 +41,7 @@ import { trajectoryPreviewText } from './trajectory-preview.ts'
 import type { TrajectoryKey, TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
 import { codeProgram, PTC_TOOL_NAME, type CodeProgram } from './code-program.ts'
+import { trajectoryActivityOf } from './trajectory-activity.ts'
 import css from './TrajectoryTable.module.css'
 
 const BOTTOM_FOLLOW_THRESHOLD_PX = 2
@@ -2745,6 +2746,9 @@ export function TrajectoryTable({
                       data-group-start={record.groupStart || undefined}
                       data-turn-start={record.turnStart || undefined}
                       data-error={record.cell.isError || undefined}
+                      data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
+                        ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
+                        : undefined}
                       data-running={stateOf(record) === 'running' || undefined}
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}

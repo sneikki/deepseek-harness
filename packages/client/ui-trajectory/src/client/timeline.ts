@@ -21,6 +21,7 @@ export interface TrajectoryTimelineSpan extends TrajectoryTimeRange {
   kind: TrajectoryCellKind
   label: string
   lane: number
+  toolName?: string | undefined
 }
 
 /** One turn boundary in the active timeline domain. */
@@ -105,6 +106,7 @@ export function deriveTrajectoryTimeline(
       kind: cell.kind,
       label: cell.text,
       lane: laneFor(cell.kind),
+      toolName: cell.toolName,
     })))
   }
 
@@ -136,6 +138,7 @@ function deriveTimedTimeline(
             kind: cell.kind,
             label: cell.text,
             lane: laneFor(cell.kind),
+            toolName: cell.toolName,
           }]
       }),
     )

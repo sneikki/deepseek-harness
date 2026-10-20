@@ -12,8 +12,11 @@
 
 .title {
   flex: none;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-primary);
+  font: 500 11px/16px var(--ds-font-family-code);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--amv-muted);
 }
 
 .description {
@@ -22,6 +25,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xs-13);
-  color: var(--dsw-alias-label-tertiary);
+  font: 400 13px/18px var(--dsw-font-family);
+  color: var(--amv-faint);
 }
