@@ -153,7 +153,7 @@ describe('deriveTrajectoryLayout', () => {
     expect(message).toMatchObject({
       input: 10, output: 20, think: 5, timeSeconds: 5,
       previewMarkdown: 'I will run bash', outputDetail: 'I will run bash',
-      thinkingDetail: 'thinking…', callsBadge: '→ bash',
+      thinkingDetail: 'thinking…', callsBadge: '→ Bash',
     })
     expect(trajectoryRecordId(thinking!)).not.toBe(trajectoryRecordId(message!))
     const tool = turns[0]?.groups.flatMap(g => g.cells).find(c => c.kind === 'tool')
@@ -176,7 +176,7 @@ describe('deriveTrajectoryLayout', () => {
     }] as unknown as LegacyConversationSlice['nodes']
     const cells = deriveTrajectoryLayout({ nodes, partial: null, runningCalls: [] })[0]!.groups.flatMap(g => g.cells)
     expect(cells.map(c => c.kind)).toEqual(['thinking', 'message', 'tool', 'tool', 'tool'])
-    expect(cells[1]).toMatchObject({ text: '', callsBadge: '→ bash ×2, moonshine recall' })
+    expect(cells[1]).toMatchObject({ text: '', callsBadge: '→ Bash ×2, Moonshine recall' })
     expect(cells[1]?.outputDetail).toBeUndefined()
     expect(cells.map(c => c.index)).toEqual([1, 2, 3, 4, 5])
   })

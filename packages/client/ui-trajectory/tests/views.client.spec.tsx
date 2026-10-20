@@ -655,7 +655,7 @@ describe('tab switching in ConversationRoot', () => {
     expect(screen.getByRole('row', { name: /live words/ })).toBeTruthy()
   })
 
-  it('hides a finished tool-call-only Assistant row yet still folds its step', async () => {
+  it('shows a tool-call-only Assistant row as a badge and still folds its step', async () => {
     const nodes: LegacyConversationSlice['nodes'] = [
       { kind: 'user', seq: 1, time: 1_000, content: [], source: null },
       {
@@ -680,7 +680,7 @@ describe('tab switching in ConversationRoot', () => {
     expect(screen.getAllByRole('row', { name: /bash/ }).length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByRole('button', { name: '收起所有调用' }))
-    expect(screen.getByText('1 个工具调用 · bash')).toBeTruthy()
+    expect(screen.getByText('1 个工具调用 · Bash')).toBeTruthy()
     expect(screen.getByRole('button', { name: '请求 #1' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /^工具/ }))

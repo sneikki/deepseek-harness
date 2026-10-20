@@ -535,13 +535,22 @@
 }
 
 .label {
-  flex: 0 0 124px;
+  display: flex;
+  flex: 0 0 156px;
   min-width: 0;
+}
+
+/* Kind or tool name as a pill tinted in the row tone: sans, humanised text. */
+.labelBadge {
+  min-width: 0;
+  padding: 0 8px;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 35%, transparent);
+  border-radius: 999px;
   color: var(--trajectory-tone-text);
-  font: 500 12px/18px var(--ds-font-family-code);
+  background: color-mix(in srgb, var(--trajectory-tone) 14%, transparent);
+  font: 500 12px/16px var(--dsw-font-family);
   text-overflow: ellipsis;
-  text-transform: lowercase;
   white-space: nowrap;
 }
 

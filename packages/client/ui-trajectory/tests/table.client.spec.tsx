@@ -192,7 +192,7 @@ describe('TrajectoryTable', () => {
 
     expect(screen.queryByText('(tool call only)')).toBeNull()
     const row = screen.getByRole('row', { name: /ASSISTANT/ })
-    expect(within(row).getByText('→ read')).toBeTruthy()
+    expect(within(row).getByText('→ Read')).toBeTruthy()
     expect(screen.getByRole('row', { name: /THINKING/ })).toBeTruthy()
   })
 
@@ -201,7 +201,7 @@ describe('TrajectoryTable', () => {
     render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
     const row = screen.getByRole('row', { name: /ASSISTANT/ })
-    const badge = within(row).getByText('→ read')
+    const badge = within(row).getByText('→ Read')
     const text = within(row).getByText('Reading now')
     expect(badge.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -247,7 +247,7 @@ describe('TrajectoryTable', () => {
       />,
     )
 
-    expect(screen.getByText('2 个工具调用 · bash ×2')).toBeTruthy()
+    expect(screen.getByText('2 个工具调用 · Bash ×2')).toBeTruthy()
   })
 
   it('shows assistant timing facts after keyboard selection', () => {

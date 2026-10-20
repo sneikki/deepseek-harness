@@ -121,10 +121,15 @@ export function trajectoryRecordId(cell: TrajectoryCellProps): string {
   return `${cell.kind}\u0000index\u0000${cell.index}`
 }
 
-/** `mcp__server__tool` reads as `server tool`. */
+/**
+ * Humanize a recorded tool name or kind label for badges and summaries.
+ * @param name - Raw name, e.g. `mcp__moonshine__store` or `list_subagent_models`.
+ * @returns Spaced words with a capital first letter: `Moonshine store`, `List subagent models`.
+ */
 export function displayToolName(name: string): string {
   const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
-  return mcp === null ? name : `${mcp[1]} ${mcp[2]}`
+  const spaced = (mcp === null ? name : `${mcp[1]} ${mcp[2]}`).replaceAll('_', ' ')
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
 /**

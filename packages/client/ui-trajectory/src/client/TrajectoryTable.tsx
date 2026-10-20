@@ -3075,7 +3075,10 @@ export function TrajectoryTable({
                                   className={css.label}
                                   title={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                 >
-                                  {displayToolName(toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind]))}
+                                  <span className={css.labelBadge}>
+                                    {displayToolName(toolCallText?.name
+                                      || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
+                                  </span>
                                 </span>
                                 <span
                                   className={resultText === undefined ? css.contentText : css.resultPreview}

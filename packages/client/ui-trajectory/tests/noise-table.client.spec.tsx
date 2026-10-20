@@ -61,7 +61,7 @@ describe('TrajectoryTable with hidden rows', () => {
     const id = trajectoryRecordId(layout[0]!.groups[0]!.cells[0]!)
     render(ledger({ collapsedAssistants: new Set([id]) }, layout))
     expect(screen.queryAllByRole('row', { name: /TOOL/ })).toHaveLength(0)
-    expect(screen.getByText('2 tool calls · bash, edit')).toBeTruthy()
+    expect(screen.getByText('2 tool calls · Bash, Edit')).toBeTruthy()
     // the summary line carries the request label and inspector button
     expect(screen.getByRole('button', { name: 'Request #1' })).toBeTruthy()
   })
@@ -86,7 +86,7 @@ describe('TrajectoryTable with hidden rows', () => {
       hiddenIndexes: new Set([1, 3, 5]),
       requestNumbers: [1, 2, 3].map(n => ({ turn: 1, step: n, group: `Step ${n}`, number: n })),
     }, layout))
-    const line = screen.getByText('3 tool calls · bash ×2, moonshine store')
+    const line = screen.getByText('3 tool calls · Bash ×2, Moonshine store')
     fireEvent.click(line)
     expect(toggled).toEqual(ids)
   })
@@ -110,7 +110,7 @@ describe('TrajectoryTable with hidden rows', () => {
       collapsedAssistants: new Set(ids),
       hiddenIndexes: new Set([3]),
     }, layout))
-    expect(screen.getByText('2 tool calls · bash ×2')).toBeTruthy()
+    expect(screen.getByText('2 tool calls · Bash ×2')).toBeTruthy()
   })
 
   it('counts only shown rows in a folded turn summary', () => {
