@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { TrajectoryCellProps } from '../src/client/trajectory-record.ts'
+import { CARD_COMPACT_ROW_HEIGHT, CARD_ROW_HEIGHT } from '../src/client/trajectory-card.ts'
 import {
   CONTENT_ROW_HEIGHT, groupTrajectoryVirtualRows, TURN_START_ROW_HEIGHT,
   trajectoryVirtualRecordKey,
@@ -59,6 +60,24 @@ describe('trajectory virtual rows', () => {
     const first = { ...record(1, { sourceSeq: 10 }), turnStart: true }
 
     expect(groupTrajectoryVirtualRows([first])[0]?.height).toBe(TURN_START_ROW_HEIGHT)
+  })
+
+  it('keeps every collapsed box kind at one height except the calls-only assistant box', () => {
+    const kinds = ['user', 'context', 'message', 'thinking', 'tool', 'subtool'] as const
+    const heights = kinds.map((kind, index) =>
+      groupTrajectoryVirtualRows([record(index + 1, { kind, text: 'x', sourceSeq: index })])[0]?.height)
+    expect(new Set(heights)).toEqual(new Set([CARD_ROW_HEIGHT]))
+
+    const calls = { callsBadge: '→ Bash', text: '' }
+    const compact = record(1, { ...calls, sourceSeq: 1 })
+    expect(groupTrajectoryVirtualRows([compact])[0]?.height).toBe(CARD_COMPACT_ROW_HEIGHT)
+    expect(CARD_COMPACT_ROW_HEIGHT).toBeLessThan(CARD_ROW_HEIGHT)
+    expect(groupTrajectoryVirtualRows([{ ...compact, turnStart: true }])[0]?.height)
+      .toBe(TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT + CARD_COMPACT_ROW_HEIGHT)
+    expect(groupTrajectoryVirtualRows([record(2, { ...calls, text: 'with text', sourceSeq: 2 })])[0]?.height)
+      .toBe(CARD_ROW_HEIGHT)
+    expect(groupTrajectoryVirtualRows([record(3, { ...calls, previewMarkdown: 'said', sourceSeq: 3 })])[0]?.height)
+      .toBe(CARD_ROW_HEIGHT)
   })
 
   it('uses the rendered collapsed-summary height', () => {

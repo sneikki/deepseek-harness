@@ -521,6 +521,18 @@
     box-shadow var(--amv-dur-1) var(--amv-ease);
 }
 
+.card[data-compact] {
+  height: var(--trajectory-card-compact-height);
+}
+
+.card[data-compact] .cardHead {
+  margin-bottom: 0;
+}
+
+.card[data-compact] .callsBadge {
+  margin-right: 0;
+}
+
 .card[data-expanded] {
   height: auto;
   min-height: var(--trajectory-card-height);

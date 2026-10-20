@@ -31,7 +31,8 @@ import type {
   AssistantMetricDetail, TrajectoryCellKind, TrajectoryCellProps, TrajectorySourceBlock,
 } from './trajectory-record.ts'
 import {
-  displayToolName, formatClock, formatElapsedSeconds, formatTurnDuration, trajectoryRecordId,
+  displayToolName, formatBoxDuration, formatClock, formatElapsedSeconds, formatTurnDuration,
+  trajectoryRecordId,
 } from './trajectory-record.ts'
 import {
   CONTENT_ROW_HEIGHT, groupTrajectoryVirtualRows, TURN_START_ROW_HEIGHT,
@@ -42,8 +43,8 @@ import type { TrajectoryTurnModel } from './layout.ts'
 import { trajectoryPreviewText } from './trajectory-preview.ts'
 import { TrajectoryCard } from './TrajectoryCard.tsx'
 import {
-  CARD_BODY_LINES, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
-  CARD_LINE_HEIGHT, CARD_MAX_WIDTH, CARD_PADDING_Y, CARD_ROW_HEIGHT, cardLevel, measureCardRow,
+  CARD_BODY_LINES, CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
+  CARD_LINE_HEIGHT, CARD_MAX_WIDTH, CARD_PADDING_Y, CARD_ROW_HEIGHT, cardIsCompact, cardLevel, measureCardRow,
 } from './trajectory-card.ts'
 import { trajectoryRowMatchesFilter, type TrajectoryRowFilter } from './trajectory-noise.ts'
 import type { TrajectoryKey, TrajectoryTranslate } from './locales.ts'
@@ -676,6 +677,7 @@ function indexTurnStats(
 /** Box geometry from trajectory-card.ts; the ledger CSS reads every size from these variables. */
 const CARD_STYLE = {
   '--trajectory-card-body-lines': CARD_BODY_LINES,
+  '--trajectory-card-compact-height': `${CARD_COMPACT_HEIGHT}px`,
   '--trajectory-card-gap': `${CARD_GAP}px`,
   '--trajectory-card-head': `${CARD_HEAD_HEIGHT}px`,
   '--trajectory-card-head-gap': `${CARD_HEAD_GAP}px`,
@@ -692,6 +694,19 @@ const TURN_START_ROW_STYLE = {
   '--trajectory-head': `${TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT}px`,
   '--trajectory-row-height': `${TURN_START_ROW_HEIGHT}px`,
 } as CSSProperties
+
+/** Row sizes of a calls-only box, which is lower than the other boxes. */
+function compactRowStyle(turnStart: boolean): CSSProperties {
+  return {
+    '--trajectory-card-row-height': `${CARD_COMPACT_ROW_HEIGHT}px`,
+    ...(turnStart
+      ? {
+        '--trajectory-head': `${TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT}px`,
+        '--trajectory-row-height': `${CARD_COMPACT_ROW_HEIGHT + TURN_START_ROW_HEIGHT - CONTENT_ROW_HEIGHT}px`,
+      }
+      : {}),
+  } as CSSProperties
+}
 
 function indexRequestNumbers(
   sessionNumbers: readonly TrajectoryRequestNumber[] | undefined,
@@ -2966,7 +2981,9 @@ export function TrajectoryTable({
                       data-terminal-request-boundary={terminalRequestBoundary || undefined}
                       data-group-start={record.groupStart || undefined}
                       data-turn-start={record.turnStart || undefined}
-                      style={record.turnStart ? TURN_START_ROW_STYLE : undefined}
+                      style={isCollapsedSummary || isRequestOnly || !cardIsCompact(record.cell)
+                        ? record.turnStart ? TURN_START_ROW_STYLE : undefined
+                        : compactRowStyle(record.turnStart)}
                       data-error={record.cell.isError || undefined}
                       data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
                         ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
@@ -3097,7 +3114,7 @@ export function TrajectoryTable({
                                     || t(KIND_LABEL_KEY[record.cell.kind]).toLowerCase())}
                                   badgeTitle={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                   {...(record.cell.timeSeconds !== null && record.cell.timeSeconds > 0
-                                    ? { meta: formatElapsedSeconds(record.cell.timeSeconds, t) }
+                                    ? { meta: formatBoxDuration(record.cell.timeSeconds * 1000, t) }
                                     : {})}
                                   expanded={expandedCards.has(rowKey)}
                                   onToggle={() => { toggleCard(rowKey) }}

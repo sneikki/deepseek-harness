@@ -19,12 +19,28 @@ export const CARD_GAP = 8
 /** Height of every collapsed box, border included. */
 export const CARD_HEIGHT = 2 * (CARD_PADDING_Y + CARD_BORDER)
   + CARD_HEAD_HEIGHT + CARD_HEAD_GAP + CARD_BODY_LINES * CARD_LINE_HEIGHT
+/** An assistant step that only chose tools has no body: header line only. */
+export const CARD_COMPACT_HEIGHT = 2 * (CARD_PADDING_Y + CARD_BORDER) + CARD_HEAD_HEIGHT
+/** Virtual-row height of a calls-only box. */
+export const CARD_COMPACT_ROW_HEIGHT = CARD_COMPACT_HEIGHT + CARD_GAP
 /** Virtual-row height of a collapsed box: the box plus the gap below it. */
 export const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_GAP
 /** Indent of a tool box under its assistant step; a sub-call adds one more. */
 export const CARD_INDENT = 28
 /** Text column width, like a book page. */
 export const CARD_MAX_WIDTH = 760
+/**
+ * Whether a box is the low calls-only form: an assistant step with a tool-calls pill and no text.
+ * @param cell - Record behind the box.
+ * @returns true when the box has a header line and no body.
+ */
+export function cardIsCompact(cell: TrajectoryCellProps): boolean {
+  return cell.kind === 'message'
+    && cell.callsBadge !== undefined
+    && cell.text === ''
+    && (cell.previewMarkdown ?? cell.outputDetail ?? '').trim() === ''
+}
+
 /**
  * Indent level of a box: step records (user, assistant, thinking, context) sit at the
  * rail, the tool calls of a step one level in, a tool's own sub-calls one more.

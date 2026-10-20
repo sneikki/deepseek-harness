@@ -12,7 +12,7 @@ import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/layout.ts'
 import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
-import { CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
+import { CARD_COMPACT_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
 import { t, tZh } from './locale.client.ts'
 
 const loadImage: MessageImageLoader = async () => 'blob:trajectory'
@@ -1202,7 +1202,7 @@ describe('TrajectoryTable', () => {
     render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
     expect(screen.getByText('tools 1')).toBeTruthy()
-    expect(screen.queryByText('5 s')).toBeNull()
+    expect(within(screen.getByLabelText('Turn 1').parentElement!).queryByText('5 s')).toBeNull()
   })
 
   it('hides the chips of a partly loaded first turn', () => {
@@ -1507,6 +1507,42 @@ describe('ledger boxes', () => {
     expect(call()).toBe(CARD_ROW_HEIGHT)
     row.dataset['cardExpanded'] = 'true'
     expect(call()).toBe(300)
+  })
+
+  it('renders an assistant step with only tool calls as a low box without a body', () => {
+    const calls: TrajectoryCellProps = {
+      index: 3, kind: 'message', text: '', callsBadge: '→ Bash', timeSeconds: 21.235,
+    }
+    render(<TrajectoryTable turns={turnOf([calls, message])} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table')
+    const rowOf = (index: number) => screen.getAllByRole('row')
+      .find(candidate => candidate.getAttribute('data-record-index') === String(index))!
+
+    expect(table.style.getPropertyValue('--trajectory-card-compact-height')).toBe(`${CARD_COMPACT_HEIGHT}px`)
+    const low = rowOf(3)
+    expect(low.querySelector('[data-card]')?.getAttribute('data-compact')).toBe('true')
+    expect(low.querySelector('[data-section]')).toBeNull()
+    expect(within(low).getByText('→ Bash')).toBeTruthy()
+    expect(low.style.getPropertyValue('--trajectory-card-row-height')).not.toBe('')
+    expect(rowOf(1).querySelector('[data-card]')?.getAttribute('data-compact')).toBeNull()
+    expect(rowOf(1).style.getPropertyValue('--trajectory-card-row-height')).toBe('')
+  })
+
+  it('writes box durations in readable units', () => {
+    const at = (timeSeconds: number): TrajectoryCellProps => ({
+      index: 1, kind: 'message', text: 'x', timeSeconds,
+    })
+    const metaOf = (timeSeconds: number) => {
+      const view = render(<TrajectoryTable turns={turnOf([at(timeSeconds)])} {...FOLD_PROPS} />)
+      const text = view.container.querySelector('[data-card]')?.querySelector('span:last-child')?.textContent
+      view.unmount()
+      return text
+    }
+
+    expect(metaOf(0.06)).toBe('60 ms')
+    expect(metaOf(21.235)).toBe('21.2 s')
+    expect(metaOf(5)).toBe('5 s')
+    expect(metaOf(124)).toBe('2 min 4 s')
   })
 
   it('indents tool boxes under their assistant step', () => {

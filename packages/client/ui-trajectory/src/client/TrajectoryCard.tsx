@@ -5,7 +5,7 @@ import type { ReactNode, RefObject } from 'react'
 import { IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TrajectoryTranslate } from './locales.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
-import { cardFullInput, cardFullOutput, cardFullText } from './trajectory-card.ts'
+import { cardFullInput, cardFullOutput, cardFullText, cardIsCompact } from './trajectory-card.ts'
 import css from './TrajectoryTable.module.css'
 
 /** Text parts of one ledger row, as produced by the table's record presentation. */
@@ -155,7 +155,8 @@ export function TrajectoryCard({
   onToggle,
   t,
 }: TrajectoryCardProps) {
-  const sections = cardSections(cell, content, t)
+  const compact = cardIsCompact(cell)
+  const sections = compact ? [] : cardSections(cell, content, t)
   const bodyRef = useRef<HTMLDivElement>(null)
   const clipped = useClipped(
     bodyRef,
@@ -164,34 +165,42 @@ export function TrajectoryCard({
   )
   const more = clipped || sections.some(section => section.truncated)
   return (
-    <div className={css.card} data-card="" data-expanded={expanded || undefined}>
+    <div
+      className={css.card}
+      data-card=""
+      data-compact={compact || undefined}
+      data-expanded={expanded || undefined}
+    >
       <div className={css.cardHead}>
         <span className={css.cardBadge} title={badgeTitle}>{badge}</span>
+        {compact && <span className={css.callsBadge}>{content.callsBadge}</span>}
         <span className={css.cardLifecycle} data-card-slot="lifecycle">{lifecycle}</span>
         {meta !== undefined && <span className={css.cardMeta}>{meta}</span>}
       </div>
-      <div
-        ref={bodyRef}
-        className={css.cardBody}
-        data-clipped={!expanded && more || undefined}
-      >
-        {sections.map(section => (
-          <div
-            key={section.key}
-            className={css.cardSection}
-            data-section={section.key}
-            data-tone={section.tone}
-          >
-            {section.label !== undefined && (
-              <span className={css.cardSectionLabel}>{section.label}</span>
-            )}
-            <span className={css.cardText}>
-              {section.lead}
-              {expanded ? section.full : section.preview}
-            </span>
-          </div>
-        ))}
-      </div>
+      {!compact && (
+        <div
+          ref={bodyRef}
+          className={css.cardBody}
+          data-clipped={!expanded && more || undefined}
+        >
+          {sections.map(section => (
+            <div
+              key={section.key}
+              className={css.cardSection}
+              data-section={section.key}
+              data-tone={section.tone}
+            >
+              {section.label !== undefined && (
+                <span className={css.cardSectionLabel}>{section.label}</span>
+              )}
+              <span className={css.cardText}>
+                {section.lead}
+                {expanded ? section.full : section.preview}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {(expanded || more) && (
         <button
           type="button"
