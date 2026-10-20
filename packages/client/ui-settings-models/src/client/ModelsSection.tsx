@@ -487,7 +487,9 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
                         role="img"
                         aria-label={t('credentialConfigured')}
                         title={t('credentialConfigured')}
-                      />
+                      >
+                        {t('credentialConfigured')}
+                      </span>
                     )
                     : credentialMissing
                       ? (
@@ -496,7 +498,9 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
                           role="img"
                           aria-label={t('credentialMissing')}
                           title={t('credentialMissing')}
-                        />
+                        >
+                          {t('credentialMissing')}
+                        </span>
                       )
                       : null}
                 </span>
