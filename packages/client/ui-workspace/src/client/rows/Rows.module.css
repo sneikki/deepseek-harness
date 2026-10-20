@@ -3,8 +3,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border-radius: var(--dsw-radius-md);
+  border-radius: 10px;
   padding: 0 8px;
+  transition: background var(--amv-dur-1) var(--amv-ease), box-shadow var(--amv-dur-1) var(--amv-ease);
   padding-inline-start: calc(8px + var(--dsh-workspace-indent, 0px));
   cursor: pointer;
   user-select: none;
@@ -13,11 +14,13 @@
 
 .projectRow:hover,
 .sessionRow:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
-.sessionRow.selected {
-  background: var(--dsw-alias-interactive-bg-hover);
+.sessionRow.selected,
+.sessionRow.selected:hover {
+  background: var(--amv-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
 
 .searchResultRow {
@@ -108,7 +111,7 @@
 
 /* Session cell (figma): pad 8, a 16px status slot, then a 4px title gap. */
 .sessionRow {
-  height: 32px;
+  height: 35px;
   gap: 0;
 }
 
@@ -136,8 +139,11 @@
 }
 
 .folderActive {
-  color: var(--dsw-alias-state-business-primary);
+  color: var(--amv-accent);
 }
+
+.projectRow .folder { color: var(--amv-muted); }
+.projectRow .folder.folderActive { color: var(--amv-accent); }
 
 
 /* Project leading slot: folder by default, expand arrow on row hover. */
@@ -147,7 +153,7 @@
 
 /* Expand arrow (filled triangle): points right closed, rotates to point down open. */
 .arrow {
-  transition: transform 150ms var(--ds-ease-in-out);
+  transition: transform var(--amv-dur-2) var(--amv-ease);
 }
 
 .arrowOpen {
@@ -167,7 +173,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 20px;
 }
 
@@ -221,10 +227,19 @@
 
 .time {
   flex: none;
-  font-size: 10px;
+  font-family: var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
   line-height: 16px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
+  transition: color var(--amv-dur-1) var(--amv-ease);
 }
+
+/* State at a glance: running teal, waiting-for-user violet, error red. */
+.sessionRow[data-tone='running'] .time { color: var(--amv-accent); }
+.sessionRow[data-tone='attention'] .time { color: var(--amv-attention); }
+.sessionRow[data-tone='error'] .time { color: var(--amv-danger); }
+.sessionRow[data-tone='attention'] .slot { color: var(--amv-attention); }
 
 .pinIndicator {
   display: inline-flex;
@@ -303,7 +318,7 @@
    hover fill while its dropdown is up). */
 .projectRow.menuOpen,
 .sessionRow.menuOpen {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--amv-raised);
 }
 
 /* Session drag insert marker: a leading chevron and 2px rule between rows,
@@ -420,4 +435,15 @@
     animation: none;
     transition: none;
   }
+}
+
+/* Rows entering after the user has interacted (AnimatedRows sets data-armed)
+   open with height + fade; the duration tokens are 0 under reduced motion. */
+@keyframes rowIn {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 40px; }
+}
+
+:global([data-armed]) .sessionRow {
+  animation: rowIn var(--amv-dur-2) var(--amv-ease) backwards;
 }

@@ -172,7 +172,7 @@ export class AnimatedRows extends Component<AnimatedRowsProps> {
         className={this.props.className}
         role="tree"
         aria-label={this.props.label}
-        onPointerDownCapture={() => { this.armed = true }}
+        onPointerDownCapture={(e) => { this.armed = true; e.currentTarget.dataset.armed = '' }}
         onKeyDownCapture={() => { this.armed = true }}
       >
         {this.props.children}

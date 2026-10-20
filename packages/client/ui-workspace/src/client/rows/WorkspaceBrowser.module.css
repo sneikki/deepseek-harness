@@ -26,8 +26,12 @@
   padding: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--amv-faint);
+  transition: color var(--amv-dur-1) var(--amv-ease), background var(--amv-dur-1) var(--amv-ease);
 }
+
+/* Header buttons stay quiet until the header (or the button) is hovered. */
+.sectionHeader:hover .iconButton { color: var(--amv-muted); }
 
 /* The action cluster animates its width and the search pill rounds its corners,
  * so both clip an outer ring; these controls keep theirs inside instead. */
@@ -39,7 +43,8 @@
 }
 
 .iconButton:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--amv-text);
+  background: var(--amv-raised);
 }
 
 /* View-options dropdown card: labels are short, so a content-sized card reads
@@ -72,6 +77,12 @@
 
 .sectionLabel {
   flex: none;
+  padding-left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
   max-width: 45%;
   min-width: 0;
   overflow: hidden;
