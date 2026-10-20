@@ -1473,3 +1473,325 @@
     gap: 0;
   }
 }
+
+/* v2 canvas: mono entity names and times, 2px teal underline tabs, status
+   pills, panel empty state, timeline glyphs. Declared last so it supersedes the
+   stock steps above at equal specificity. */
+.pageHeading h1,
+.editName,
+.readonlyName {
+  font-family: var(--ds-font-family-code);
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.newButton {
+  min-height: 34px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.filters {
+  gap: 0 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--amv-border);
+}
+
+.filterTabs {
+  gap: 0 24px;
+}
+
+.filterTab {
+  position: relative;
+  height: 36px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--amv-muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color var(--amv-dur-1) var(--amv-ease);
+}
+
+.filterTab::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--amv-dur-1) var(--amv-ease);
+}
+
+.filterTab:hover {
+  background: transparent;
+  color: var(--amv-text-2);
+}
+
+.filterTabActive,
+.filterTabActive:hover {
+  background: transparent;
+  color: var(--amv-text);
+}
+
+.filterTabActive::after {
+  background: var(--amv-accent);
+}
+
+.searchField {
+  height: 38px;
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-surface);
+  transition: border-color var(--amv-dur-1) var(--amv-ease);
+}
+
+.searchField:hover {
+  border-color: var(--amv-border-strong);
+}
+
+.searchField:focus-within {
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
+}
+
+.searchField input {
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
+}
+
+.row {
+  align-items: center;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  transition: background var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
+}
+
+.row:hover {
+  background: var(--amv-raised);
+}
+
+.selectedRow,
+.selectedRow:hover {
+  border-color: var(--amv-accent-ring);
+  background: var(--amv-accent-soft);
+}
+
+.rowGlyph {
+  align-self: center;
+  margin-top: 0;
+  color: var(--amv-accent);
+}
+
+.endedRow .rowGlyph {
+  color: var(--amv-muted);
+}
+
+.rowTitle {
+  font-family: var(--ds-font-family-code);
+  font-size: 14px;
+  letter-spacing: -0.005em;
+}
+
+.rowSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  color: var(--amv-muted);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metadata + .metadata::before {
+  padding: 0 4px 0 0;
+  color: var(--amv-faint);
+}
+
+/* Status pill: neutral by default (ended), teal when the task is enabled. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 9px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 999px;
+  background: var(--amv-raised);
+  color: var(--amv-text-2);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.pillDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pillActive {
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.pillActive .pillDot {
+  animation: amv-pulse 2s var(--amv-ease) infinite;
+}
+
+.endedRow .rowSummary {
+  color: var(--amv-faint);
+}
+
+.list .empty {
+  margin-top: 8px;
+  padding: 40px 20px;
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+  background: var(--amv-surface);
+}
+
+.empty h2,
+.empty h3,
+.empty .emptyTitle {
+  color: var(--amv-text-2);
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
+}
+
+.emptyGlyph {
+  box-sizing: content-box;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.notice,
+.retentionRule {
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
+  background: var(--amv-surface);
+}
+
+.nextRun {
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  border-left-color: var(--amv-border);
+  background: var(--amv-bg);
+}
+
+.detailTabsBar {
+  border-bottom-color: var(--amv-border);
+}
+
+.detailTab {
+  font-size: 14px;
+  color: var(--amv-muted);
+}
+
+.detailTab[aria-selected="true"] {
+  color: var(--amv-text);
+}
+
+.detailTab[aria-selected="true"]::after {
+  background: var(--amv-accent);
+}
+
+/* Section label: the rule card's heading. */
+.ruleCard h3 {
+  margin-left: 2px;
+  color: var(--amv-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ruleRows,
+.instruction {
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+  background: var(--amv-surface);
+}
+
+.instruction:hover {
+  border-color: var(--amv-border-strong);
+}
+
+.instruction:focus {
+  border-color: var(--amv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
+}
+
+.ruleRow,
+.ruleRowMenu {
+  border-bottom-color: var(--amv-border);
+}
+
+.ruleValueFace,
+.ruleInput,
+.ruleIntervalInput {
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ruleValue:not(:disabled):hover .ruleValueFace {
+  background: var(--amv-raised);
+}
+
+/* Run history: 16px tinted circular status icon on the 1px timeline. */
+.deliveryGlyph {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--amv-success) 35%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--amv-success) 14%, transparent);
+  color: var(--amv-success);
+}
+
+.delivery::before,
+.delivery::after {
+  width: 1px;
+  background: var(--amv-border);
+}
+
+.deliveryTime {
+  color: var(--amv-text);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.savedPrompt {
+  color: var(--amv-text-2);
+}
+
+.saveFooter {
+  border-top-color: var(--amv-border);
+  background: var(--amv-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillActive .pillDot {
+    animation: none;
+  }
+}

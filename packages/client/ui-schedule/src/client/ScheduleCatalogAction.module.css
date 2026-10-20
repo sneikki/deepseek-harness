@@ -187,3 +187,29 @@
 .trigger[aria-expanded='true'] {
   background: var(--dsw-alias-interactive-bg-hover);
 }
+
+/* v2 canvas: mono task names and next-run times, amber for overdue. */
+.title {
+  font-family: var(--ds-font-family-code);
+  font-size: 13px;
+}
+
+.metadata,
+.nextRun {
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowTask:hover {
+  background: var(--amv-raised);
+}
+
+.rowOverdue,
+.rowOverdue:hover {
+  background: color-mix(in srgb, var(--amv-warning) 10%, transparent);
+}
+
+.metadataOverdue {
+  color: var(--amv-warning);
+}

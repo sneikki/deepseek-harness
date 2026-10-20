@@ -136,3 +136,29 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* v2 canvas: panel card, mono names and times. */
+.card {
+  --card-fill: var(--amv-surface);
+  --card-hover: var(--amv-raised);
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+}
+
+.leading {
+  border: 1px solid color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.title {
+  font-family: var(--ds-font-family-code);
+}
+
+.frequency,
+.status {
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
