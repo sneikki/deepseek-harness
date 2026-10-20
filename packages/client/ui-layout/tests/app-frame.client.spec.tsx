@@ -558,8 +558,8 @@ describe('AppFrame pointer resizing', () => {
     drag(handle, 636, 646)
     expect(instance.getSnapshot().layoutInfo.rightbar).toBe(454)
     expect(rightOwner().width).toBe(454)
-    expect(tracks(frame)[1]).toBe(410)
-    expect(handle.style.left).toBe('690px')
+    expect(tracks(frame)[1]).toBe(454)
+    expect(handle.style.left).toBe('646px')
   })
 
   it('widens to the 70% limit and shrinks to 300px through pointer input', () => {

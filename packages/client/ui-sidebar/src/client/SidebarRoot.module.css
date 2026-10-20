@@ -295,10 +295,10 @@
 
 .fallbackBrandName {
   font-family: var(--ds-font-family-code);
-  font-size: 17px;
+  font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
