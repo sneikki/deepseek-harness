@@ -26,8 +26,41 @@
   cursor: pointer;
 }
 
+/* Canvas status pill: neutral at rest, teal while any subagent runs. */
 .trigger {
-  gap: 4px;
+  gap: 6px;
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 999px;
+  background: var(--amv-raised);
+  color: var(--amv-text-2);
+  font-weight: 500;
+}
+
+.triggerActive {
+  border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
+  color: var(--amv-accent);
+}
+
+.pulseDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: subagentPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes subagentPulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot {
+    animation: none;
+  }
 }
 
 .switcherTrigger {
@@ -55,18 +88,14 @@
   flex: none;
 }
 
-.activitySlot {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-}
-
 .trigger:hover,
 .trigger:focus-visible {
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
+}
+
+.triggerActive:hover,
+.triggerActive:focus-visible {
+  color: var(--amv-accent);
 }
 
 .switcherTrigger:hover,

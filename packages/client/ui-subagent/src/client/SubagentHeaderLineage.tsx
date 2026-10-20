@@ -670,7 +670,7 @@ function CatalogDropdown({
         type="button"
         className={variant === 'switcher'
           ? `${css.switcherTrigger} ${ancestorSwitcher ? css.ancestorSwitcherTrigger : ''}`
-          : css.trigger}
+          : `${css.trigger} ${runningCount > 0 ? css.triggerActive : ''}`}
         aria-haspopup="tree"
         aria-expanded={open}
         aria-label={variant === 'switcher'
@@ -703,9 +703,7 @@ function CatalogDropdown({
           : (
             <>
               {runningCount > 0 && (
-                <span className={css.activitySlot}>
-                  <StateDot state="ongoing" />
-                </span>
+                <span className={css.pulseDot} data-state="ongoing" aria-hidden="true" />
               )}
               <span className={css.count}>{t(totalCountKey, { count: directCount })}</span>
             </>
