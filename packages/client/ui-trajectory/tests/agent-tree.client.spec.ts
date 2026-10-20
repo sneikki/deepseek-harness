@@ -37,12 +37,23 @@ describe('deriveAgentTree', () => {
     expect(rows[2]).toMatchObject({ label: 'bbbbbbbb', startIndex: null })
   })
 
-  it('maps non-completed non-abort reasons to failed', () => {
+  it('maps every turn-end kind to a status', () => {
+    const kinds = ['completed', 'forked', 'aborted', 'interrupted', 'blocked', 'error', 'max-tokens'] as const
+    const rows = deriveAgentTree('root', {}, {
+      root: proj(kinds.map((kind, position) => entry(`k-${kind}`, position))),
+      ...Object.fromEntries(kinds.map(kind => [`k-${kind}`, proj([], { settledMs: 0, lastTurnEnd: { at: 2, reason: kind } })])),
+    }, [])
+    expect(rows.map(row => row.status)).toEqual([
+      'done', 'done', 'interrupted', 'interrupted', 'interrupted', 'failed', 'failed',
+    ])
+  })
+
+  it('treats an open turn as running even when byId lacks the child', () => {
     const rows = deriveAgentTree('root', {}, {
       root: proj([entry('x1', 1)]),
-      x1: proj([], { settledMs: 0, lastTurnEnd: { at: 2, reason: 'error' } }),
+      x1: proj([], { settledMs: 10, active: { since: 5, through: 8 }, lastTurnEnd: { at: 4, reason: 'completed' } }),
     }, [])
-    expect(rows[0]?.status).toBe('failed')
+    expect(rows[0]).toMatchObject({ status: 'running', endedAt: null, activeMs: 13 })
   })
 
   it('falls back to lastTurnCompleted, then unknown, without lastTurnEnd', () => {
@@ -81,11 +92,11 @@ describe('deriveAgentTree', () => {
     expect(rows.map(row => row.startIndex)).toEqual([7, 8, 9])
   })
 
-  it('leaves surplus one-shot entries unlinked', () => {
+  it('leaves every blocking pairing unlinked when the counts differ', () => {
     const rows = deriveAgentTree('root', {}, {
       root: proj([entry('x1', 1, undefined, 'one-shot'), entry('x2', 2, undefined, 'one-shot')]),
     }, [life('call-1', 7, false)])
-    expect(rows.map(row => row.startIndex)).toEqual([7, null])
+    expect(rows.map(row => row.startIndex)).toEqual([null, null])
   })
 })
 
@@ -123,7 +134,34 @@ describe('wallToDomain', () => {
     expect(covered.wallToDomain(3_500)).toBe(3_500)
   })
 
-  it('is identity (wall) or zero (sequence) without timed records', () => {
+  it('places partially covered gaps exactly in duration mode', () => {
+    const map = deriveTrajectoryTimeline(turns, 'duration', [{ start: 2_000, end: 3_500 }])!.wallToDomain
+    expect([map(2_000), map(3_500), map(5_000), map(6_000)]).toEqual([2_000, 3_500, 3_500, 4_500])
+    expect(map(2_750)).toBe(2_750)
+    expect(map(4_250)).toBe(3_500)
+  })
+
+  it('ignores non-finite, inverted and pre-first covered intervals', () => {
+    const base = deriveTrajectoryTimeline(turns, 'duration')!.wallToDomain
+    const map = deriveTrajectoryTimeline(turns, 'duration', [
+      { start: Number.NaN, end: 4_000 }, { start: 3_000, end: 2_500 }, { start: 100, end: 900 },
+    ])!.wallToDomain
+    expect([0, 1_500, 3_000, 5_000, 7_000].map(map)).toEqual([0, 1_500, 3_000, 5_000, 7_000].map(base))
+  })
+
+  it('clamps a covered interval starting before the first record', () => {
+    const map = deriveTrajectoryTimeline(turns, 'duration', [{ start: 0, end: 4_000 }])!.wallToDomain
+    expect(map(5_000)).toBe(4_000 - 0)
+  })
+
+  it('stays monotone with equal and unsorted startedAt', () => {
+    const tied = turnsOf(cell(3, 5_000, 1), cell(1, 1_000, 1), cell(2, 1_000, 2))
+    const map = deriveTrajectoryTimeline(tied, 'sequence')!.wallToDomain
+    const samples = [0, 1_000, 2_000, 5_000, 6_000].map(map)
+    expect(samples).toEqual([...samples].sort((a, b) => a - b))
+  })
+
+  it('maps to 0 without timed records', () => {
     const none = turnsOf({ index: 1, startedAt: null, timeSeconds: null, kind: 'tool', text: 'x', toolName: 'bash' } as never)
     expect(deriveTrajectoryTimeline(none, 'sequence')!.wallToDomain(42)).toBe(0)
   })

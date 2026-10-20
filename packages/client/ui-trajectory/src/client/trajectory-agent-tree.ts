@@ -15,8 +15,12 @@ interface TimingLike {
   readonly settledMs: number
   readonly active?: { readonly since: number; readonly through: number } | undefined
   readonly lastTurnCompleted?: boolean | undefined
-  readonly lastTurnEnd?: { readonly at: number; readonly reason: string } | undefined
+  readonly lastTurnEnd?: { readonly at: number; readonly reason: TurnEndKind } | undefined
 }
+
+/** Mirrors the `kind`s of `TurnEndReasonMap` (core/session types). */
+export type TurnEndKind =
+  | 'completed' | 'aborted' | 'blocked' | 'error' | 'max-tokens' | 'interrupted' | 'forked'
 
 /** Structural subset of a session projection snapshot. */
 export interface AgentTreeProjectionLike {
@@ -39,7 +43,7 @@ export interface AgentTreeRow {
   startedAt: number | null
   /** Null while running or untimed. */
   endedAt: number | null
-  /** Accumulated active turn time, including the open turn; null when untimed. */
+  /** Settled time plus the open turn up to `active.through`; a live consumer extends it to now. Null when untimed. */
   activeMs: number | null
   hasChildren: boolean
   /** Ledger record index of the start call; depth-1 rows only. */
@@ -48,7 +52,16 @@ export interface AgentTreeRow {
 
 function endStatus(timing: TimingLike): AgentTreeStatus {
   const reason = timing.lastTurnEnd?.reason
-  if (reason !== undefined) return reason === 'completed' ? 'done' : reason === 'aborted' ? 'interrupted' : 'failed'
+  if (reason !== undefined) {
+    switch (reason) {
+      case 'completed':
+      case 'forked': return 'done'
+      case 'aborted':
+      case 'interrupted':
+      case 'blocked': return 'interrupted'
+      default: return 'failed'
+    }
+  }
   if (timing.lastTurnCompleted === undefined) return 'unknown'
   return timing.lastTurnCompleted ? 'done' : 'failed'
 }
@@ -64,13 +77,15 @@ function startIndexes(
     const found = byId.get(entry.id)
     if (found !== undefined) result.set(entry.id, found.startIndex)
   }
+  // Heuristic: blocking calls carry no agent id, so pair by order, and only
+  // when both sides have the same count (otherwise the pairing would guess).
   const blocking = lifecycles.filter(lifecycle => !lifecycle.background && !result.has(lifecycle.id))
-  let next = 0
-  for (const entry of entries) {
-    if (result.has(entry.id) || entry.mode !== 'one-shot') continue
-    const lifecycle = blocking[next++]
-    if (lifecycle === undefined) break
-    result.set(entry.id, lifecycle.startIndex)
+  const unmapped = entries.filter(entry => !result.has(entry.id) && entry.mode === 'one-shot')
+  if (unmapped.length === blocking.length) {
+    unmapped.forEach((entry, position) => {
+      const lifecycle = blocking[position]
+      if (lifecycle !== undefined) result.set(entry.id, lifecycle.startIndex)
+    })
   }
   return result
 }
@@ -97,7 +112,8 @@ export function deriveAgentTree(
       visited.add(entry.id)
       const projection = projectionsBySession[entry.id]
       const timing = projection?.values.subagentTiming
-      const running = byId[entry.id]?.running === true
+      // An open turn in the projection counts as running even before byId says so.
+      const running = byId[entry.id]?.running === true || timing?.active !== undefined
       const children = projection?.values.subagentCatalog ?? []
       rows.push({
         sessionId: entry.id,
