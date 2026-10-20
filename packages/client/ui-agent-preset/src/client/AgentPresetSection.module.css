@@ -82,23 +82,23 @@
 }
 
 /* Tag pills beside the name: default = active teal pill, others neutral. */
-.cardIdentity .presetTag {
+.card .cardIdentity .presetTag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: none;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--amv-border-strong);
   border-radius: 999px;
   background: var(--amv-raised);
   color: var(--amv-text-2);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 17px;
   white-space: nowrap;
 }
 
-.cardIdentity .presetTagDefault {
+.card .cardIdentity .presetTagDefault {
   border-color: color-mix(in srgb, var(--amv-accent) 35%, transparent);
   background: color-mix(in srgb, var(--amv-accent) 10%, transparent);
   color: var(--amv-accent);
@@ -229,10 +229,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .cardName {
   min-width: 0;
+  flex: 0 1 auto;
+  max-width: 100%;
   font-family: var(--ds-font-family-code);
   font-size: 13px;
   font-weight: 500;
