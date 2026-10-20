@@ -175,8 +175,7 @@ function decodeSpeed(stats: WindowStats, t: Translate): string {
 function PlainPill({ stat, caption, label }: PillContent) {
   return (
     <span className={css.anchor} data-composer-stat={stat}>
-      <span className={css.pill}>
-        <span className={css.caption}>{caption}</span>
+      <span className={css.pill} data-caption={caption}>
         <span className={css.label}>{label}</span>
       </span>
     </span>
@@ -200,12 +199,12 @@ function DialogPill({ stat, icon, caption, label, ariaLabel, title, titleValue, 
       <button
         type="button"
         className={css.pill}
+        data-caption={caption}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => { setOpen(!open) }}
       >
-        <span className={css.caption}>{caption}</span>
         <span className={css.label}>{label}</span>
       </button>
       {open && createPortal(

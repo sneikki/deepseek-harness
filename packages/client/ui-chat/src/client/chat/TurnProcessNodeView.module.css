@@ -37,6 +37,7 @@
   padding: 3px 10px;
   border: 1px solid color-mix(in srgb, var(--turn-tone) 32%, transparent);
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--turn-tone) 10%, transparent);
   color: var(--turn-tone);
   font-size: 12px;
@@ -57,6 +58,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
   flex: none;
 }

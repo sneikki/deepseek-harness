@@ -18,7 +18,7 @@
   max-width: 100%;
   padding: 3px 10px;
   border: 1px solid var(--amv-border);
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
   background: transparent;
   color: var(--amv-accent);
   font: inherit;
@@ -29,7 +29,8 @@
   transition: background var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.caption {
+.pill::before {
+  content: attr(data-caption);
   flex: none;
   color: var(--amv-muted);
   font-family: var(--ds-font-family-base, inherit);
