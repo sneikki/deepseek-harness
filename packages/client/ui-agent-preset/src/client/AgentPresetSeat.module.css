@@ -11,7 +11,7 @@
    paddings + 16px icon + two 4px gaps + 14px chevron — so the glyphs never
    crush once the label has ellipsized away to nothing. */
 .menuAnchor {
-  min-width: 54px;
+  min-width: 60px;
   max-width: 100%;
 }
 
@@ -22,12 +22,13 @@
   min-width: 0;
   max-width: min(100%, 240px);
   min-height: 28px;
-  padding: 0 8px;
-  border: none;
-  border-radius: var(--dsw-radius-sm);
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font-size: 13px;
+  padding: 0 10px;
+  border: 1px solid var(--amv-border);
+  border-radius: 10px;
+  background: var(--amv-surface);
+  color: var(--amv-text);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
   line-height: 20px;
   font-weight: 500;
   white-space: nowrap;
@@ -36,17 +37,18 @@
 
 .seat:not(:disabled):hover,
 .seat[aria-expanded='true'] {
-  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--amv-border-strong);
+  background: var(--amv-raised);
 }
 
 .seat:disabled {
   cursor: default;
-  color: var(--dsw-alias-label-quaternary);
+  color: var(--amv-faint);
 }
 
 .seatIcon {
   flex: none;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .seatLabel {
@@ -113,7 +115,7 @@
 
 .chevron {
   flex: none;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-muted);
 }
 
 /* Menu rows carry the name over its description: the id alone never said what
@@ -128,12 +130,12 @@
 .itemName {
   font-size: 13px;
   line-height: 20px;
-  color: var(--dsw-alias-label-primary);
+  color: var(--amv-text);
 }
 
 .itemDesc {
   font-size: 12px;
   line-height: 16px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-muted);
   white-space: normal;
 }
