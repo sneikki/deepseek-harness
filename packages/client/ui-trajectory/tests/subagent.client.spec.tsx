@@ -225,6 +225,19 @@ describe('subagent timeline lane', () => {
     expect(onRecordSelect).toHaveBeenCalledWith(Number(bars[1]!.dataset.timelineRecordIndex))
   })
 
+  it('draws no Tools span for a start call and keeps its bar selected', () => {
+    seq = 0
+    const turns = deriveTrajectoryLayout({ nodes: nodes as Nodes, partial: null, runningCalls: [] }, t)
+    const start = trajectorySubagentLifecycles(turns)[0]!.startIndex
+    const view = render(
+      <TrajectoryTimeline t={t} turns={turns} mode="sequence" range={null}
+        onRangeChange={vi.fn()} selectedIndex={start} />,
+    )
+    expect(view.container.querySelector(`[data-timeline-span][data-timeline-record-index="${start}"]`)).toBeNull()
+    const bar = view.container.querySelector<HTMLElement>(`[data-timeline-subagent][data-timeline-record-index="${start}"]`)
+    expect(bar?.dataset.current).toBe('true')
+  })
+
   it('shows no lane without subagents', () => {
     seq = 0
     const turns = deriveTrajectoryLayout({ nodes: nodes.slice(0, 1) as Nodes, partial: null, runningCalls: [] }, t)

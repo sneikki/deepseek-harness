@@ -797,7 +797,8 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                 )
               })}
             {model.subagents
-              .filter(bar => bar.end >= domainStart && bar.start <= domainStart + domainDuration)
+              .filter(bar => bar.index === selectedIndex
+                || (bar.end >= domainStart && bar.start <= domainStart + domainDuration))
               .map(bar => (
                 <Tooltip
                   key={bar.index}
@@ -810,7 +811,16 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                     className={css.subagent}
                     data-timeline-subagent={bar.lifecycle.status}
                     data-timeline-record-index={bar.index}
+                    data-current={bar.index === selectedIndex || undefined}
                     data-hovered={hover?.recordIndex === bar.index || undefined}
+                    data-search-match={searchMatchIndexes === null
+                      ? undefined
+                      : searchMatchIndexes.has(bar.index) ? 'true' : 'false'}
+                    data-selected={activeRange === null
+                      ? undefined
+                      : bar.start <= activeRange.end && bar.end >= activeRange.start
+                        ? 'true'
+                        : 'false'}
                     style={{
                       '--trajectory-span-left': `${(bar.start - model.start) / fullDuration * 100}%`,
                       '--trajectory-span-width': `${(bar.end - bar.start) / fullDuration * 100}%`,
