@@ -28,10 +28,8 @@
   height: 36px;
   margin: 0 auto;
   padding: 4px 5px 4px 12px;
-  border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
-  border-radius: var(--dsw-radius-md);
-  box-shadow: var(--dsw-elevation-panel);
+  border: 1px solid var(--amv-border);
+  border-radius: 12px;
 }
 
 .bar::before {
@@ -39,8 +37,7 @@
   z-index: -1;
   inset: 0;
   border-radius: inherit;
-  background: var(--dsw-specific-menu);
-  backdrop-filter: var(--dsw-menu-backdrop-filter);
+  background: var(--amv-surface);
   content: '';
   pointer-events: none;
 }
@@ -48,26 +45,29 @@
 .goalGlyph {
   display: inline-flex;
   flex: none;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-accent);
 }
 
 /* Matches the Todo/Queue panel titles (13/24 medium, primary) so the three
    composer-stack cards read as one family. */
 .label {
   flex: none;
-  font-size: 13px;
-  line-height: 24px;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 500;
-  color: var(--dsw-alias-label-primary);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amv-muted);
 }
 
 .objective {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
   line-height: 20px;
-  color: var(--dsw-alias-label-primary-dimmed);
+  color: var(--amv-text-2);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
