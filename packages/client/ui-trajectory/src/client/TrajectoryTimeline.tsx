@@ -12,6 +12,7 @@ import {
   deriveTrajectoryTimeline,
   formatTimelineOffset,
   type TrajectoryTimelineMode,
+  type TrajectoryTimelineSubagent,
   type TrajectoryTimeRange,
 } from './timeline.ts'
 import { trajectoryActivityOf } from './trajectory-activity.ts'
@@ -132,6 +133,29 @@ function timelineTooltipLabel(
   return [heading, range, timing].filter(value => value !== null && value !== '').join('\n')
 }
 
+function subagentTooltipLabel(
+  { lifecycle }: TrajectoryTimelineSubagent,
+  t: TrajectoryTranslate,
+): string {
+  const durationMs = lifecycle.startedAt !== null && lifecycle.endedAt !== null
+    ? lifecycle.endedAt - lifecycle.startedAt
+    : null
+  const status = {
+    running: t('timeline.subagentRunning'),
+    finished: t('timeline.subagentFinished'),
+    failed: t('timeline.subagentFailed'),
+    interrupted: t('timeline.subagentInterrupted'),
+  }[lifecycle.status]
+  return [
+    `${lifecycle.description} · ${lifecycle.shortId}`,
+    [
+      status,
+      durationMs === null ? null : t('timeline.total', { duration: formatTimelineOffset(durationMs, t) }),
+      lifecycle.reportCount === 0 ? null : t('timeline.subagentReports', { count: lifecycle.reportCount }),
+    ].filter(part => part !== null).join(' · '),
+  ].join('\n')
+}
+
 /** Props for the fixed full-domain overview above the trajectory ledger. */
 export interface TrajectoryTimelineProps {
   t: TrajectoryTranslate
@@ -191,12 +215,13 @@ function rangeFraction(
   }
 }
 
-function LaneLabels({ t }: { t: TrajectoryTranslate }) {
+function LaneLabels({ t, subagents = false }: { t: TrajectoryTranslate; subagents?: boolean }) {
   return (
     <div className={css.labels} aria-hidden="true">
       <span>{t('column.input')}</span>
       <span>{t('column.model')}</span>
       <span>{t('column.tools')}</span>
+      {subagents && <span>{t('timeline.subagents')}</span>}
     </div>
   )
 }
@@ -586,8 +611,8 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
 
   return (
     <section ref={rootRef} className={css.root} aria-label={t('timeline.aria')}>
-      <div className={css.plot}>
-        <LaneLabels t={t} />
+      <div className={css.plot} data-subagents={model.subagents.length > 0 || undefined}>
+        <LaneLabels t={t} subagents={model.subagents.length > 0} />
         <div
           ref={trackRef}
           className={css.track}
@@ -736,6 +761,28 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                   </Tooltip>
                 )
               })}
+            {model.subagents
+              .filter(bar => bar.end >= domainStart && bar.start <= domainStart + domainDuration)
+              .map(bar => (
+                <Tooltip
+                  key={bar.lifecycle.id}
+                  label={() => subagentTooltipLabel(bar, t)}
+                  side="bottom"
+                  delayMs={TIMELINE_TOOLTIP_DELAY_MS}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={css.subagent}
+                    data-timeline-subagent={bar.lifecycle.status}
+                    data-timeline-record-index={bar.index}
+                    data-hovered={hover?.recordIndex === bar.index || undefined}
+                    style={{
+                      '--trajectory-span-left': `${(bar.start - model.start) / fullDuration * 100}%`,
+                      '--trajectory-span-width': `${(bar.end - bar.start) / fullDuration * 100}%`,
+                    } as CSSProperties}
+                  />
+                </Tooltip>
+              ))}
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import type { TrajectoryTurnModel } from './layout.ts'
 import type { TrajectoryTranslate } from './locales.ts'
+import { trajectorySubagentLifecycles, type TrajectorySubagentLifecycle } from './trajectory-subagent.ts'
 import { formatDurationMillis } from './trajectory-record.ts'
 import type { TrajectoryCellKind, TrajectoryCellProps } from './trajectory-record.ts'
 
@@ -30,9 +31,17 @@ export interface TrajectoryTimelineTurnBoundary {
   time: number
 }
 
+/** One subagent bar in the active timeline domain; `end` is the model end while it runs. */
+export interface TrajectoryTimelineSubagent extends TrajectoryTimeRange {
+  lifecycle: TrajectorySubagentLifecycle
+  /** Record the bar focuses on click. */
+  index: number
+}
+
 /** Full-domain model used by the overview. */
 export interface TrajectoryTimelineModel extends TrajectoryTimeRange {
   spans: readonly TrajectoryTimelineSpan[]
+  subagents: readonly TrajectoryTimelineSubagent[]
   turnBoundaries: readonly TrajectoryTimelineTurnBoundary[]
 }
 
@@ -77,6 +86,29 @@ export function deriveTrajectoryTimeline(
   turns: readonly TrajectoryTurnModel[],
   mode: TrajectoryTimelineMode = 'sequence',
 ): TrajectoryTimelineModel | null {
+  const model = deriveSpans(turns, mode)
+  if (model === null) return null
+  const byIndex = new Map(model.spans.map(span => [span.index, span]))
+  const subagents = trajectorySubagentLifecycles(turns).flatMap((lifecycle) => {
+    const first = byIndex.get(lifecycle.startIndex)
+    if (first === undefined) return []
+    const last = lifecycle.endIndex === null ? undefined : byIndex.get(lifecycle.endIndex)
+    return [{
+      lifecycle,
+      index: first.index,
+      start: first.start,
+      end: lifecycle.endIndex === null
+        ? model.end
+        : Math.max(first.end, last?.end ?? first.end),
+    }]
+  })
+  return { ...model, subagents }
+}
+
+function deriveSpans(
+  turns: readonly TrajectoryTurnModel[],
+  mode: TrajectoryTimelineMode,
+): Omit<TrajectoryTimelineModel, 'subagents'> | null {
   if (mode !== 'sequence') {
     return deriveTimedTimeline(
       turns,
@@ -123,7 +155,7 @@ function deriveTimedTimeline(
   turns: readonly TrajectoryTurnModel[],
   actualDuration: boolean,
   compressIdle: boolean,
-): TrajectoryTimelineModel | null {
+): Omit<TrajectoryTimelineModel, 'subagents'> | null {
   const timedTurns = turns.flatMap((turn) => {
     const rawSpans = turn.groups.flatMap(group =>
       group.cells.flatMap((cell): TrajectoryTimelineSpan[] => {

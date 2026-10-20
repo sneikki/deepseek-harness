@@ -4,6 +4,7 @@ import type { HTMLAttributes } from 'react'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { ConversationPromptSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { TrajectoryTranslate } from './locales.ts'
+import type { TrajectorySubagentInfo } from './trajectory-subagent.ts'
 
 /** Closed set of trajectory record kinds. */
 export type TrajectoryCellKind =
@@ -105,6 +106,8 @@ export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
   output?: number
   /** Message-only reasoning token count. */
   think?: number
+  /** Subagent lifecycle this record belongs to (start, report, control or finish). */
+  subagent?: TrajectorySubagentInfo
   /** Whether the legacy standalone cell renders its selection treatment. */
   selected?: boolean
 }

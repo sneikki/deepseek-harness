@@ -48,6 +48,14 @@
   top: 35px;
 }
 
+.labels span:nth-child(4) {
+  top: 49px;
+}
+
+.plot[data-subagents='true'] {
+  height: 64px;
+}
+
 .track {
   position: relative;
   overflow: hidden;
@@ -315,4 +323,52 @@
     var(--amv-accent) 18%,
     transparent
   );
+}
+
+/* Lane 4: one bar per subagent, start to settle; running stays open-ended. */
+.subagent {
+  position: absolute;
+  top: calc(3 * 14px);
+  left: var(--trajectory-span-left);
+  width: max(6px, var(--trajectory-span-width));
+  height: 10px;
+  border-radius: 3px;
+  background: var(--amv-success);
+  opacity: 0.9;
+}
+
+.subagent[data-timeline-subagent='failed'] {
+  background: var(--amv-danger);
+}
+
+.subagent[data-timeline-subagent='interrupted'] {
+  background: var(--amv-warning);
+}
+
+.subagent[data-timeline-subagent='running'] {
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(
+    to right,
+    var(--amv-accent) 0,
+    var(--amv-accent) 80%,
+    transparent 100%
+  );
+  animation: subagent-pulse 1.6s ease-in-out infinite;
+}
+
+.subagent[data-hovered='true'] {
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--amv-bg-deep),
+    0 0 0 2px color-mix(in srgb, var(--amv-accent) 80%, transparent);
+}
+
+@keyframes subagent-pulse {
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subagent[data-timeline-subagent='running'] {
+    animation: none;
+  }
 }
