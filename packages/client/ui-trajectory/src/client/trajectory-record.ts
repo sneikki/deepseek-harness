@@ -145,3 +145,22 @@ export function formatElapsedSeconds(
 ): string {
   return formatDurationMillis(seconds === null ? null : seconds * 1000, t)
 }
+
+/**
+ * Format a turn's wall-clock duration compactly (`820 ms`, `12.4 s`, `3 min 5 s`).
+ * @param milliseconds - Duration in milliseconds.
+ * @param t - Trajectory locale translator.
+ * @returns the shortest readable duration label.
+ */
+export function formatTurnDuration(
+  milliseconds: number,
+  t: TrajectoryTranslate,
+): string {
+  if (milliseconds < 1000) return formatDurationMillis(milliseconds, t)
+  if (milliseconds < 60_000) {
+    return t('unit.seconds', { value: (milliseconds / 1000).toFixed(1) })
+  }
+  const minutes = Math.floor(milliseconds / 60_000)
+  const seconds = Math.round((milliseconds % 60_000) / 1000)
+  return `${t('unit.minutes', { value: String(minutes) })} ${t('unit.seconds', { value: String(seconds) })}`
+}

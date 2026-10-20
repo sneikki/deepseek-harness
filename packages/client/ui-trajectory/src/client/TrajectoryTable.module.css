@@ -109,11 +109,7 @@
 }
 
 .eventColumn {
-  width: 140px;
-}
-
-.eventColumn:where(:lang(zh)) {
-  width: 84px;
+  width: 33px;
 }
 
 .contentColumn {
@@ -150,7 +146,7 @@
   height: 30px;
   padding: 0 8px;
   overflow: hidden;
-  border-bottom: 1px solid var(--amv-border);
+  vertical-align: top;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -181,6 +177,39 @@
 .table tbody tr[data-activity='other'] { --trajectory-act: color-mix(in srgb, var(--amv-act-wait) 45%, var(--amv-text-2)); }
 .table tbody tr[data-activity='error'] { --trajectory-act: var(--amv-danger); }
 
+/* Row tone: glyph, line label. assistant neutral, user accent, context muted, tool = activity. */
+.table tbody tr {
+  --trajectory-tone: var(--amv-text-2);
+  --trajectory-tone-text: var(--amv-text-2);
+  --trajectory-body: var(--amv-text);
+}
+.table tbody tr[data-kind='user'] {
+  --trajectory-tone: var(--amv-accent);
+  --trajectory-tone-text: var(--amv-accent-text);
+}
+.table tbody tr[data-kind='context'],
+.table tbody tr[data-kind='system'],
+.table tbody tr[data-kind='compacted'] {
+  --trajectory-tone: var(--amv-muted);
+  --trajectory-tone-text: var(--amv-muted);
+  --trajectory-body: var(--amv-muted);
+}
+.table tbody tr[data-kind='tool'],
+.table tbody tr[data-kind='subtool'] {
+  --trajectory-tone: var(--trajectory-act, var(--amv-text-2));
+  --trajectory-tone-text: var(--trajectory-act, var(--amv-text-2));
+  --trajectory-body: var(--amv-text-2);
+}
+
+/* A turn's first row = turn header (--trajectory-head) above its 30px content line.
+   Keep 42 + 30 equal to TURN_START_ROW_HEIGHT in trajectory-virtual-rows.ts. */
+.table tbody tr[data-turn-start='true'] {
+  --trajectory-head: 42px;
+}
+.table tbody tr[data-turn-start='true'] td {
+  height: 72px;
+}
+
 .table tbody tr[data-timeline-focus='outside'] {
   opacity: 0.24;
 }
@@ -193,7 +222,21 @@
   background: transparent;
 }
 
-.table tbody tr[data-request-only='true'] td {
+.table tbody tr[data-turn-start='true']:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):hover,
+.table tbody tr[data-turn-start='true'][data-selected='true'] {
+  background: transparent;
+}
+
+.table tbody tr[data-turn-start='true']:not([data-collapsed-summary]):not([data-virtual-spacer]):not([data-history-load]):hover .line {
+  background: var(--amv-raised);
+}
+
+.table tbody tr[data-turn-start='true'][data-selected='true'] .line {
+  background: var(--amv-accent-soft);
+}
+
+.table tbody tr[data-request-only='true'] td,
+.table tbody tr[data-turn-start='true'][data-request-only='true'] td {
   height: 0;
   padding-top: 0;
   padding-bottom: 0;
@@ -205,11 +248,6 @@
   height: 9px;
 }
 
-.table tbody tr[data-request-only='true'] .turnRail {
-  top: -15px;
-  bottom: 0;
-}
-
 .table tbody tr:not([data-collapsed-summary]):focus-visible {
   box-shadow: inset 0 0 0 1px var(--amv-accent-ring);
 }
@@ -219,11 +257,11 @@
 }
 
 .requestBoundaryControl {
-  --request-boundary-base-left: 12px;
+  --request-boundary-base-left: 9px;
 
   position: absolute;
   z-index: 6;
-  top: -8px;
+  top: calc(var(--trajectory-head, 0px) - 8px);
   left: calc(var(--request-boundary-base-left) + var(--request-boundary-offset, 0px));
   width: 16px;
   height: 16px;
@@ -310,144 +348,184 @@
   background: transparent;
 }
 
+/* Rail column: 16px tinted circle on a 1px vertical line. */
 .event {
   position: relative;
+  padding: 0 !important;
+  overflow: visible !important;
 }
 
-.turnRail,
-.selectionRail {
+.event::after {
   position: absolute;
-  left: 0;
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
-  pointer-events: none;
-}
-
-.turnRail {
-  z-index: 4;
-  top: -1px;
-  bottom: -1px;
-  width: 2px;
-  background: var(--trajectory-turn-accent);
-}
-
-.table tbody tr[data-turn-end='true'] .turnRail {
-  bottom: 0;
-}
-
-.selectionRail {
-  z-index: 5;
+  z-index: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
-}
-
-.table tbody tr[data-error='true'] .turnRail {
-  background: color-mix(
-    in srgb,
-    var(--dsw-alias-state-error-primary) 22%,
-    var(--dsw-alias-bg-layer-1)
-  );
-}
-
-.table tbody tr[data-error='true'] .selectionRail {
-  background: var(--dsw-alias-state-error-primary);
-}
-
-.table tbody tr[data-turn-start='true'] td {
-  position: relative;
-  overflow: visible;
-}
-
-.table tbody tr[data-turn-start='true']:not(:first-child) td::before {
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 1px;
+  left: 16px;
+  width: 1px;
   background: var(--amv-border-strong);
   content: '';
   pointer-events: none;
-  transform: translateY(-50%);
 }
 
-.event {
-  overflow: visible !important;
-  padding-right: 4px !important;
-  padding-left: 36px !important;
+/* The line starts at the turn's first glyph and ends at its last. */
+.table tbody tr[data-turn-start='true'] .event::after {
+  top: calc(var(--trajectory-head) + 15px);
 }
 
-.turnLabel {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  left: 0;
-  display: inline-grid;
-  flex: none;
+.table tbody tr[data-turn-end='true'] .event::after {
+  bottom: 15px;
+}
+
+.table tbody tr[data-collapsed-summary][data-turn-end='true'] .event::after {
+  bottom: 10px;
+}
+
+.glyphSlot {
+  position: relative;
+  z-index: 1;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  height: 30px;
+  margin-top: var(--trajectory-head, 0px);
+  padding-right: 1px;
+}
+
+.glyph {
+  display: grid;
+  place-items: center;
   box-sizing: border-box;
-  width: max-content;
-  padding: 2px 8px 1px;
-  border-radius: 0 0 6px;
-  color: var(--amv-muted);
-  background: var(--amv-bg-deep);
-  font: 500 10px/12px var(--ds-font-family-code);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  user-select: none;
-  white-space: nowrap;
+  width: 16px;
+  height: 16px;
+  border: 1px solid color-mix(in srgb, var(--trajectory-tone) 35%, transparent);
+  border-radius: 50%;
+  color: var(--trajectory-tone);
+  /* Opaque tint so the rail line does not show through the circle. */
+  background: color-mix(in srgb, var(--trajectory-tone) 14%, var(--amv-bg));
 }
 
-.turnLabelFull,
-.turnLabelCompact {
-  grid-area: 1 / 1;
-  max-width: 64px;
-  overflow: hidden;
-  opacity: 1;
-  white-space: nowrap;
+.glyphIcon {
+  display: inline-flex;
 }
 
-.turnLabelCompact {
-  max-width: 0;
-  opacity: 0;
+.glyphIcon svg {
+  width: 10px;
+  height: 10px;
 }
 
-.turnLabelActive {
-  color: var(--amv-accent-text);
-  background: color-mix(in srgb, var(--amv-accent) 12%, var(--amv-bg-deep));
-}
-
-.eventInner {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 0;
-  height: 100%;
-}
-
-.kindSlot {
-  display: flex;
-  flex: none;
-  align-items: flex-end;
-  justify-content: flex-end;
-  width: 96px;
-}
-
-.kindSlot:where(:lang(zh)) {
-  width: 44px;
-}
-
-.kindSlot :global([role='tooltip']) {
+.glyph :global([role='tooltip']) {
   border: 0;
   background: var(--dsw-alias-bg-layer-2);
   box-shadow: var(--dsw-elevation-panel);
   color: var(--dsw-alias-label-primary);
 }
 
+.selectionRail {
+  position: absolute;
+  z-index: 5;
+  top: var(--trajectory-head, 0px);
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--amv-accent);
+  pointer-events: none;
+}
+
+.table tbody tr[data-error='true'] .selectionRail {
+  background: var(--dsw-alias-state-error-primary);
+}
+
+/* Turn header: more air above than between rows. */
+.turnHead {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--trajectory-head);
+  padding: 22px 8px 0 4px;
+  gap: 8px;
+}
+
+.turnLabel {
+  flex: none;
+  color: var(--amv-text-2);
+  font: 500 12px/16px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.turnLabelActive {
+  color: var(--amv-accent-text);
+}
+
+.chip {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--amv-border);
+  border-radius: 6px;
+  color: var(--amv-muted);
+  font: 400 11px/16px var(--ds-font-family-code);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.turnRule {
+  flex: 1;
+  height: 1px;
+  margin-left: 4px;
+  background: var(--amv-border);
+}
+
 .content {
-  padding-left: 4px !important;
-  color: var(--dsw-alias-label-primary);
+  padding: 0 !important;
+  color: var(--amv-text);
+}
+
+/* Baseline-aligned so the 12px mono label and 13-14px body share one text line. */
+.line {
+  display: flex;
+  align-items: baseline;
+  box-sizing: border-box;
+  height: 30px;
+  min-width: 0;
+  padding: 6px 8px 0 4px;
+  border-radius: 8px;
+  gap: 10px;
+  transition: background-color var(--amv-dur-1) var(--amv-ease);
+}
+
+.label {
+  flex: 0 0 112px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--trajectory-tone-text);
+  font: 500 12px/18px var(--ds-font-family-code);
+  text-overflow: ellipsis;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.line > .contentText,
+.line > .resultPreview {
+  flex: 1;
+  min-width: 0;
+  color: var(--trajectory-body);
+}
+
+.body {
+  min-width: 0;
+}
+
+.table tbody tr[data-kind='user'] .contentText {
+  font-weight: 500;
+}
+
+.table tbody tr[data-turn-start='true'] .line > .contentText {
+  font-size: 14px;
+}
+
+.table tbody tr[data-kind='subtool'] .line {
+  padding-left: 18px;
 }
 
 .kindTag {
@@ -465,121 +543,6 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   user-select: none;
-}
-
-.kindTagIcon {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 0;
-  height: 13px;
-  overflow: hidden;
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.kindTagLabel {
-  display: inline-block;
-  max-width: 80px;
-  overflow: hidden;
-  opacity: 1;
-  white-space: nowrap;
-}
-
-.table .kindSlot .message {
-  justify-content: center;
-  width: 100%;
-}
-
-@container trajectory-table (max-width: 620px) {
-  .eventColumn {
-    width: 50px;
-  }
-
-  .event {
-    padding-right: 3px !important;
-    padding-left: 28px !important;
-  }
-
-  .requestBoundaryControl {
-    --request-boundary-base-left: 6px;
-  }
-
-  .kindSlot {
-    width: 20px;
-  }
-
-  .kindTag,
-  .table .kindSlot .message {
-    justify-content: center;
-    width: 20px;
-    padding-right: 0;
-    padding-left: 0;
-  }
-
-  .kindTagIcon {
-    width: 13px;
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  .kindTagLabel {
-    max-width: 0;
-    opacity: 0;
-  }
-
-  .turnLabelFull {
-    max-width: 0;
-    opacity: 0;
-  }
-
-  .turnLabelCompact {
-    max-width: 64px;
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .eventColumn,
-  .event,
-  .requestBoundaryControl,
-  .kindSlot,
-  .kindTag,
-  .kindTagIcon,
-  .kindTagLabel,
-  .turnLabelFull,
-  .turnLabelCompact {
-    transition-duration: 180ms;
-    transition-timing-function: var(--ds-ease-in-out);
-  }
-
-  .eventColumn,
-  .kindSlot {
-    transition-property: width;
-  }
-
-  .event {
-    transition-property: padding-right, padding-left;
-  }
-
-  .requestBoundaryControl {
-    transition-property: left;
-  }
-
-  .kindTag {
-    transition-property: padding-right, padding-left;
-  }
-
-  .kindTagIcon {
-    transition-property: width, opacity, transform;
-  }
-
-  .kindTagLabel,
-  .turnLabelFull,
-  .turnLabelCompact {
-    transition-property: max-width, opacity;
-  }
 }
 
 /* Role pills: tinted status pills. user = teal, assistant/system = neutral,
@@ -777,7 +740,7 @@
 }
 
 .toolCallPayload {
-  margin-left: 7px;
+  margin-left: 0;
   color: var(--amv-text-2);
   font: 400 12px/18px var(--ds-font-family-code);
 }
@@ -790,24 +753,16 @@
   font-size: 12px;
 }
 
-.table tbody tr[data-kind='subtool'] .content {
-  padding-left: 26px;
-}
-
 .inlineResult {
   display: flex;
   align-items: center;
   min-width: 0;
+  padding-left: 10px;
+  border-left: 1px solid var(--amv-border-strong);
   color: var(--amv-muted);
 }
 
 .noOutputText {
-  color: var(--amv-muted);
-}
-
-.arrow {
-  flex: none;
-  margin-right: 8px;
   color: var(--amv-muted);
 }
 
