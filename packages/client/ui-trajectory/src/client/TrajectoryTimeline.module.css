@@ -199,7 +199,7 @@
 
 .span[data-timeline-span='tool'],
 .span[data-timeline-span='subtool'] {
-  background: var(--amv-act-wait);
+  background: color-mix(in srgb, var(--amv-act-wait) 45%, var(--amv-text-2));
   opacity: 1;
 }
 
