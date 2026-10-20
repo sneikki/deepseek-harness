@@ -181,8 +181,9 @@ export function TaskManagerPage(props: TaskManagerPageProps) {
                         <span className={css.rowContent}>
                           <span className={css.rowTitle}>{taskName(record)}</span>
                           <span className={css.rowSummary} id={`${detailId}-metadata-${record.id}`}>
-                            {record.status === 'inactive'
-                              && <span className={css.metadata}>{t('status.inactive')}</span>}
+                            <span className={clsx(css.pill, record.status === 'active' && css.pillActive)} aria-hidden={record.status === 'active' || undefined}>
+                              <span className={css.pillDot} />{t(`status.${record.status}`)}
+                            </span>
                             <span className={css.metadata}>{frequency(record)}</span>
                             {record.status === 'active' && <span className={css.metadata}>
                               {t('list.nextPrefix')}<time dateTime={record.scheduledAt}>

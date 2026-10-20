@@ -715,9 +715,10 @@ describe('Task manager catalog', () => {
     expect(time.parentElement?.textContent)
       .toBe(`${en['list.nextPrefix']}${time.textContent} ${relativeNextRun(every.scheduledAt, en)}`)
     expect(metadata.textContent).not.toContain(every.sessionId)
-    // Rows carry no Enabled word: every listed task is running unless the line
-    // says otherwise, so only the ended state is named.
-    expect(metadata.textContent).not.toContain(en['status.active'])
+    // The Enabled pill is decorative (aria-hidden): only the ended state is
+    // named to assistive tech.
+    expect(metadata.querySelector('[aria-hidden]')?.textContent).toBe(en['status.active'])
+    expect(metadata.querySelectorAll(':scope > :not([aria-hidden])')).toHaveLength(2)
     row.focus()
     expect(document.activeElement).toBe(row)
     h.view.rerender(<TaskManagerPage {...h.props} t={makeTranslate(zh)} />)
