@@ -99,13 +99,13 @@
   top: 50%;
   right: 0;
   width: 20px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--dsw-alias-border-l4);
+  height: 1px;
+  border-radius: 1px;
+  background: var(--amv-border-strong);
   content: '';
   transform: translateY(-50%) scaleX(0.6);
   transform-origin: right center;
-  transition: transform 140ms ease, background-color 140ms ease;
+  transition: transform var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
 }
 
 /* Ordered before hover/active so those states keep their stronger tick. */
@@ -116,7 +116,7 @@
 
 .markPreview::before {
   transform: translateY(-50%) scaleX(0.9);
-  background: var(--dsw-alias-label-tertiary);
+  background: var(--amv-muted);
 }
 
 .markBusy::before {
@@ -125,7 +125,7 @@
 
 .markActive::before {
   transform: translateY(-50%) scaleX(1);
-  background: var(--dsw-alias-label-primary);
+  background: var(--amv-text);
 }
 
 /* Keyboard focus outranks both resting states: the tick takes the brand color
@@ -133,7 +133,7 @@
    against a busy transcript. */
 .mark:focus-visible::before {
   transform: translateY(-50%) scaleX(1);
-  background: var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  background: var(--amv-accent);
 }
 
 .mark:focus-visible {
@@ -145,7 +145,7 @@
   inset: 0 0 0 auto;
   width: 20px;
   border-radius: inherit;
-  outline: 1px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline: 1px solid var(--amv-accent);
   /* The scroller clips the right edge; keep the marker's ring inside it. */
   outline-offset: -1px;
   content: '';
@@ -165,10 +165,10 @@
   overflow: hidden;
   padding: 10px 12px;
   border: 0;
-  border-radius: var(--dsw-radius-lg);
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-layer-1);
-  box-shadow: var(--dsw-elevation-panel);
+  border-radius: 12px;
+  color: var(--amv-text);
+  background: var(--amv-surface);
+  box-shadow: var(--amv-shadow-pop);
   pointer-events: none;
   animation: dsh-turn-preview-enter 120ms ease-out;
   transition: top 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -188,7 +188,7 @@
 
 .previewResponse {
   margin-top: 4px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--amv-faint);
   font: var(--dsw-font-xxs-12);
   -webkit-line-clamp: 3;
 }

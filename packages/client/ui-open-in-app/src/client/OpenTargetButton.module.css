@@ -1,5 +1,7 @@
 /* Sized to sit in the document header's 24px control row beside its round
-   icon buttons: a hairline pill with a 12px label and a narrow chevron half. */
+   icon buttons. v2 outline button: raised fill, 1px strong border, muted
+   chevron half. The large (unavailable preview) variant is the 36px outline
+   button of the canvas (radius 10, 13px/500). */
 
 .menuAnchor {
   display: inline-flex;
@@ -13,9 +15,11 @@
   box-sizing: border-box;
   height: 24px;
   overflow: hidden;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-sm);
+  border: 1px solid var(--amv-border-strong);
+  border-radius: 8px;
+  background: var(--amv-raised);
   font-family: var(--dsw-font-family);
+  transition: border-color var(--amv-dur-1) var(--amv-ease);
 }
 
 .main,
@@ -25,29 +29,31 @@
   justify-content: center;
   border: 0;
   background: none;
-  color: var(--dsw-alias-label-primary);
-  font-size: 11px;
+  color: var(--amv-text);
+  font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--amv-dur-1) var(--amv-ease), color var(--amv-dur-1) var(--amv-ease);
 }
 
 .main {
   gap: 4px;
-  padding: 3px 5px;
+  padding: 3px 6px;
 }
 
 .chevron {
-  padding: 3px 4px 3px 3px;
-  border-left: 0.5px solid var(--dsw-alias-border-l4);
-  color: var(--dsw-alias-label-secondary);
+  padding: 3px 5px 3px 4px;
+  border-left: 1px solid var(--amv-border-strong);
+  color: var(--amv-muted);
 }
 
 .main:hover:not(:disabled),
 .main:focus-visible,
 .chevron:hover:not(:disabled),
 .chevron:focus-visible {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: color-mix(in srgb, var(--amv-text) 8%, transparent);
+  color: var(--amv-text);
 }
 
 /* Pending disables clicks without a restyle; only hover feedback pauses. */
@@ -63,18 +69,19 @@
 /* The unavailable preview emphasizes the same actions with a labeled button. */
 .split[data-size='large'] {
   height: 36px;
-  border-radius: var(--dsw-radius-md);
-  border-color: var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  border-color: var(--amv-border-strong);
 }
 
 .split[data-size='large'] .main {
   gap: 6px;
   padding: 6px 14px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .split[data-size='large'] .chevron {
   padding: 6px 10px;
 }
 
-.skeleton { display: inline-block; flex: none; border-radius: var(--dsw-radius-xs); background: var(--dsw-alias-interactive-bg-hover); }
+.skeleton { display: inline-block; flex: none; border-radius: 4px; background: var(--amv-raised); }

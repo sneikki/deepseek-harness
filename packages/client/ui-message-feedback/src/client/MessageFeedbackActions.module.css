@@ -1,3 +1,5 @@
+/* v2 canvas: action icons sit muted and turn to text colour on hover. */
+
 .action {
   display: inline-flex;
   align-items: center;
@@ -9,10 +11,11 @@
   height: calc(28px + var(--dsh-content-font-delta, 0px));
   padding: 6px;
   border: none;
-  border-radius: var(--dsw-radius-sm);
+  border-radius: 8px;
   background: transparent;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   cursor: pointer;
+  transition: color var(--amv-dur-1) var(--amv-ease), background-color var(--amv-dur-1) var(--amv-ease);
 }
 
 /* The 15px glyphs follow the same px delta as the text they serve; the CSS
@@ -23,8 +26,8 @@
 }
 
 .action:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-secondary);
+  background: var(--amv-raised);
+  color: var(--amv-text);
 }
 
 .action:disabled {
@@ -35,12 +38,12 @@
 /* A recorded rating stays legible without hover, so the signal survives a
    pointer leaving the row. */
 .action[data-active] {
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-text-2);
 }
 
 .failure {
   padding-left: 4px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--amv-muted);
   font-size: 13px;
   line-height: 20px;
 }

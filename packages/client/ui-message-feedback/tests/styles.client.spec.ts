@@ -56,7 +56,7 @@ describe.each(SHEETS)('%s theme styles', (name) => {
     // never been written. Every theme-variable prefix the sheets actually use,
     // not just `--dsw-`: a `--dsh-` name reads as a plausible sibling and would
     // otherwise slip past into an invalid declaration.
-    const named = [...sheet.matchAll(/var\((--(?:dsw|dsh|ds)-[a-z0-9-]+)/g)].map(match => match[1])
+    const named = [...sheet.matchAll(/var\((--(?:dsw|dsh|ds|amv)-[a-z0-9-]+)/g)].map(match => match[1])
     // Vacuity guard: the sheet has to actually name tokens, or the filter below
     // is satisfied by an empty list and this test proves nothing.
     expect(named.length).toBeGreaterThan(3)
@@ -88,9 +88,9 @@ describe('MessageFeedbackActions row styles', () => {
     expect(block('MessageFeedbackActions', '.action svg')).toMatch(/width:\s*calc\(15px \+ var\(--dsh-content-font-delta, 0px\)\)/)
   })
 
-  it('uses the tertiary label colour for recorded rating icons', () => {
+  it('uses the secondary text colour for recorded rating icons', () => {
     expect(block('MessageFeedbackActions', '.action[data-active]'))
-      .toMatch(/color:\s*var\(--dsw-alias-label-tertiary\)/)
+      .toMatch(/color:\s*var\(--amv-text-2\)/)
   })
 })
 
@@ -98,10 +98,10 @@ describe('FeedbackDialog layout styles', () => {
   it('uses the reviewed spacing, text colours, and submit-button geometry', () => {
     expect(block('FeedbackDialog', '.dialog.dialog')).toMatch(/gap:\s*38px/)
     expect(block('FeedbackDialog', '.categories')).toMatch(/margin-top:\s*-14px/)
-    expect(block('FeedbackDialog', '.chip')).toMatch(/color:\s*var\(--dsw-alias-label-primary\)/)
-    expect(block('FeedbackDialog', '.detail::placeholder')).toMatch(/color:\s*var\(--dsw-alias-label-caption\)/)
-    expect(block('FeedbackDialog', '.detail')).toContain('border-radius: var(--dsw-radius-lg)')
-    expect(block('FeedbackDialog', '.submit')).toContain('border-radius: var(--dsw-radius-lg)')
+    expect(block('FeedbackDialog', '.chip')).toMatch(/color:\s*var\(--amv-text\)/)
+    expect(block('FeedbackDialog', '.detail::placeholder')).toMatch(/color:\s*var\(--amv-faint\)/)
+    expect(block('FeedbackDialog', '.detail')).toContain('border-radius: 10px')
+    expect(block('FeedbackDialog', '.submit')).toContain('border-radius: 10px')
     expect(block('FeedbackDialog', '.submit')).toMatch(/font-weight:\s*500/)
   })
 })
