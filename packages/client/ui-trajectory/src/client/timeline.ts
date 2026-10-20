@@ -43,6 +43,12 @@ export interface TrajectoryTimelineModel extends TrajectoryTimeRange {
   spans: readonly TrajectoryTimelineSpan[]
   subagents: readonly TrajectoryTimelineSubagent[]
   turnBoundaries: readonly TrajectoryTimelineTurnBoundary[]
+  /**
+   * Wall-clock ms to domain position: piecewise-linear through the parent
+   * records (startedAt -> span.start), slope 1 past the ends in wall-clock
+   * modes, clamped in sequence mode.
+   */
+  wallToDomain: (wallMs: number) => number
 }
 
 /**
@@ -85,8 +91,9 @@ function cellRange(cell: TrajectoryCellProps): TrajectoryTimeRange | null {
 export function deriveTrajectoryTimeline(
   turns: readonly TrajectoryTurnModel[],
   mode: TrajectoryTimelineMode = 'sequence',
+  coveredIntervals: readonly TrajectoryTimeRange[] = [],
 ): TrajectoryTimelineModel | null {
-  const model = deriveSpans(turns, mode)
+  const model = deriveSpans(turns, mode, coveredIntervals)
   if (model === null) return null
   const byIndex = new Map(model.spans.map(span => [span.index, span]))
   const startedAt = new Map(turns.flatMap(turn =>
@@ -112,18 +119,57 @@ export function deriveTrajectoryTimeline(
     }
     return [{ lifecycle, index: first.index, start: first.start, end }]
   })
-  return { ...model, subagents }
+  const { wallPoints, ...base } = model
+  const wallToDomain = buildWallToDomain(
+    wallPoints ?? turns.flatMap(turn => turn.groups.flatMap(group => group.cells)).flatMap((cell) => {
+      const span = byIndex.get(cell.index)
+      return span === undefined || !finite(cell.startedAt) ? [] : [{ wall: cell.startedAt, domain: span.start }]
+    }),
+    wallPoints === undefined,
+  )
+  return { ...base, subagents, wallToDomain }
+}
+
+function buildWallToDomain(
+  records: readonly { wall: number; domain: number }[],
+  clamp: boolean,
+): (wallMs: number) => number {
+  const points: { wall: number; domain: number }[] = []
+  for (const point of [...records].sort((a, b) => a.wall - b.wall || a.domain - b.domain)) {
+    const last = points[points.length - 1]
+    if (last !== undefined && last.wall === point.wall) continue
+    // Keep the mapping monotone even when records overlap.
+    points.push({ wall: point.wall, domain: Math.max(point.domain, last?.domain ?? point.domain) })
+  }
+  const first = points[0]
+  const last = points[points.length - 1]
+  if (first === undefined || last === undefined) return () => 0
+  return (wallMs) => {
+    if (wallMs <= first.wall) return clamp ? first.domain : first.domain + (wallMs - first.wall)
+    if (wallMs >= last.wall) return clamp ? last.domain : last.domain + (wallMs - last.wall)
+    const upper = points.findIndex(point => point.wall >= wallMs)
+    const hi = points[upper] ?? last
+    const lo = points[upper - 1] ?? first
+    return lo.domain + (hi.domain - lo.domain) * ((wallMs - lo.wall) / (hi.wall - lo.wall))
+  }
+}
+
+type SpansModel = Omit<TrajectoryTimelineModel, 'subagents' | 'wallToDomain'> & {
+  /** Wall-to-domain breakpoints of the timed modes (idle removed so far). */
+  wallPoints?: { wall: number; domain: number }[]
 }
 
 function deriveSpans(
   turns: readonly TrajectoryTurnModel[],
   mode: TrajectoryTimelineMode,
-): Omit<TrajectoryTimelineModel, 'subagents'> | null {
+  coveredIntervals: readonly TrajectoryTimeRange[],
+): SpansModel | null {
   if (mode !== 'sequence') {
     return deriveTimedTimeline(
       turns,
       mode === 'duration' || mode === 'actual',
       mode === 'duration',
+      coveredIntervals,
     )
   }
   const spans: TrajectoryTimelineSpan[] = []
@@ -165,7 +211,8 @@ function deriveTimedTimeline(
   turns: readonly TrajectoryTurnModel[],
   actualDuration: boolean,
   compressIdle: boolean,
-): Omit<TrajectoryTimelineModel, 'subagents'> | null {
+  coveredIntervals: readonly TrajectoryTimeRange[],
+): SpansModel | null {
   const timedTurns = turns.flatMap((turn) => {
     const rawSpans = turn.groups.flatMap(group =>
       group.cells.flatMap((cell): TrajectoryTimelineSpan[] => {
@@ -189,15 +236,28 @@ function deriveTimedTimeline(
   const rawSpans = timedTurns.flatMap(turn => turn.rawSpans)
   if (rawSpans.length === 0) return null
 
+  const firstStart = Math.min(...rawSpans.map(span => span.start))
+  const covered = coveredIntervals.flatMap((range) => {
+    if (!finite(range.start) || !finite(range.end) || range.end < range.start || range.end < firstStart) return []
+    return [{ start: Math.max(range.start, firstStart), end: range.end }]
+  })
+  const wallPoints: { wall: number; domain: number }[] = []
   const removedIdleBySpan = new Map<TrajectoryTimelineSpan, number>()
   let removedIdle = 0
   let coveredUntil: number | null = null
-  for (const span of [...rawSpans].sort((left, right) =>
+  // Descendant intervals count as covered so waits while children run stay.
+  const covering: (TrajectoryTimeRange & { span?: TrajectoryTimelineSpan })[] = [
+    ...rawSpans.map(span => ({ start: span.start, end: span.end, span })),
+    ...covered,
+  ]
+  for (const span of covering.sort((left, right) =>
     left.start - right.start || left.end - right.end)) {
     if (compressIdle && coveredUntil !== null && span.start > coveredUntil) {
+      wallPoints.push({ wall: coveredUntil, domain: coveredUntil - removedIdle })
       removedIdle += span.start - coveredUntil
     }
-    removedIdleBySpan.set(span, removedIdle)
+    wallPoints.push({ wall: span.start, domain: span.start - removedIdle })
+    if (span.span !== undefined) removedIdleBySpan.set(span.span, removedIdle)
     coveredUntil = coveredUntil === null ? span.end : Math.max(coveredUntil, span.end)
   }
 
@@ -226,6 +286,7 @@ function deriveTimedTimeline(
     end: Math.max(...spans.map(span => span.end)),
     spans,
     turnBoundaries,
+    wallPoints,
   }
 }
 
