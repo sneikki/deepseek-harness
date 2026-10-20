@@ -463,6 +463,8 @@ export function chatSnapshotFixture(input: {
         const name = toolCallName(call)
         return name !== null && isSubagentDelegationTool(name)
       }).length,
+      // Production derives this incrementally from events (turn-process.ts); the fixture reads
+      // already-projected tool roots, where interrupted calls are synthesized isError results.
       activity: toolCalls.map(call => ('kind' in call && call.isError ? 'error' : turnActivityOf(toolCallName(call) ?? ''))),
     }
     const previousSpec = dataStore.get('turn-process')

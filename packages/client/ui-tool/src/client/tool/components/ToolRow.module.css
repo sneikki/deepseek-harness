@@ -118,6 +118,8 @@
   transition: opacity var(--amv-dur-1) var(--amv-ease), transform var(--amv-dur-2) var(--amv-ease);
 }
 .root .row[data-expandable]:hover::after,
+.root .row[data-expandable]:focus-visible::after,
+.root .row[data-expandable]:focus-within::after,
 .root .row[aria-expanded='true']::after { opacity: 1; }
 .root .row[aria-expanded='true']::after { transform: rotate(180deg); }
 
