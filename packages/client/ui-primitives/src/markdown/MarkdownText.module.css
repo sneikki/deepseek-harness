@@ -149,7 +149,7 @@
 }
 
 .markdown blockquote {
-  border-left: 2px solid var(--dsw-alias-label-caption);
+  border-left: 2px solid var(--amv-accent-ring);
   margin: 16px 0 0;
   padding-left: 14px;
 }
@@ -160,17 +160,26 @@
   overflow: auto;
 }
 
+/* Canvas value chip: mono 12px, 1px border. */
 .markdown :not(pre) > code {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  font: var(--dsw-font-markdown-code);
   font-family: var(--ds-font-family-code);
-  font-size: 0.875em !important;
-  background-color: var(--dsw-alias-markdown-inline-code);
-  border: 0.5px solid var(--dsw-alias-border-l1);
+  font-size: 12px !important;
+  line-height: 18px;
+  background-color: var(--amv-raised);
+  border: 1px solid var(--amv-border);
   border-radius: var(--dsw-radius-sm);
-  padding: 0 5px;
+  padding: 1px 8px;
+}
+
+/* A file reference is a tile: icon + mono name. */
+.markdown :not(pre) > code:has(> .fileMention) {
+  border-radius: var(--dsw-radius-sm);
+  border-color: var(--amv-border-strong);
+  background-color: var(--amv-surface);
+  padding: 2px 10px;
 }
 
 .markdown :where(h1, h2, h3, h4, h5, h6) code {
