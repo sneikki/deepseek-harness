@@ -373,21 +373,22 @@
 .hoverTitle {
   font-size: 14px;
   line-height: 20px;
-  color: #FFFFFF;
+  color: var(--amv-text);
   overflow-wrap: break-word;
 }
 
 .hoverPath {
   font-size: 12px;
   line-height: 16px;
-  color: #CFD3D6;
+  color: var(--amv-muted);
   word-break: break-all;
+  font-family: var(--ds-font-family-code);
 }
 
 .hoverTime {
   font-size: 12px;
   line-height: 16px;
-  color: #CFD3D6;
+  color: var(--amv-muted);
 }
 
 .hoverStatus {
@@ -396,7 +397,7 @@
   gap: 8px;
   font-size: 12px;
   line-height: 20px;
-  color: #ADB2B8;
+  color: var(--amv-text-2);
 }
 
 /* Archive glyph rides the status row's text color; slight inset aligns it with the 6px status dots. */
@@ -435,15 +436,4 @@
     animation: none;
     transition: none;
   }
-}
-
-/* Rows entering after the user has interacted (AnimatedRows sets data-armed)
-   open with height + fade; the duration tokens are 0 under reduced motion. */
-@keyframes rowIn {
-  from { opacity: 0; max-height: 0; }
-  to { opacity: 1; max-height: 40px; }
-}
-
-:global([data-armed]) .sessionRow {
-  animation: rowIn var(--amv-dur-2) var(--amv-ease) backwards;
 }
