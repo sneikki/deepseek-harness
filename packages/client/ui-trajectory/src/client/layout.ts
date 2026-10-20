@@ -754,9 +754,9 @@ function expandAssistant(
     .map(block => block.kind === 'reasoning' ? block.text : '')
     .join('\n\n')
   const recordId = `assistant\u0000${node.turn}\u0000${node.step}`
-  // Reasoning is its own row before the output. A streaming placeholder with
-  // empty text keeps the row so live and structural layouts share cell indexes.
-  if (thinkingText !== '' || (streaming && node.blocks.some(block => block.kind === 'reasoning'))) {
+  // Reasoning is its own row before the output. Any reasoning block makes the
+  // row, even with empty text, so live, structural and finalised layouts share cell indexes.
+  if (node.blocks.some(block => block.kind === 'reasoning')) {
     out.push({
       absTime: null,
       cell: {

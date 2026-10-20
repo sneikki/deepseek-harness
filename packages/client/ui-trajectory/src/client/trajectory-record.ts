@@ -128,7 +128,7 @@ export function trajectoryRecordId(cell: TrajectoryCellProps): string {
  */
 export function displayToolName(name: string): string {
   const mcp = /^mcp__(.+?)__(.+)$/.exec(name)
-  const spaced = (mcp === null ? name : `${mcp[1]} ${mcp[2]}`).replaceAll('_', ' ')
+  const spaced = (mcp === null ? name : `${mcp[1]} ${mcp[2]}`).replace(/_+/g, ' ').trim()
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 

@@ -221,6 +221,29 @@ describe('TrajectoryTable', () => {
     expect(detail.getByText('weigh the options')).toBeTruthy()
   })
 
+  it('shows a muted No output placeholder for an assistant row with no text and no tools', () => {
+    const nodes = [
+      { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'go' }], source: null },
+      {
+        kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
+        blocks: [{ kind: 'reasoning', text: 'hm' }],
+      },
+    ] as unknown as Parameters<typeof deriveTrajectoryLayout>[0]['nodes']
+    render(<TrajectoryTable turns={deriveTrajectoryLayout({ nodes, partial: null, runningCalls: [] }, t)} {...FOLD_PROPS} />)
+
+    expect(within(screen.getByRole('row', { name: /ASSISTANT/ })).getByText('No output')).toBeTruthy()
+  })
+
+  it('gives the thinking row the running state of its assistant record', () => {
+    const turns = deriveTrajectoryLayout({ nodes: stepNodes('x'), partial: null, runningCalls: [] }, t)
+    const cells = turns[0]!.groups.flatMap(g => g.cells)
+    const message = cells.find(c => c.kind === 'message')!
+    const running = { ...message, assistantMetrics: { ...message.assistantMetrics!, completedTime: null } }
+    render(<TrajectoryTable turns={turns} streamingCells={[running]} {...FOLD_PROPS} />)
+
+    expect(screen.getByRole('row', { name: /THINKING/ }).getAttribute('data-running')).toBe('true')
+  })
+
   it('shows live reasoning in the thinking row', () => {
     const turns = deriveTrajectoryLayout({ nodes: stepNodes('x'), partial: null, runningCalls: [] }, t)
     const thinking = turns[0]!.groups.flatMap(g => g.cells).find(c => c.kind === 'thinking')!

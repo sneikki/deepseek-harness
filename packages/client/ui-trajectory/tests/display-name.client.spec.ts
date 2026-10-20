@@ -14,6 +14,8 @@ describe('displayToolName', () => {
     ['assistant', 'Assistant'],
     ['thinking', 'Thinking'],
     ['context', 'Context'],
+    ['__x__y', 'X y'],
+    ['mcp__a__b__c', 'A b c'],
     ['', ''],
   ])('%s reads as %s', (raw, shown) => {
     expect(displayToolName(raw)).toBe(shown)

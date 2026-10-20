@@ -41,8 +41,9 @@ function recordSources(
   group: string,
   cell: TrajectoryCellProps,
 ): readonly string[] {
+  // Reasoning is indexed on its own thinking row, not again on the assistant row.
   const blocks = [
-    ...(cell.sourceBlocks ?? []),
+    ...(cell.sourceBlocks ?? []).filter(block => cell.kind !== 'message' || block.type !== 'thinking'),
     ...(cell.outputBlocks ?? []),
   ]
   return [
@@ -54,7 +55,7 @@ function recordSources(
     cell.previewMarkdown ?? '',
     cell.inputDetail ?? '',
     cell.outputDetail ?? '',
-    cell.thinkingDetail ?? '',
+    cell.kind === 'message' ? '' : cell.thinkingDetail ?? '',
     cell.schemaDetail ?? '',
     cell.result ?? '',
     cell.resultPreviewMarkdown ?? '',

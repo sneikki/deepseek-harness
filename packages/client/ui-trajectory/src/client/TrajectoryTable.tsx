@@ -1286,9 +1286,20 @@ function RecordListText({
   displayText,
   callsBadge,
   toolCallText,
-}: Pick<RecordPresentationValue, 'displayText' | 'callsBadge' | 'toolCallText'>) {
+  emptyMessage,
+  t,
+}: Pick<RecordPresentationValue, 'displayText' | 'callsBadge' | 'toolCallText'> & {
+  /** An assistant row with no output and no tool calls. */
+  emptyMessage: boolean
+  t: TrajectoryTranslate
+}) {
   if (toolCallText === undefined) {
-    if (callsBadge === undefined) return displayText || '—'
+    if (callsBadge === undefined) {
+      if (displayText === '' && emptyMessage) {
+        return <span className={css.noOutputText}>{t('record.noOutput')}</span>
+      }
+      return displayText || '—'
+    }
     return (
       <>
         <span className={css.callsBadge}>{callsBadge}</span>
@@ -2320,6 +2331,9 @@ export function TrajectoryTable({
     const cell = streamingCellsByIndex.get(record.cell.index)
     return cell === undefined ? record : { ...record, cell }
   }, [streamingCellsByIndex])
+  // A thinking row shows the running/error state of its step's assistant record.
+  const currentOwner = (record: TableRecord): TableRecord =>
+    currentRecord(ownerRecord(allRecords, record) ?? record)
   const selectedTemplate = useMemo(() => selectedRecordId === null
     ? undefined
     : allRecords.find(record => trajectoryRecordId(record.cell) === selectedRecordId),
@@ -2958,7 +2972,7 @@ export function TrajectoryTable({
                       data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
                         ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
                         : undefined}
-                      data-running={stateOf(record) === 'running' || undefined}
+                      data-running={stateOf(currentOwner(record)) === 'running' || undefined}
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}
                       data-selected={!isCollapsedSummary && rowSelected || undefined}
@@ -3091,6 +3105,8 @@ export function TrajectoryTable({
                                       displayText={displayText}
                                       callsBadge={callsBadge}
                                       toolCallText={toolCallText}
+                                      emptyMessage={record.cell.kind === 'message'}
+                                      t={t}
                                     />
                                   </span>
                                   {resultText !== undefined && (

@@ -181,6 +181,19 @@ describe('deriveTrajectoryLayout', () => {
     expect(cells.map(c => c.index)).toEqual([1, 2, 3, 4, 5])
   })
 
+  it('keeps cell indexes equal whether empty reasoning is finalised or streaming', () => {
+    const blocks = [{ kind: 'reasoning', text: '' }, { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' }]
+    const finalised = deriveTrajectoryLayout({
+      nodes: [{ kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1, blocks }] as unknown as LegacyConversationSlice['nodes'],
+      partial: null, runningCalls: [],
+    })[0]!.groups.flatMap(g => g.cells)
+    const streaming = deriveTrajectoryLayout({
+      nodes: [], partial: { turn: 1, step: 1, blocks } as never, runningCalls: [],
+    })[0]!.groups.flatMap(g => g.cells)
+    expect(finalised.map(c => [c.index, c.kind])).toEqual([[1, 'thinking'], [2, 'message'], [3, 'tool']])
+    expect(streaming.map(c => [c.index, c.kind])).toEqual([[1, 'thinking'], [2, 'message'], [3, 'tool']])
+  })
+
   it('adds runningCalls not already present and leaves their time blank', () => {
     const turns = deriveTrajectoryLayout({
       nodes: [],

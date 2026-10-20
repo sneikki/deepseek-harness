@@ -667,7 +667,7 @@
   border-radius: 4px;
   color: var(--amv-accent-text);
   background: var(--amv-accent-tint);
-  font: 500 11.5px/18px var(--ds-font-family-code);
+  font: 500 12px/18px var(--dsw-font-family);
   text-overflow: ellipsis;
   vertical-align: top;
   white-space: nowrap;
