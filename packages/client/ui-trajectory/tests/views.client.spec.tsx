@@ -989,6 +989,19 @@ describe('timeline projection', () => {
     })).toBe(false)
   })
 
+  it('lets the wheel scroll the agent list but zooms on pinch', () => {
+    const agentRows = [{
+      sessionId: 'a1', depth: 1, label: 'agent', shortId: 'a1', status: 'done' as const, startedAt: 0,
+      endedAt: 5, activeMs: null, hasChildren: false, startIndex: null, loaded: false,
+    }]
+    const { container } = render(
+      <TrajectoryTimeline turns={longTurns} mode="sequence" range={null} onRangeChange={vi.fn()} agentRows={agentRows} />,
+    )
+    const list = container.querySelector<HTMLElement>('[data-agent-rows]')!
+    expect(fireEvent.wheel(list, { deltaY: 100 })).toBe(true)
+    expect(fireEvent.wheel(list, { deltaY: 100, ctrlKey: true })).toBe(false)
+  })
+
   it('scales sequence gutters with narrow operation spans', () => {
     const view = render(
       <TrajectoryTimeline

@@ -146,7 +146,7 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
           : t('timeline.agentsSectionUntimed', { count: rows.length, untimed })}
       </button>
       {open && (
-        <div className={css.rows} role="tree" aria-label={t('timeline.agentsSection', { count: allRows.length })}>
+        <div className={css.rows} data-agent-rows role="tree" aria-label={t('timeline.agentsSection', { count: allRows.length })}>
           {visible.map((entry, index) => {
             const { row, ancestor } = entry
             const startedAt = row.startedAt
