@@ -39,6 +39,8 @@ interface CardSection {
   tone: 'primary' | 'output' | 'error' | 'empty'
   /** The preview was cut before the text ended. */
   truncated: boolean
+  /** Collapsed rich body is held to one line, so the section below keeps its line. */
+  clamp?: 'line'
 }
 
 function isTruncated(text: string): boolean {
@@ -175,6 +177,7 @@ export function cardSections(
       full: () => cardFullInput(cell) || args,
       tone: 'primary',
       truncated: isTruncated(args),
+      ...(kind === 'bash' ? { clamp: 'line' as const } : {}),
     })
   }
   if (resultText !== undefined) {
@@ -287,6 +290,7 @@ export function TrajectoryCard({
                   <div
                     className={css.cardRich}
                     data-collapsed={!expanded || undefined}
+                    data-clamp={!expanded ? section.clamp : undefined}
                     onClick={stopRow}
                     onDoubleClick={stopRow}
                     onKeyDown={stopRow}

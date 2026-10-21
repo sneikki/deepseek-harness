@@ -2196,6 +2196,11 @@
   box-shadow: none;
 }
 
+.cardRich[data-clamp='line'] {
+  max-height: var(--trajectory-card-line);
+  overflow: hidden;
+}
+
 .cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
 .cardRich[data-collapsed] :global(.md-code-block) > :first-child {
   display: none;

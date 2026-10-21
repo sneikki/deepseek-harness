@@ -244,5 +244,6 @@ describe('header subject and standalone bodies', () => {
       '{"command":"ls"}', 'a.txt',
     )
     expect(container.querySelector('[data-collapsed]')).not.toBeNull()
+    expect(container.querySelector('[data-clamp="line"]')).not.toBeNull()
   })
 })
