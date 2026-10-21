@@ -11,7 +11,9 @@ const plainTextWorker: NonNullable<UserConfig['plugins']> = [{
   async load(id) {
     if (id !== WORKER_SOURCE) return null
     const worker = await Rolldown.rolldown({
-      input: join(import.meta.dirname, 'src/markdown/plain-text-worker.ts'), platform: 'browser',
+      input: join(import.meta.dirname, 'src/markdown/plain-text-worker.ts'),
+      // Not 'browser': decode-named-character-reference's browser entry reads `document`, which a Worker lacks.
+      platform: 'node',
       transform: { define: { 'process.env.NODE_ENV': JSON.stringify('production') } },
     })
     try {

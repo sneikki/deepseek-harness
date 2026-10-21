@@ -2,30 +2,15 @@ import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { CodeFileIcon } from './CodeFileIcon.tsx'
 import {
-  classifyCodeFileType, isCodeFileType, type CodeFileType, type FileTypeProjectContext,
+  isCodeFileType, type CodeFileType, type FileTypeProjectContext,
 } from './code-file-types.ts'
+import { classifyFileType, type FileType, type FileTypeKind } from './file-type.ts'
 import type { IconProps } from './icons/props.ts'
 import css from './FileTypeIcon.module.css'
 
-/** File categories with distinct 28px glyphs. */
-export type FileType =
-  | CodeFileType
-  | 'code'
-  | 'excel'
-  | 'folder'
-  | 'html'
-  | 'image'
-  | 'markdown'
-  | 'other'
-  | 'pdf'
-  | 'ppt'
-  | 'video'
-  | 'word'
+export { classifyFileType, fileExtension } from './file-type.ts'
+export type { FileType, FileTypeKind } from './file-type.ts'
 
-/** Compatibility name for consumers that pass an already resolved category. */
-export type FileTypeKind = FileType
-
-type ClassifiedFileType = Exclude<FileType, 'folder'>
 type TraditionalFileType = Exclude<FileType, CodeFileType>
 
 export type { CodeFileType, FileTypeProjectContext } from './code-file-types.ts'
@@ -43,107 +28,6 @@ export type FileTypeIconProps = IconProps & (
     readonly kind: FileTypeKind
   }
 )
-
-const EXTENSION_TYPES: Readonly<Record<string, ClassifiedFileType>> = {
-  scss: 'code',
-  sass: 'code',
-  less: 'code',
-  vue: 'code',
-  svelte: 'code',
-  astro: 'code',
-  bat: 'code',
-  cmd: 'code',
-  csv: 'excel',
-  tsv: 'excel',
-  html: 'html',
-  htm: 'html',
-  png: 'image',
-  jpg: 'image',
-  jpeg: 'image',
-  gif: 'image',
-  svg: 'image',
-  webp: 'image',
-  avif: 'image',
-  bmp: 'image',
-  ico: 'image',
-  tif: 'image',
-  tiff: 'image',
-  heic: 'image',
-  heif: 'image',
-  md: 'markdown',
-  mdx: 'markdown',
-  markdown: 'markdown',
-  pdf: 'pdf',
-  ppt: 'ppt',
-  pptx: 'ppt',
-  key: 'ppt',
-  mp4: 'video',
-  mov: 'video',
-  m4v: 'video',
-  webm: 'video',
-  mkv: 'video',
-  avi: 'video',
-  mpg: 'video',
-  mpeg: 'video',
-  doc: 'word',
-  docx: 'word',
-  rtf: 'word',
-  odt: 'word',
-  pages: 'word',
-  xls: 'excel',
-  xlsx: 'excel',
-  xlsm: 'excel',
-  xlsb: 'excel',
-  xlt: 'excel',
-  xltx: 'excel',
-  xltm: 'excel',
-  ods: 'excel',
-  ots: 'excel',
-  fods: 'excel',
-  numbers: 'excel',
-}
-
-const NAME_TYPES: Readonly<Record<string, ClassifiedFileType>> = {
-  changelog: 'markdown',
-  contributing: 'markdown',
-  readme: 'markdown',
-}
-
-function basename(path: string): string {
-  return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
-}
-
-/**
- * Extract the final suffix from a file path without changing its case.
- * A leading dot starts a suffix, while a missing or trailing dot returns an empty string.
- * @param path - File path or basename using either path separator.
- * @returns The characters after the basename's final dot.
- */
-export function fileExtension(path: string): string {
-  const name = basename(path)
-  const dot = name.lastIndexOf('.')
-  return dot < 0 ? '' : name.slice(dot + 1)
-}
-
-/**
- * Classify a file path or name for file-card presentation.
- * Matching is case-insensitive and applies code filename rules before extension rules;
- * unknown names fall back to `other`.
- * @param path - File path or basename using either path separator.
- * @param context - Optional project files used by context-sensitive code mappings.
- * @returns The file's closed presentation category.
- */
-export function classifyFileType(
-  path: string,
-  context?: FileTypeProjectContext,
-): ClassifiedFileType {
-  const name = basename(path).toLowerCase()
-  const extension = fileExtension(name).toLowerCase()
-  return classifyCodeFileType(name, extension, context)
-    ?? NAME_TYPES[name]
-    ?? EXTENSION_TYPES[extension]
-    ?? 'other'
-}
 
 const FILE_BODY = 'M8.48924 28H19.5108C21.6479 28 22.7165 28 23.5594 27.6509C24.6833 27.1853 25.5762 26.2924 26.0417 25.1685C26.3909 24.3256 26.3909 23.257 26.3909 21.1199V8.79443C26.3909 8.32877 26.3909 8.09593 26.3471 7.87507C26.2887 7.58058 26.173 7.30042 26.0067 7.05048C25.882 6.86303 25.7177 6.69799 25.3893 6.36792L20.0611 1.01354C19.7304 0.681235 19.5651 0.515081 19.3769 0.38885C19.126 0.220541 18.8443 0.103463 18.5481 0.0443412C18.3259 0 18.0915 0 17.6226 0H8.48924C6.35209 0 5.28351 0 4.4406 0.349145C3.31672 0.814671 2.4238 1.70759 1.95828 2.83147C1.60913 3.67438 1.60913 4.74296 1.60913 6.88011V21.1199C1.60913 23.257 1.60913 24.3256 1.95828 25.1685C2.4238 26.2924 3.31672 27.1853 4.4406 27.6509C5.28351 28 6.35209 28 8.48924 28Z'
 const FILE_FOLD = 'M26.3909 7.37445L19.0525 0V3.77445C19.0525 4.89271 19.0525 5.45184 19.2352 5.89289C19.4788 6.48096 19.946 6.94818 20.5341 7.19176C20.9751 7.37445 21.5342 7.37445 22.6525 7.37445H26.3909Z'

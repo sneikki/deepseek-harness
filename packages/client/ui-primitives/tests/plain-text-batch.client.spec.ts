@@ -78,7 +78,7 @@ describe('plain-text Worker script', () => {
     const post = vi.fn()
     vi.stubGlobal('postMessage', post)
     await import('../src/markdown/plain-text-worker.ts')
-    const onmessage = (globalThis as { onmessage?: (event: { data: PlainTextRequest }) => void }).onmessage!
+    const onmessage = globalThis.onmessage as unknown as (event: { data: PlainTextRequest }) => void
     onmessage({ data: { sources } })
     expect(post).toHaveBeenCalledWith({ ok: true, texts: expected })
   })
