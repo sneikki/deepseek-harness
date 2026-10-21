@@ -423,19 +423,23 @@ export function TrajectoryView({
   const latestSearchLayouts = useRef(searchLayouts)
   latestSearchLayouts.current = searchLayouts
   useEffect(() => {
+    const sync = (layouts: typeof searchLayouts): void => {
+      void searchIndex.update(layouts).then((changed) => {
+        if (changed) setSearchIndexRevision(revision => revision + 1)
+      }, (error: unknown) => {
+        // The old index stays; the next layout change retries.
+        console.error('Trajectory search index update failed', error)
+      })
+    }
     if (!searchIndexInitialized.current) {
       searchIndexInitialized.current = true
-      if (searchIndex.update(searchLayouts)) {
-        setSearchIndexRevision(revision => revision + 1)
-      }
+      sync(searchLayouts)
       return
     }
     if (searchIndexTimer.current !== null) return
     searchIndexTimer.current = setTimeout(() => {
       searchIndexTimer.current = null
-      if (searchIndex.update(latestSearchLayouts.current)) {
-        setSearchIndexRevision(revision => revision + 1)
-      }
+      sync(latestSearchLayouts.current)
     }, SEARCH_INDEX_THROTTLE_MS)
   }, [searchIndex, searchLayouts])
   useEffect(() => () => {

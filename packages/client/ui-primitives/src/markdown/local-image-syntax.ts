@@ -1,6 +1,6 @@
 /** Recover standalone local image references with bare spaces without changing code or source offsets. */
 import type { Root, RootContent, PhrasingContent } from 'mdast'
-import { classifyFileType } from '../FileTypeIcon.tsx'
+import { classifyFileType } from '../file-type.ts'
 
 /**
  * Recover only unambiguous, unescaped image-only paragraphs containing a local path with spaces.

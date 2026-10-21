@@ -3,7 +3,7 @@
 import type { TrajectoryTurnModel } from './layout.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import { trajectoryRecordId } from './trajectory-record.ts'
-import { trajectoryPreviewText } from './trajectory-preview.ts'
+import { trajectoryPreviewTexts } from './trajectory-preview.ts'
 
 interface SearchEntry {
   readonly sources: readonly string[]
@@ -23,17 +23,14 @@ function sameSources(left: readonly string[], right: readonly string[]): boolean
   return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
-function markdownPreview(cell: TrajectoryCellProps): string {
-  if (cell.previewMarkdown === undefined) return ''
-  const preview = trajectoryPreviewText(cell.previewMarkdown)
+function markdownPreview(cell: TrajectoryCellProps, preview: string | undefined): string {
+  if (preview === undefined) return ''
   if (cell.text === '') return preview
   return preview === '' ? cell.text : `${cell.text} · ${preview}`
 }
 
-function resultPreview(cell: TrajectoryCellProps): string {
-  return cell.resultPreviewMarkdown === undefined
-    ? cell.result ?? ''
-    : trajectoryPreviewText(cell.resultPreviewMarkdown)
+function resultPreview(cell: TrajectoryCellProps, preview: string | undefined): string {
+  return preview === undefined ? cell.result ?? '' : preview
 }
 
 function recordSources(
@@ -77,16 +74,22 @@ function recordSources(
 export class TrajectorySearchIndex {
   private readonly entries = new Map<string, SearchEntry>()
   private layouts: readonly (readonly TrajectoryTurnModel[])[] | undefined
+  private generation = 0
 
   /**
-   * Incrementally synchronize one or more current trajectory layout slices.
+   * Incrementally synchronize one or more current trajectory layout slices. Changed records'
+   * Markdown is parsed off the main thread when many changed at once, so the entries commit
+   * when that resolves; a newer call supersedes an unfinished one.
    * @param layouts - Finalized and optional streaming layouts from the same view.
    * @returns Whether the indexed layout version changed.
    */
-  update(layouts: readonly (readonly TrajectoryTurnModel[])[]): boolean {
+  async update(layouts: readonly (readonly TrajectoryTurnModel[])[]): Promise<boolean> {
     if (this.layouts === layouts) return false
-    this.layouts = layouts
+    const generation = ++this.generation
     const seen = new Set<string>()
+    // Markdown of the changed records, in one batch; each record keeps its slot (-1: none).
+    const markdown: string[] = []
+    const changed: { id: string; sources: readonly string[]; cell: TrajectoryCellProps; preview: number; result: number }[] = []
     for (const turns of layouts) {
       for (const turn of turns) {
         for (const group of turn.groups) {
@@ -95,21 +98,32 @@ export class TrajectorySearchIndex {
             const id = trajectoryRecordId(cell)
             const sources = recordSources(turn.turn, group.title, cell)
             const previous = this.entries.get(id)
-            const entry = previous !== undefined && sameSources(previous.sources, sources)
-              ? previous
-              : {
-                sources,
-                text: [
-                  ...sources,
-                  markdownPreview(cell),
-                  resultPreview(cell),
-                ].join('\n').toLocaleLowerCase(),
-              }
-            this.entries.set(id, entry)
             seen.add(id)
+            if (previous !== undefined && sameSources(previous.sources, sources)) continue
+            changed.push({
+              id,
+              sources,
+              cell,
+              preview: cell.previewMarkdown === undefined ? -1 : markdown.push(cell.previewMarkdown) - 1,
+              result: cell.resultPreviewMarkdown === undefined ? -1 : markdown.push(cell.resultPreviewMarkdown) - 1,
+            })
           }
         }
       }
+    }
+    const previews = await trajectoryPreviewTexts(markdown)
+    if (generation !== this.generation) return false
+    // Recorded only after a successful parse, so a rejected update leaves the next call a retry.
+    this.layouts = layouts
+    for (const { id, sources, cell, preview, result } of changed) {
+      this.entries.set(id, {
+        sources,
+        text: [
+          ...sources,
+          markdownPreview(cell, previews[preview]),
+          resultPreview(cell, previews[result]),
+        ].join('\n').toLocaleLowerCase(),
+      })
     }
     for (const id of this.entries.keys()) {
       if (!seen.has(id)) this.entries.delete(id)
