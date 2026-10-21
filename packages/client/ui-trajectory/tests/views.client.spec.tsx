@@ -1439,8 +1439,8 @@ describe('TrajectoryView state', () => {
     expect(within(screen.getByRole('tabpanel')).getByText(status)).toBeTruthy()
   })
 
-  it('reveals resident history one bounded page at a time', async () => {
-    const nodes: LegacyConversationSlice['nodes'] = Array.from({ length: 5_000 }, (_, index) => ({
+  it('shows all resident history without paging', () => {
+    const nodes: LegacyConversationSlice['nodes'] = Array.from({ length: 300 }, (_, index) => ({
       kind: 'user' as const,
       seq: index + 1,
       time: index + 1,
@@ -1448,28 +1448,80 @@ describe('TrajectoryView state', () => {
       source: null,
     }))
     const trajectory = createSnapshotStore(historySnapshot([]))
-    const loadOlder = vi.fn(() => Promise.resolve(false))
     render(
       <TrajectoryView
         {...standaloneProps([])}
         {...standaloneHistory(historySnapshot(nodes))}
         {...standaloneDuration()}
         useTrajectory={bindSnapshotSelector(trajectory)}
-        loadOlder={loadOlder}
       />,
     )
-
     act(() => { trajectory.set(historySnapshot(nodes)) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
-    fireEvent.click(screen.getAllByRole('button', { name: '加载更早的历史' }).at(-1)!)
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('101')
-    expect(loadOlder).not.toHaveBeenCalled()
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('300')
+  })
 
-    act(() => { trajectory.set(historySnapshot([...nodes, {
-      kind: 'user', seq: 5_001, time: 5_001,
-      content: [{ type: 'text', text: 'appended prompt' }], source: null,
-    }])) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('102')
+  describe('auto-loading older history', () => {
+    function setup(pages: number, behave?: (call: number) => void) {
+      const session = createSnapshotStore({ ...sessionSnapshot([]), hasMore: pages > 0 })
+      let remaining = pages
+      let calls = 0
+      let active = 0
+      let maxActive = 0
+      const loadOlder = vi.fn(async () => {
+        calls += 1
+        active += 1
+        maxActive = Math.max(maxActive, active)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 5))
+          behave?.(calls)
+          remaining -= 1
+          session.set({ ...session.getSnapshot(), hasMore: remaining > 0 })
+          return true
+        } finally { active -= 1 }
+      })
+      const view = render(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          useSession={bindSnapshotSelector(session)}
+          loadOlder={loadOlder}
+        />,
+      )
+      return { loadOlder, view, maxActive: () => maxActive }
+    }
+
+    it('pages until no older history remains, one load at a time', async () => {
+      const { loadOlder, maxActive } = setup(4)
+      await waitFor(() => { expect(loadOlder).toHaveBeenCalledTimes(4) })
+      await act(async () => { await Promise.resolve() })
+      expect(loadOlder).toHaveBeenCalledTimes(4)
+      expect(maxActive()).toBe(1)
+    })
+
+    it('stops on unmount', async () => {
+      const { loadOlder, view } = setup(50)
+      await waitFor(() => { expect(loadOlder).toHaveBeenCalled() })
+      view.unmount()
+      const calls = loadOlder.mock.calls.length
+      await new Promise(resolve => setTimeout(resolve, 20))
+      expect(loadOlder.mock.calls.length).toBeLessThanOrEqual(calls + 1)
+      expect(loadOlder.mock.calls.length).toBeLessThan(50)
+
+    })
+
+    it('stops on error', async () => {
+      const { loadOlder } = setup(10, (call) => { if (call === 2) throw new Error('boom') })
+      await waitFor(() => { expect(loadOlder).toHaveBeenCalledTimes(2) })
+      await new Promise(resolve => setTimeout(resolve, 20))
+      expect(loadOlder).toHaveBeenCalledTimes(2)
+    })
+
+    it('makes no call when nothing older remains', async () => {
+      const { loadOlder } = setup(0)
+      await new Promise(resolve => setTimeout(resolve, 20))
+      expect(loadOlder).not.toHaveBeenCalled()
+    })
   })
 
   it('keeps a replacement window bounded when its predecessor tail is absent', () => {
@@ -1492,10 +1544,10 @@ describe('TrajectoryView state', () => {
         useTrajectory={bindSnapshotSelector(trajectory)}
       />,
     )
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('100')
 
     act(() => { trajectory.set(historySnapshot(nodes(201))) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('100')
   })
 
   it('keeps resident request numbering and cumulative usage outside the layout page', async () => {
