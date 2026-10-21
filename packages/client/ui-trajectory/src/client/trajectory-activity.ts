@@ -6,15 +6,17 @@ const MCP_READ_VERBS = new Set(['search', 'recall', 'expand', 'read', 'get', 'li
 
 /**
  * Whether an MCP Tool name (`mcp__<server>__<tool>`) names a read-only tool by its verb.
- * A repeated server prefix (`mcp__codevec__codevec_search`) is skipped.
+ * Leading words that name the server (`mcp__codevec__codevec_search`, `mcp__claude_ai_Slack__slack_read`) are skipped.
  * @param name - durable Tool-call name.
  * @returns true when the tool part starts with a read verb.
  */
 function isMcpReadTool(name: string): boolean {
   const [prefix, server = '', ...rest] = name.split('__')
   if (prefix !== 'mcp' || rest.length === 0) return false
+  const serverWords = new Set(server.toLowerCase().split(/[_\-.]/))
   const words = rest.join('__').toLowerCase().split(/[_\-.]/)
-  const verb = words[0] === server.toLowerCase() ? words[1] : words[0]
+  const start = words.findIndex(word => !serverWords.has(word))
+  const verb = start === -1 ? undefined : words[start]
   return verb !== undefined && MCP_READ_VERBS.has(verb)
 }
 

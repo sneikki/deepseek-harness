@@ -1,4 +1,6 @@
 /** Activity bucket per Tool-call name; must mirror ui-chat's turnActivityOf. */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 import { trajectoryActivityOf } from '../src/client/trajectory-activity.ts'
@@ -15,6 +17,9 @@ describe('trajectoryActivityOf', () => {
     ['mcp__moonshine__expand', 'review'],
     ['mcp__codevec__codevec_search', 'review'],
     ['mcp__codevec__codevec_where', 'review'],
+    ['mcp__claude_ai_Slack__slack_read_channel', 'review'],
+    ['mcp__claude_ai_Notion__notion-search', 'review'],
+    ['mcp__linear-amv__linear_amv_get', 'review'],
     ['mcp__linear-amv__get-issue', 'review'],
     ['mcp__moonshine__store', 'other'],
     ['mcp__ledger__create_issue', 'other'],
@@ -33,5 +38,20 @@ describe('trajectoryActivityOf', () => {
 
   it('is undefined for records without a tool name', () => {
     expect(trajectoryActivityOf(undefined, undefined)).toBeUndefined()
+  })
+})
+
+describe('MCP read verbs stay in sync with ui-chat', () => {
+  const verbsIn = (path: string): string[] => {
+    const source = readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
+    const body = /const MCP_READ_VERBS = new Set\(\[([^\]]*)\]\)/.exec(source)?.[1] ?? ''
+    return [...body.matchAll(/'([^']+)'/g)].map(match => match[1] ?? '').sort()
+  }
+
+  it('declares the same verb set in both classifiers', () => {
+    const chat = verbsIn('../../ui-chat/src/client/contract/turn-process.ts')
+    const trajectory = verbsIn('../src/client/trajectory-activity.ts')
+    expect(chat.length).toBeGreaterThan(0)
+    expect(trajectory).toEqual(chat)
   })
 })
