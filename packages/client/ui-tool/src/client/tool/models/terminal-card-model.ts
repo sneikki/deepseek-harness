@@ -299,17 +299,6 @@ function parseExitStatus(text: string): { output: string; exitCode?: number | nu
 }
 
 /**
- * Derive terminal props for supported shell and terminal-send calls, including
- * nested PTC dispatch calls. Standard shell results parse their final status
- * marker. Successful background shell launches retain only their command after
- * settlement; persistent shell results, spill previews, background terminal sends,
- * errors, and malformed input use the generic path. {@link isSettledPersistentShellCall} lets that generic
- * persistent result remain expandable without inventing one process status.
- * @param block - running or settled Tool block.
- * @param sessionCwd - original workspace root used only for old results without recorded cwd.
- * @returns locale-neutral terminal-card data, or null for the generic path.
- */
-/**
  * The command a shell call ran, whether or not the call has a card: a persistent
  * shell call without a description has no card but still ran this command.
  * @param block - running or settled Tool block.
@@ -322,6 +311,17 @@ export function shellCommand(block: ToolCallBlock): string | undefined {
   return call?.command
 }
 
+/**
+ * Derive terminal props for supported shell and terminal-send calls, including
+ * nested PTC dispatch calls. Standard shell results parse their final status
+ * marker. Successful background shell launches retain only their command after
+ * settlement; persistent shell results, spill previews, background terminal sends,
+ * errors, and malformed input use the generic path. {@link isSettledPersistentShellCall} lets that generic
+ * persistent result remain expandable without inventing one process status.
+ * @param block - running or settled Tool block.
+ * @param sessionCwd - original workspace root used only for old results without recorded cwd.
+ * @returns locale-neutral terminal-card data, or null for the generic path.
+ */
 export function terminalCardModel(
   block: ToolCallBlock,
   sessionCwd?: string,
