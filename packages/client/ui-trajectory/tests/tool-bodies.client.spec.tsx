@@ -68,7 +68,7 @@ describe('rich tool bodies in the ledger box', () => {
       toolCell({ toolName: 'bash', toolBody: { kind: 'bash', command: 'ls -la' } }),
       'ls -la', 'a.txt',
     )
-    expect(lastProps(vi.mocked(CodeBlock))).toMatchObject({ code: 'ls -la', lang: 'bash', showHeader: false })
+    expect(lastProps(vi.mocked(CodeBlock))).toMatchObject({ code: 'ls -la', lang: 'bash' })
   })
 
   it('draws a read result through ReadBlock with the file language and no wrapper text', () => {
@@ -76,7 +76,7 @@ describe('rich tool bodies in the ledger box', () => {
     renderCard(
       toolCell({
         toolName: 'read',
-        toolBody: { kind: 'read', model: { label: 'src/a.ts', lines, totalLines: 2, lang: 'typescript' } },
+        toolBody: { kind: 'read', label: 'src/a.ts', model: { label: 'src/a.ts', lines, totalLines: 2, lang: 'typescript' } },
       }),
       '{"file_path":"src/a.ts"}', '<path>src/a.ts</path>\n<type>file</type>\n<content>...',
     )
@@ -87,7 +87,7 @@ describe('rich tool bodies in the ledger box', () => {
   it('draws an edit as a DiffBlock in the OUTPUT section', () => {
     const diffs = [{ path: 'src/a.ts', oldText: 'const a = 1', newText: 'const a = 2' }]
     renderCard(
-      toolCell({ toolName: 'edit', toolBody: { kind: 'diff', model: { card: { diffs } } } }),
+      toolCell({ toolName: 'edit', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
       '{"file_path":"src/a.ts"}', 'Edited src/a.ts',
     )
     expect(lastProps(vi.mocked(DiffBlock))).toMatchObject({ diffs })
@@ -99,6 +99,7 @@ describe('rich tool bodies in the ledger box', () => {
         toolName: 'grep',
         toolBody: {
           kind: 'search',
+          label: 'foo',
           model: { card: { kind: 'matches', files: [], total: 0, truncated: false }, recovery: 'full output: /w/out.txt' },
         } as TrajectoryToolBody,
       }),
@@ -202,5 +203,46 @@ describe('tool cell body derivation', () => {
     expect(read?.kind).toBe('read')
     expect(read?.kind === 'read' ? read.model.lang : undefined).toBe('typescript')
     expect(read?.kind === 'read' ? read.model.label : undefined).toBe('a.ts')
+  })
+})
+
+describe('header subject and standalone bodies', () => {
+  it('names the file in the header and puts the diff in the INPUT slot, without the success line', () => {
+    const diffs = [{ path: 'src/a.ts', oldText: 'const a = 1', newText: 'const a = 2' }]
+    const { container } = renderCard(
+      toolCell({ toolName: 'edit', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
+      '{"file_path":"src/a.ts"}', 'Edited src/a.ts',
+    )
+    expect(container.querySelector('span[title="src/a.ts"]')).not.toBeNull()
+    expect(container.querySelector('[data-section="input"]')).not.toBeNull()
+    expect(container.querySelector('[data-section="output"]')).toBeNull()
+    expect(lastProps(vi.mocked(DiffBlock))).toMatchObject({ diffs })
+  })
+
+  it('drops the arguments of a file read, its path is the header subject', () => {
+    const lines = [{ number: 1, text: 'const a = 1' }]
+    const { container } = renderCard(
+      toolCell({
+        toolName: 'read',
+        toolBody: { kind: 'read', label: 'src/a.ts', model: { label: 'src/a.ts', lines, totalLines: 1, lang: 'typescript' } },
+      }),
+      '{"file_path":"src/a.ts"}', '<content>...',
+    )
+    expect(container.querySelector('span[title="src/a.ts"]')).not.toBeNull()
+    expect(container.querySelector('[data-section="input"]')).toBeNull()
+    expect(container.querySelector('[data-section="output"]')).not.toBeNull()
+  })
+
+  it('keeps the output text of a failed edit, which has no diff body', () => {
+    renderCard(toolCell({ toolName: 'edit', isError: true }), '{"file_path":"src/a.ts"}', 'File not found')
+    expect(screen.getByText('File not found')).toBeTruthy()
+  })
+
+  it('marks a collapsed rich body so its frame and header are hidden', () => {
+    const { container } = renderCard(
+      toolCell({ toolName: 'bash', toolBody: { kind: 'bash', command: 'ls' } }),
+      '{"command":"ls"}', 'a.txt',
+    )
+    expect(container.querySelector('[data-collapsed]')).not.toBeNull()
   })
 })

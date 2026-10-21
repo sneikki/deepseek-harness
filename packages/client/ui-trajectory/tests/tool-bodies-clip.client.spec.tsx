@@ -36,7 +36,7 @@ function bashCell(command: string): TrajectoryCellProps {
 
 function readCell(): TrajectoryCellProps {
   const model = { label: 'a.ts', lines: [{ number: 1, text: 'const a = 1' }], totalLines: 1, lang: 'typescript' }
-  return { index: 1, kind: 'tool', text: '', timeSeconds: 1, toolName: 'read', toolBody: { kind: 'read', model } }
+  return { index: 1, kind: 'tool', text: '', timeSeconds: 1, toolName: 'read', toolBody: { kind: 'read', label: 'a.ts', model } }
 }
 
 function card(cell: TrajectoryCellProps, onToggle: () => void) {

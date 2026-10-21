@@ -7,7 +7,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TrajectoryTranslate } from './locales.ts'
 import { codeProgram } from './code-program.ts'
-import type { TrajectoryCellProps } from './trajectory-record.ts'
+import type { TrajectoryCellProps, TrajectoryToolBody } from './trajectory-record.ts'
 import type { ToolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { cardFullInput, cardFullOutput, cardFullText, cardIsCompact } from './trajectory-card.ts'
 import css from './TrajectoryTable.module.css'
@@ -59,10 +59,16 @@ function sameRich(node: ReactNode): Rich {
   return { collapsed: node, expanded: node }
 }
 
+/** The shell or program code; its header (language, copy) shows only when expanded. */
 function codeRich(code: string, lang: string, labels: ToolCardLabels): Rich {
   return sameRich(
-    <CodeBlock code={code} lang={lang} showHeader={false} copyLabel={labels.copy} copiedLabel={labels.copied} />,
+    <CodeBlock code={code} lang={lang} copyLabel={labels.copy} copiedLabel={labels.copied} />,
   )
+}
+
+/** The header subject of a rich body: the file path, or the search pattern. */
+function subjectOf(body: TrajectoryToolBody | undefined): string | undefined {
+  return body === undefined || body.kind === 'bash' ? undefined : body.label
 }
 
 /** Rich INPUT: the program source of a code call, the command of a shell call. */
@@ -121,10 +127,39 @@ export function cardSections(
       truncated: isTruncated(displayText),
     }]
   }
-  const sections: CardSection[] = []
   const inputBody = inputRich(cell, labels)
   const outputBody = outputRich(cell, labels)
   const args = toolCallText.args?.trim()
+  const kind = cell.toolBody?.kind
+  const sections: CardSection[] = []
+  if (kind === 'diff') {
+    // The diff takes the INPUT slot; a settled edit's routine success line adds nothing to the box.
+    sections.push({
+      key: 'input',
+      ...(outputBody === undefined ? {} : { rich: outputBody }),
+      preview: '',
+      previewText: resultText ?? '',
+      full: () => cardFullInput(cell) || args || '',
+      tone: 'primary',
+      truncated: false,
+    })
+    return sections
+  }
+  if (kind === 'read' || kind === 'search') {
+    // The file view or the matches stand alone: their path or pattern is the header subject.
+    if (resultText !== undefined) {
+      sections.push({
+        key: 'output',
+        ...(outputBody === undefined ? {} : { rich: outputBody }),
+        preview: resultText,
+        previewText: resultText,
+        full: () => cardFullOutput(cell) || resultText,
+        tone: 'output',
+        truncated: false,
+      })
+    }
+    return sections
+  }
   if (args !== undefined && args !== '') {
     sections.push({
       key: 'input',
@@ -201,6 +236,7 @@ export function TrajectoryCard({
   // A calls-only box has no body to open.
   const expanded = expandedRequest && !compact
   const sections = compact ? [] : cardSections(cell, content, t, toolLabels)
+  const subject = compact ? undefined : subjectOf(cell.toolBody)
   const bodyRef = useRef<HTMLDivElement>(null)
   const clipped = useClippedContent(
     bodyRef,
@@ -217,6 +253,7 @@ export function TrajectoryCard({
     >
       <div className={css.cardHead}>
         <span className={css.cardBadge} title={badgeTitle}>{badge}</span>
+        {subject !== undefined && <span className={css.cardSubject} title={subject}>{subject}</span>}
         {compact && <span className={css.callsBadge}>{content.callsBadge}</span>}
         <span className={css.cardLifecycle} data-card-slot="lifecycle">{lifecycle}</span>
         {meta !== undefined && <span className={css.cardMeta}>{meta}</span>}
@@ -249,6 +286,7 @@ export function TrajectoryCard({
                   // The body's own buttons (copy, wrap) act on the body, not on the row that selects or folds the call.
                   <div
                     className={css.cardRich}
+                    data-collapsed={!expanded || undefined}
                     onClick={stopRow}
                     onDoubleClick={stopRow}
                     onKeyDown={stopRow}
