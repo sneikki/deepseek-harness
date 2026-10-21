@@ -7,7 +7,7 @@ import { trajectoryRecordId } from '../src/client/trajectory-record.ts'
 import { t } from './locale.client.ts'
 
 describe('TrajectorySearchIndex', () => {
-  it('matches reasoning on the thinking row and not on the assistant row', () => {
+  it('matches reasoning on the thinking row and not on the assistant row', async () => {
     const nodes = [{
       kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
       blocks: [
@@ -20,7 +20,7 @@ describe('TrajectorySearchIndex', () => {
     const thinking = cells.find(cell => cell.kind === 'thinking')!
     const message = cells.find(cell => cell.kind === 'message')!
     const index = new TrajectorySearchIndex()
-    index.update([turns])
+    await index.update([turns])
 
     expect([...index.search('zebra')!]).toEqual([trajectoryRecordId(thinking)])
     expect([...index.search('giraffe')!]).toEqual([trajectoryRecordId(message)])
