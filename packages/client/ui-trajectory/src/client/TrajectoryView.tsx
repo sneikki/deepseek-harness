@@ -5,7 +5,7 @@ import type {
   AssistantBlock, AssistantMessageNode, ConvViewProps, MessageImageLoader,
   ToolCallBlock,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { InjectFace, PropsLocale, PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { JsonTreeProps } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
@@ -82,6 +82,8 @@ function partialStructureSignature(partial: TrajectorySnapshot['partial']): stri
 export interface TrajectoryViewInjected {
   /** Shared wrapping preference read by expansion handlers. */
   jsonStringWrapping?: Omit<NonNullable<JsonTreeProps['stringWrapping']>, 'label'>
+  /** Conversation-namespace translate, for the rich tool-body labels shared with the chat row. */
+  conversationT: TranslateNS<'conversation'>
   hooks: {
     duration: SnapshotStore<boolean>
     /** Whether thinking rows are shown. */
@@ -151,7 +153,7 @@ function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTree
 export function TrajectoryView({
   sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
   setActualDuration, setShowThinking, openSession, requestProjection,
-  viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
+  viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping, conversationT,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
   & InjectFace<TrajectoryViewInjected>
@@ -592,6 +594,7 @@ export function TrajectoryView({
       <div className={css.ledger}>
         <TrajectoryTable
           t={t}
+          conversationT={conversationT}
           stringWrapping={jsonStringWrapping === undefined ? undefined : {
             ...jsonStringWrapping,
             label: t('record.wrapLines'),

@@ -2,9 +2,13 @@
 
 import { useRef } from 'react'
 import type { ReactNode } from 'react'
-import { IconCodeOutlineRegular, useClippedContent } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  CodeBlock, DiffBlock, IconCodeOutlineRegular, ReadBlock, SearchBlock, useClippedContent,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TrajectoryTranslate } from './locales.ts'
+import { codeProgram } from './code-program.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
+import type { TrajectoryToolLabels } from './trajectory-tool-labels.ts'
 import { cardFullInput, cardFullOutput, cardFullText, cardIsCompact } from './trajectory-card.ts'
 import css from './TrajectoryTable.module.css'
 
@@ -30,6 +34,8 @@ interface CardSection {
   previewText: string
   /** Complete text shown while expanded; computed only when read. */
   full: () => string
+  /** Rich body drawn instead of the text, when the tool has one (highlighted code, file, diff, matches). */
+  rich?: { collapsed: ReactNode; expanded: ReactNode }
   tone: 'primary' | 'output' | 'error' | 'empty'
   /** The preview was cut before the text ended. */
   truncated: boolean
@@ -37,6 +43,45 @@ interface CardSection {
 
 function isTruncated(text: string): boolean {
   return text.endsWith('…')
+}
+
+/** Unfolded body height: the box's own clip does the cutting, so the body never folds its middle. */
+const UNFOLDED = Number.MAX_SAFE_INTEGER
+
+type Rich = NonNullable<CardSection['rich']>
+
+function sameRich(node: ReactNode): Rich {
+  return { collapsed: node, expanded: node }
+}
+
+function codeRich(code: string, lang: string, labels: TrajectoryToolLabels): Rich {
+  return sameRich(
+    <CodeBlock code={code} lang={lang} showHeader={false} copyLabel={labels.copy} copiedLabel={labels.copied} />,
+  )
+}
+
+/** Rich INPUT: the program source of a code call, the command of a shell call. */
+function inputRich(cell: TrajectoryCellProps, labels: TrajectoryToolLabels): Rich | undefined {
+  const program = codeProgram(cell)
+  if (program !== undefined) return codeRich(program.source, program.language ?? 'typescript', labels)
+  if (cell.toolBody?.kind === 'bash') return codeRich(cell.toolBody.command, 'bash', labels)
+  return undefined
+}
+
+/** Rich OUTPUT: the file view, the diff or the search matches of the call. */
+function outputRich(cell: TrajectoryCellProps, labels: TrajectoryToolLabels): Rich | undefined {
+  const body = cell.toolBody
+  if (body === undefined || body.kind === 'bash') return undefined
+  if (body.kind === 'read') {
+    return sameRich(<ReadBlock {...body.model} labels={labels.read} maxLines={UNFOLDED} />)
+  }
+  if (body.kind === 'diff') {
+    return sameRich(<DiffBlock {...body.model.card} labels={labels.diff} maxLines={UNFOLDED} />)
+  }
+  return sameRich(<>
+    <SearchBlock {...body.model.card} labels={labels.search} maxLines={UNFOLDED} />
+    {body.model.recovery === undefined ? null : <div>{body.model.recovery}</div>}
+  </>)
 }
 
 /**
@@ -51,6 +96,7 @@ export function cardSections(
   cell: TrajectoryCellProps,
   content: TrajectoryCardContent,
   t: TrajectoryTranslate,
+  labels: TrajectoryToolLabels,
 ): CardSection[] {
   const { toolCallText, resultText, displayText, callsBadge } = content
   if (toolCallText === undefined) {
@@ -71,11 +117,14 @@ export function cardSections(
     }]
   }
   const sections: CardSection[] = []
+  const inputBody = inputRich(cell, labels)
+  const outputBody = outputRich(cell, labels)
   const args = toolCallText.args?.trim()
   if (args !== undefined && args !== '') {
     sections.push({
       key: 'input',
       label: t('column.input'),
+      ...(inputBody === undefined ? {} : { rich: inputBody }),
       preview: (
         <>
           {toolCallText.program && <IconCodeOutlineRegular className={css.programIcon} size={12} />}
@@ -93,6 +142,7 @@ export function cardSections(
     sections.push({
       key: 'output',
       label: t('column.output'),
+      ...(outputBody === undefined ? {} : { rich: outputBody }),
       preview: resultText,
       previewText: resultText,
       full: () => cardFullOutput(cell) || resultText,
@@ -120,6 +170,8 @@ export interface TrajectoryCardProps {
   expanded: boolean
   onToggle: () => void
   t: TrajectoryTranslate
+  /** Labels of the rich tool bodies. */
+  toolLabels: TrajectoryToolLabels
 }
 
 /**
@@ -138,11 +190,12 @@ export function TrajectoryCard({
   expanded: expandedRequest,
   onToggle,
   t,
+  toolLabels,
 }: TrajectoryCardProps) {
   const compact = cardIsCompact(cell)
   // A calls-only box has no body to open.
   const expanded = expandedRequest && !compact
-  const sections = compact ? [] : cardSections(cell, content, t)
+  const sections = compact ? [] : cardSections(cell, content, t, toolLabels)
   const bodyRef = useRef<HTMLDivElement>(null)
   const clipped = useClippedContent(
     bodyRef,
@@ -180,10 +233,14 @@ export function TrajectoryCard({
               {section.label !== undefined && (
                 <span className={css.cardSectionLabel}>{section.label}</span>
               )}
-              <span className={css.cardText}>
-                {section.lead}
-                {expanded ? section.full() : section.preview}
-              </span>
+              {section.rich === undefined
+                ? (
+                  <span className={css.cardText}>
+                    {section.lead}
+                    {expanded ? section.full() : section.preview}
+                  </span>
+                )
+                : <div className={css.cardRich}>{expanded ? section.rich.expanded : section.rich.collapsed}</div>}
             </div>
           ))}
         </div>

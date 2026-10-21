@@ -14,6 +14,9 @@ function translator(dictionary: Record<string, string>): TrajectoryTranslate {
   }
 }
 
+/** Conversation-namespace stand-in for the shared tool-body labels: each key reads as its own text. */
+export const conversationT: (key: string) => string = key => key
+
 /** English trajectory translator for component and pure-layout tests. */
 export const t = translator({ ...commonEn, ...en })
 

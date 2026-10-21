@@ -2167,3 +2167,10 @@
   white-space: pre;
   overflow-x: auto;
 }
+
+/* Rich tool body (highlighted code, file view, diff, search matches): mono, inside the box's column. */
+.cardRich {
+  flex: 1;
+  min-width: 0;
+  font: 400 12px/var(--trajectory-card-line) var(--ds-font-family-code);
+}
