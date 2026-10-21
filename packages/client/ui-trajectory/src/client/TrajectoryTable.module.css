@@ -2187,7 +2187,7 @@
 }
 
 /* A collapsed rich body is bare: no frame, padding or toolbar, so its real lines show in the box. */
-.cardRich[data-collapsed] :is([data-read], [data-diff], [data-search], .md-code-block) {
+.cardRich[data-collapsed] :is([data-read], [data-diff], [data-search], :global(.md-code-block)) {
   margin: 0;
   padding: 0;
   border: 0;
@@ -2197,6 +2197,6 @@
 }
 
 .cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
-.cardRich[data-collapsed] .md-code-block > :first-child {
+.cardRich[data-collapsed] :global(.md-code-block) > :first-child {
   display: none;
 }
