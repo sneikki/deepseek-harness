@@ -299,6 +299,19 @@ function parseExitStatus(text: string): { output: string; exitCode?: number | nu
 }
 
 /**
+ * The command a shell call ran, whether or not the call has a card: a persistent
+ * shell call without a description has no card but still ran this command.
+ * @param block - running or settled Tool block.
+ * @returns the command text, or undefined for a call that is not a shell call.
+ */
+export function shellCommand(block: ToolCallBlock): string | undefined {
+  const parsed = parsedToolCall(block)
+  if (parsed === null) return undefined
+  const call = shellCall(parsed.name, parsed.args)
+  return call?.command
+}
+
+/**
  * Derive terminal props for supported shell and terminal-send calls, including
  * nested PTC dispatch calls. Standard shell results parse their final status
  * marker. Successful background shell launches retain only their command after

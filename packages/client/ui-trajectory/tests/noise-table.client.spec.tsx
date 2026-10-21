@@ -7,7 +7,7 @@ import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation
 import { TrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import type { TrajectoryTurnModel } from '../src/client/layout.ts'
 import { trajectoryRecordId } from '../src/client/trajectory-record.ts'
-import { t } from './locale.client.ts'
+import { t, toolLabels } from './locale.client.ts'
 
 afterEach(cleanup)
 
@@ -34,6 +34,7 @@ function ledger(props: Partial<Parameters<typeof TrajectoryTable>[0]> = {}, layo
   return (
     <TrajectoryTable
       t={t}
+      toolLabels={toolLabels}
       renderSlot={() => null}
       loadImage={loadImage}
       turns={layout}

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { TrajectoryTable } from '../src/client/TrajectoryTable.tsx'
 import type { TrajectoryCellProps } from '../src/client/trajectory-record.ts'
-import { t } from './locale.client.ts'
+import { t, toolLabels } from './locale.client.ts'
 
 afterEach(() => {
   cleanup()
@@ -26,7 +26,7 @@ function Harness({ cell = CELL, getDefault = () => false, setDefault = () => {} 
 }) {
   return <TrajectoryTable
     turns={[{ turn: 1, groups: [{ title: 'Step 1', cells: [cell] }] }]}
-    renderSlot={() => null} loadImage={async () => 'blob:unused'} t={t}
+    renderSlot={() => null} loadImage={async () => 'blob:unused'} t={t} toolLabels={toolLabels}
     stringWrapping={{ label: 'Wrap lines', getDefault, setDefault }}
     collapsedTurns={new Set()} onToggleTurn={() => {}}
     collapsedAssistants={new Set()} onToggleAssistant={() => {}}

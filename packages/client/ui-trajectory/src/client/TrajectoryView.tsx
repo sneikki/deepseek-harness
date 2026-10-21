@@ -5,7 +5,10 @@ import type {
   AssistantBlock, AssistantMessageNode, ConvViewProps, MessageImageLoader,
   ToolCallBlock,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { InjectFace, PropsLocale, PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ToolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
+// Type-only: pulls the ui-tool service's Context merge (ctx.toolCards).
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { JsonTreeProps } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
@@ -22,7 +25,7 @@ import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
-  type TrajectoryTurnModel,
+  type ToolCardReader, type TrajectoryTurnModel,
 } from './layout.ts'
 import {
   trajectoryTimelineFocusIndexes,
@@ -82,6 +85,13 @@ function partialStructureSignature(partial: TrajectorySnapshot['partial']): stri
 export interface TrajectoryViewInjected {
   /** Shared wrapping preference read by expansion handlers. */
   jsonStringWrapping?: Omit<NonNullable<JsonTreeProps['stringWrapping']>, 'label'>
+  /** Conversation-namespace translate, for the rich tool-body labels shared with the chat row. */
+  conversationT: TranslateNS<'conversation'>
+  /** The chat row's rich tool bodies: the reader of one call's body and the labels of those bodies. */
+  toolCards?: {
+    cardBody: ToolCardReader
+    labels: (t: TranslateNS<'conversation'>) => ToolCardLabels
+  } | undefined
   hooks: {
     duration: SnapshotStore<boolean>
     /** Whether thinking rows are shown. */
@@ -151,7 +161,7 @@ function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTree
 export function TrajectoryView({
   sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
   setActualDuration, setShowThinking, openSession, requestProjection,
-  viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping,
+  viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping, conversationT, toolCards,
 }: ConvViewProps
   & Pick<PropsRenderSlots<'conversation.trajectory.images'>, 'renderSlot'>
   & InjectFace<TrajectoryViewInjected>
@@ -344,12 +354,14 @@ export function TrajectoryView({
       requests,
       systemPrompts: inspection.systemPrompts,
       callSchemas,
+      cards: toolCards?.cardBody,
     }, t)
     return { turns, lastIndex: lastCellIndex(turns) }
   }, [
     nodes, eventLocations, partialTurn, partialStep,
-    runningCalls, requests, inspection.systemPrompts, callSchemas, t,
+    runningCalls, requests, inspection.systemPrompts, callSchemas, t, toolCards,
   ])
+  const toolLabels = useMemo(() => toolCards?.labels(conversationT), [toolCards, conversationT])
   const timelinePartialSignature = partialStructureSignature(partial)
   const partialStartTime = partial?.timing?.stepStartTime
   const partialFirstTokenTime = partial?.timing?.firstTokenTime
@@ -363,8 +375,8 @@ export function TrajectoryView({
     },
   [partialStep, partialTurn, timelinePartialSignature, partialStartTime, partialFirstTokenTime])
   const timelineTurns = useMemo(
-    () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t),
-    [finalized, timelinePartial, t],
+    () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t, toolCards?.cardBody),
+    [finalized, timelinePartial, t, toolCards],
   )
   const timelineLifecycles = useMemo(() => trajectorySubagentLifecycles(timelineTurns), [timelineTurns])
   const agentRows = useSessions(
@@ -380,8 +392,8 @@ export function TrajectoryView({
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
   const partialSearchTurns = useMemo(
-    () => appendTrajectoryPartialLayout([], partial, finalized.lastIndex, t),
-    [finalized.lastIndex, partial, t],
+    () => appendTrajectoryPartialLayout([], partial, finalized.lastIndex, t, toolCards?.cardBody),
+    [finalized.lastIndex, partial, t, toolCards],
   )
   const searchLayouts = useMemo(
     () => [finalized.turns, partialSearchTurns] as const,
@@ -592,6 +604,7 @@ export function TrajectoryView({
       <div className={css.ledger}>
         <TrajectoryTable
           t={t}
+          toolLabels={toolLabels}
           stringWrapping={jsonStringWrapping === undefined ? undefined : {
             ...jsonStringWrapping,
             label: t('record.wrapLines'),

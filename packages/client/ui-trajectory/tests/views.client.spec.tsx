@@ -53,7 +53,8 @@ import { createTrajectoryThinkingStore } from '../src/client/thinking-store.ts'
 import { EMPTY_TRAJECTORY_SNAPSHOT } from '../src/client/trajectory-snapshot-builder.ts'
 import type { TrajectorySnapshot } from '../src/client/trajectory-contract.ts'
 import { deriveTrajectoryTimeline } from '../src/client/timeline.ts'
-import { t as tTrajectory, tZh } from './locale.client.ts'
+import { conversationT, t as tTrajectory, tZh } from './locale.client.ts'
+import { toolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 
 // Every session-scope fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']
@@ -255,6 +256,9 @@ function standaloneProps(
     // Image seats the outlet would bake: standalone renders omit the gallery.
     renderSlot: () => null,
     loadImage: () => Promise.reject(new Error('standalone views load no images')),
+    conversationT,
+    // Standalone views draw no rich tool bodies: every box keeps plain text.
+    toolCards: { cardBody: () => undefined, labels: toolCardLabels },
     // The locale seat the outlet would inject for the declared namespace.
     t: tZh,
   }
@@ -308,6 +312,8 @@ async function bench(snapshot = historySnapshot(NODES)) {
   ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
   ctx.provide('configForms', { developerTools: { enabled: createSnapshotStore(true) }, get: () => stubConfigForm().scope } as never)
   ctx.provide('uiWorkspace', { openSession: vi.fn() } as never)
+  // The chat tool row's body service: the views here draw no rich bodies.
+  ctx.provide('toolCards', { cardBody: () => undefined, labels: toolCardLabels } as never)
   await runtime.mount(localePlugin)
   const provide = vi.spyOn(ctx.uiSession, 'provide')
   const feature = await runtime.mount({ inject: [...inject], apply })
@@ -398,6 +404,8 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         return {
           loadOlder: trajectory.loadOlder,
           loadImage: trajectory.loadImage,
+          conversationT: trajectory.conversationT,
+          toolCards: trajectory.toolCards,
           setActualDuration: trajectory.setActualDuration,
           useDuration: bindSnapshotSelector(trajectory.hooks.duration),
           setShowThinking: trajectory.setShowThinking,

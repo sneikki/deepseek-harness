@@ -26,13 +26,15 @@ export function useClippedContent(
       setClipped(false)
       return undefined
     }
+    const boxesOf = () => selector === undefined ? [root] : [...root.querySelectorAll<HTMLElement>(selector)]
     const measure = () => {
-      const boxes = selector === undefined ? [root] : [...root.querySelectorAll<HTMLElement>(selector)]
-      setClipped(boxes.some(box => box.scrollHeight - box.clientHeight > 1))
+      setClipped(boxesOf().some(box => box.scrollHeight - box.clientHeight > 1))
     }
     measure()
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure)
     observer?.observe(root)
+    // The root is a fixed-size box: growth inside it (a highlighter arriving, a wrap toggle) resizes the boxes, not the root.
+    for (const box of boxesOf()) observer?.observe(box)
     const fonts = 'fonts' in root.ownerDocument ? root.ownerDocument.fonts : undefined
     fonts?.addEventListener('loadingdone', measure)
     return () => {

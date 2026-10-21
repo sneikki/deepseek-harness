@@ -23,6 +23,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { JsonTreeLabels, JsonTreeProps, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ToolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { structuredPatch } from 'diff'
 import type {
   AssistantRequestConfig, ConversationPromptSnapshot, MessageImageLoader,
@@ -426,6 +427,8 @@ function AssistantTimingPanel({
 
 /** Props for the trajectory ledger. */
 export interface TrajectoryTableProps {
+  /** Labels of the rich tool bodies (code, file, diff, search), from the chat row's builders. */
+  toolLabels?: ToolCardLabels | undefined
   /** Wrapping control shared by all JSON inspectors. */
   stringWrapping?: JsonTreeProps['stringWrapping']
   /** Trajectory locale seat. */
@@ -2273,6 +2276,7 @@ function OverviewSection({
  */
 export function TrajectoryTable({
   t,
+  toolLabels,
   stringWrapping,
   renderSlot,
   loadImage,
@@ -3135,6 +3139,7 @@ export function TrajectoryTable({
                               >
                                 <TrajectoryCard
                                   cell={record.cell}
+                                  toolLabels={toolLabels}
                                   content={{
                                     displayText: subagentNotice ?? displayText,
                                     resultText,

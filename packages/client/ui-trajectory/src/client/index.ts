@@ -7,6 +7,8 @@ import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+// Type-only: pulls the tool plugin's Context merge (ctx.toolCards).
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the 'conversation.view' SlotMap row (declared by the slot's
@@ -108,6 +110,7 @@ export function apply(ctx: Context): void {
     label: () => t('view.trajectory'),
     children: { 'conversation.trajectory.images': { kind: 'single', scope: 'session' } },
     inject: (sessionId: SessionId): TrajectoryViewInjected => {
+      const tools = ctx.get('toolCards')
       const session = ctx.sessions.binding(sessionId)?.session
       if (session === undefined) {
         throw new Error(`ui-trajectory: session "${sessionId}" is unavailable`)
@@ -115,6 +118,15 @@ export function apply(ctx: Context): void {
       const trajectory = ctx.uiConversation.binding(sessionId).target('trajectory')
       return {
         hooks: { duration, thinking },
+        conversationT: ctx.locale.bind('conversation'),
+        // Optional: without the tool plugin the view draws plain boxes, with no rich bodies or labels.
+        toolCards: tools === undefined ? undefined : {
+          // The session's workspace root is read per call, so a rename lands on the next render.
+          cardBody: (toolName, block) => tools.cardBody(
+            toolName, block, ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd,
+          ),
+          labels: t => tools.labels(t),
+        },
         jsonStringWrapping: {
           getDefault: () => stringWrapping.getSnapshot(),
           setDefault: (value) => { stringWrapping.set(value) },

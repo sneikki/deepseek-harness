@@ -4,9 +4,7 @@ import {
   IconSparkleRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ToolCallOwnerProps, ToolTreeProps } from '../../contract/slots.ts'
-import { readCardModel } from '../models/read-card-model.ts'
-import { diffCardModel } from '../models/diff-card-model.ts'
-import { searchCardModel } from '../models/search-card-model.ts'
+import { toolBodyModels } from '../models/tool-body-model.ts'
 import { terminalCardModel, terminalFailed } from '../models/terminal-card-model.ts'
 import { webCardModel } from '../models/web-card-model.ts'
 import { toolRowModel, type ToolRowVariant } from '../models/tool-call-model.ts'
@@ -36,9 +34,7 @@ export function GenericToolCard({ toolName, block, cwd, home, openFile, inspect,
     ? null
     : localizeAutoReviewDenial(model.autoReviewDenial, t)
   const terminal = terminalCardModel(block, cwd)
-  const read = readCardModel(block, cwd, home)
-  const diff = diffCardModel(block)
-  const search = searchCardModel(block)
+  const { read, diff, search } = toolBodyModels(block, cwd, home)
   const web = webCardModel(block)
   // A failing exit status is the terminal card's own error signal (the call
   // itself settles isError:false), surfaced through the row's error summary.

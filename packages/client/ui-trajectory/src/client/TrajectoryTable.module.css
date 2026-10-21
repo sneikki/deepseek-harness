@@ -2167,3 +2167,56 @@
   white-space: pre;
   overflow-x: auto;
 }
+
+/* Rich tool body (highlighted code, file view, diff, search matches): mono, inside the box's column. */
+.cardRich {
+  flex: 1;
+  min-width: 0;
+  font: 400 12px/var(--trajectory-card-line) var(--ds-font-family-code);
+}
+
+/* The subject the header names: the file path or the search pattern. */
+.cardSubject {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--amv-muted);
+  font: 400 12px/16px var(--ds-font-family-code);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A collapsed rich body is bare: no frame, padding or toolbar, so its real lines show in the box. */
+.cardRich[data-collapsed] :is([data-read], [data-diff], [data-search], :global(.md-code-block)) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.cardRich[data-clamp='line'] {
+  max-height: var(--trajectory-card-line);
+  overflow: hidden;
+}
+
+.cardText[data-clamp='line'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardRich[data-collapsed] :global(.md-code-block) pre {
+  margin: 0;
+  padding: 0;
+}
+
+.cardRich[data-collapsed] [data-diff] [data-row='path'] {
+  display: none;
+}
+
+.cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
+.cardRich[data-collapsed] :global(.md-code-block) > :first-child {
+  display: none;
+}

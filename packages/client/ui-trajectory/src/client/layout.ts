@@ -16,6 +16,7 @@ import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-att
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,
+  TrajectoryToolBody,
 } from './trajectory-record.ts'
 import type { TrajectoryPartialAssistant, TrajectorySnapshot } from './trajectory-contract.ts'
 import { displayToolName, formatElapsedSeconds } from './trajectory-record.ts'
@@ -46,7 +47,12 @@ export interface TrajectoryLayoutInput {
   runningCalls: TrajectorySnapshot['runningCalls']
   requests?: readonly RequestView[]
   callSchemas?: RequestInspectionSnapshot['callSchemas']
+  /** Rich-body reader of the tool calls; without it every tool box keeps plain text. */
+  cards?: ToolCardReader | undefined
 }
+
+/** The rich body of one tool call, or undefined for the plain box; bound to the session's workspace. */
+export type ToolCardReader = (toolName: string, block: ToolCallBlock) => TrajectoryToolBody | undefined
 
 interface UsageLike {
   inputTokens?: number
@@ -180,7 +186,7 @@ export function deriveTrajectoryLayout(
   t: TrajectoryTranslate,
 ): readonly TrajectoryTurnModel[] {
   const {
-    nodes, eventLocations, partial, runningCalls, requests = [], callSchemas,
+    nodes, eventLocations, partial, runningCalls, requests = [], callSchemas, cards,
   } = input
   const resultByCall = indexResults(nodes)
   const callById = new Map<string, ToolCallBlock>(resultByCall)
@@ -440,7 +446,7 @@ export function deriveTrajectoryLayout(
     }
     if (node.kind === 'assistant') {
       const laidList = withSubCalls(
-        expandAssistant(node, index + 1, prevAbsTime, resultByCall, callStartById, callById, t),
+        expandAssistant(node, index + 1, prevAbsTime, resultByCall, callStartById, callById, cards, t),
         t,
       )
       if (node.step > 0) pushStep(node.turn, node.step, laidList)
@@ -518,6 +524,7 @@ export function deriveTrajectoryLayout(
       resultByCall,
       callStartById,
       callById,
+      cards,
       t,
       { streaming: true, timing: partial.timing },
     ), t)
@@ -588,12 +595,14 @@ export function appendTrajectoryPartialLayout(
   partial: TrajectorySnapshot['partial'],
   lastIndex: number,
   t: TrajectoryTranslate,
+  cards?: ToolCardReader | undefined,
 ): readonly TrajectoryTurnModel[] {
   if (partial === null) return turns
   const partialTurn = deriveTrajectoryLayout({
     nodes: [],
     partial,
     runningCalls: [],
+    cards,
   }, t).at(0)
   if (partialTurn === undefined) return turns
   const streamed: TrajectoryTurnModel = {
@@ -732,6 +741,7 @@ function expandAssistant(
   results: Map<string, ToolResultNode>,
   callStarts: ReadonlyMap<string, number>,
   calls: ReadonlyMap<string, ToolCallBlock>,
+  cards: ToolCardReader | undefined,
   t: TrajectoryTranslate,
   opts?: { streaming?: boolean; timing?: TrajectoryPartialAssistant['timing'] },
 ): LaidCell[] {
@@ -803,6 +813,8 @@ function expandAssistant(
     // Text and reasoning belong to the one Assistant record emitted above.
     if (block.kind !== 'tool-call') continue
     const result = results.get(block.callId)
+    const callBlock = result ?? calls.get(block.callId)
+    const toolBody = cards === undefined || callBlock === undefined ? undefined : cards(block.name, callBlock)
     const toolDuration = streaming || result === undefined
       ? null
       : durationSeconds(result.time, result.callTime)
@@ -819,6 +831,7 @@ function expandAssistant(
         ...summarizeCall(block.name, block.argsRaw),
         inputDetail: block.argsRaw,
         callId: block.callId,
+        ...toolBody === undefined ? {} : { toolBody },
         ...(result !== undefined
           ? {
             outputDetail: detailResult(result, t),
