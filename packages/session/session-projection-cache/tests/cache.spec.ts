@@ -738,6 +738,110 @@ describe('SessionProjectionCache cold-read seeding', () => {
     })
   })
 
+  it('persists a migrated historical fold and serves it only for the same stored revision and stateVersion', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
+    roots.push(root)
+    const id = SessionId('migrated')
+    const restore = (marks: string[][]) => {
+      const session = Session.fromRestore(id, structuredClone(storedLog(marks)), headerOf(id), SessionLogOffset(0), 'detached')
+      return { session, events: session.snapshotEvents(SessionLogOffset(0), session.seq) }
+    }
+    const stored: SessionHeader = { ...headerOf(id), version: 0 as SessionHeader['version'] }
+    const source = { header: stored, revision: 'rev-1' }
+    const first = await harness({ root })
+    const written = whenWritten(first.ctx, id)
+    // First open: the in-memory migrated Session folds the log and persists the result.
+    const { session, events } = restore([['folded']])
+    expect(first.cache.cachedMigrated(source)).toBeUndefined()
+    first.cache.hydratePrepared(session, events, source)
+    await written
+    expect((await storedRecord(root, id))?.identity.sourceRevision).toBe('rev-1')
+
+    // Header-only faces never serve it: no revision proof.
+    expect(first.cache.cachedSnapshot(stored)).toBeUndefined()
+    expect(first.cache.cachedSnapshot(headerOf(id))).toBeUndefined()
+
+    // After a restart the values come from the record, with no log and no migration.
+    await first.ctx.fiber.dispose()
+    const second = await harness({ root })
+    expect(second.cache.cachedMigrated(source)).toEqual({
+      asOfSeq: 3,
+      values: { 'cache-test/marks': { marks: ['folded'] } },
+    })
+    // The log changed on disk (new revision): not served.
+    expect(second.cache.cachedMigrated({ header: stored, revision: 'rev-2' })).toBeUndefined()
+    // A different lifecycle under the same id: not served.
+    expect(second.cache.cachedMigrated({ header: { ...stored, createdAt: 5 }, revision: 'rev-1' })).toBeUndefined()
+
+    // A second hydrate seeds from the record: the mark is read from the row, not the log.
+    const other = restore([['other']])
+    expect(second.cache.hydratePrepared(other.session, other.events, source).values)
+      .toEqual({ 'cache-test/marks': { marks: ['folded'] } })
+
+    // A projection stateVersion bump discards the row instead of serving it.
+    await second.ctx.fiber.dispose()
+    const bumped = await harness({ root, stateVersion: 2 })
+    expect(bumped.cache.cachedMigrated(source)).toBeUndefined()
+  })
+
+  describe('migrated write-back policy', () => {
+    const migratedId = SessionId('migrated-policy')
+    const stored: SessionHeader = { ...headerOf(migratedId), version: 0 as SessionHeader['version'] }
+    const source = { header: stored, revision: 'rev-1' }
+    const restore = (marks: string[][]) => {
+      const session = Session.fromRestore(migratedId, structuredClone(storedLog(marks)), headerOf(migratedId), SessionLogOffset(0), 'detached')
+      return { session, events: session.snapshotEvents(SessionLogOffset(0), session.seq) }
+    }
+    const migratedIdentity = (inheritedEventCount: number): CheckpointRecord['identity'] => ({
+      formatVersion: 0, createdAt: 0, isSeeded: false, inheritedEventCount: SessionLogOffset(inheritedEventCount), sourceRevision: 'rev-1',
+    })
+    const cachedRows = { 'cache-test/marks': { ver: 1, seq: SessionSeq(1), val: { marks: ['cached'] } } }
+
+    it('does not seed from a record folded under another inherited cut', async () => {
+      const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
+      roots.push(root)
+      await seedRecord(root, migratedId, cachedRows, migratedIdentity(5))
+      const { cache } = await harness({ root })
+      const { session, events } = restore([['fresh']])
+      expect(cache.hydratePrepared(session, events, source).values).toEqual({ 'cache-test/marks': { marks: ['fresh'] } })
+      const control = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
+      roots.push(control)
+      await seedRecord(control, migratedId, cachedRows, migratedIdentity(0))
+      const matching = restore([['fresh']])
+      expect((await harness({ root: control })).cache.hydratePrepared(matching.session, matching.events, source).values)
+        .toEqual({ 'cache-test/marks': { marks: ['cached'] } })
+    })
+
+    it('never overwrites a current-format checkpoint', async () => {
+      const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
+      roots.push(root)
+      await seedRecord(root, migratedId, cachedRows)
+      const { cache } = await harness({ root })
+      const put = vi.spyOn(cache as unknown as { put: () => Promise<void> }, 'put')
+      const { session, events } = restore([['fresh']])
+      cache.hydratePrepared(session, events, source)
+      expect(put).not.toHaveBeenCalled()
+      expect((await storedRecord(root, migratedId))?.identity.sourceRevision).toBeUndefined()
+    })
+
+    it('stays fail-soft when the checkpoint or the durable write fails', async () => {
+      const { ctx, cache } = await harness()
+      const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+      const { session, events } = restore([['fresh']])
+      const checkpoint = vi.spyOn(ctx.sessionProjections, 'checkpoint').mockImplementationOnce(() => {
+        throw new Error('checkpoint boom')
+      })
+      expect(cache.hydratePrepared(session, events, source).values).toEqual({ 'cache-test/marks': { marks: ['fresh'] } })
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('checkpoint boom'))
+      checkpoint.mockRestore()
+      vi.spyOn(cache as unknown as { put: () => Promise<void> }, 'put').mockRejectedValue(new Error('disk boom'))
+      cache.hydratePrepared(session, events, source)
+      await vi.waitFor(() => {
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('disk boom'))
+      })
+    })
+  })
+
   it('coldSnapshot traverses the full log but applies only the events after each cached watermark', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
     roots.push(root)

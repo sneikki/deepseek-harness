@@ -2283,9 +2283,15 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'a title-only block at the stored title row\'s watermark, or `undefined` when the record is current, newer, unrelated, missing, or incompatible with the title unit.',
       },
       {
-        signature: 'hydratePrepared( session: Session, events: readonly SessionEvent[], ): ProjectionSnapshot',
-        description: 'Hydrate projection cells for an already-prepared Session without another persistence read. The cache seeds matching rows; the supplied exact log advances every unit to the observation cut. No checkpoint is written because the logical observation may contain recovery events not yet durable.',
-        parameters: [{ name: 'session', description: 'exact unpublished Session retained by persistence.' }, { name: 'events', description: 'exact logical event prefix represented by the observation.' }],
+        signature: 'cachedMigrated( source: { readonly header: SessionHeader; readonly revision: string }, keys?: readonly Extract<keyof SessionProjectionMap, string>[], ): ProjectionSnapshot | undefined',
+        description: 'The zero-I/O read for a session whose stored log is still a historical format: the values folded from its in-memory migrated view, served only while the stored log revision is the one they were folded from. A `migration-required` session otherwise has hints only; this lets a second open skip the migration entirely.',
+        parameters: [{ name: 'source', description: 'the stored header and `stat` revision (no log read).' }, { name: 'keys', description: 'optional projection keys required by the caller\'s audience.' }],
+        returns: 'the viewed block, or `undefined` when no record proves this exact log.',
+      },
+      {
+        signature: 'hydratePrepared( session: Session, events: readonly SessionEvent[], source?: { readonly header: SessionHeader; readonly revision: string }, ): ProjectionSnapshot',
+        description: 'Hydrate projection cells for an already-prepared Session without another persistence read. The cache seeds matching rows; the supplied exact log advances every unit to the observation cut. No checkpoint is written for a current Session because the logical observation may contain recovery events not yet durable.\n\nWith `source` the Session is the in-memory migration of a stored historical log (never published), so nothing durable can be ahead of it: rows bound to the same stored revision seed the fold, and the folded checkpoint is persisted (fail-soft) for the next open.',
+        parameters: [{ name: 'session', description: 'exact unpublished Session retained by persistence.' }, { name: 'events', description: 'exact logical event prefix represented by the observation.' }, { name: 'source', description: 'the historical stored log the Session was migrated from.' }],
         returns: 'all projection values at the event cut.',
       },
       {

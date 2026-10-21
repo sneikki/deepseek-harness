@@ -1,6 +1,6 @@
 /** Projection reads distinguish ordinary cold history from history that still needs migration. */
 
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -261,6 +261,38 @@ describe('Session projection discovery', () => {
     expect(fixture.ctx.sessions.get(parent.header.id)).toBeUndefined()
     expect(await readFile(parent.path, 'utf8')).toBe(parent.bytes)
     expect(await readdir(dirname(parent.path))).toEqual(['session.v3.jsonl'])
+  })
+
+  it('serves a persisted migrated fold on later reads without opening the log, until the stored log changes', async () => {
+    const fixture = await harness()
+    const parent = await stored(fixture, SessionId('migrated-cache'), {}, 3)
+    const cacheRoot = join(fixture.root, 'cache')
+    await fixture.ctx.plugin(Storage)
+    await fixture.ctx.plugin(StorageJson, { root: cacheRoot })
+    await fixture.ctx.plugin(StorageDomain, { backend: 'json' })
+    await fixture.ctx.plugin(SessionProjectionCache, { writeEveryEvents: 100, writeIntervalMs: 60_000 })
+    const signal = new AbortController().signal
+    const read = () => fixture.controller.projections({ sessionId: parent.header.id }, signal)
+
+    // First open: hints only, then the full migrated open persists its fold.
+    await expect(read()).resolves.toEqual({ kind: 'migration-required', values: {} })
+    const observation = await fixture.ctx.sessionQuery.observeSession(parent.header.id)
+    observation[Symbol.dispose]()
+    await vi.waitFor(async () => {
+      expect(await read()).toMatchObject({ kind: 'migration-required', values: { subagentCatalog: [], title: null } })
+    })
+
+    // Later reads need neither the log body nor a migration.
+    const open = vi.spyOn(fixture.ctx.sessionPersistence, 'open').mockRejectedValue(new Error('unexpected body read'))
+    const observe = vi.spyOn(fixture.ctx.sessionQuery, 'observeSession')
+    await expect(read()).resolves.toMatchObject({ kind: 'migration-required', values: { subagentCatalog: [], title: null } })
+    expect(open).not.toHaveBeenCalled()
+    expect(observe).not.toHaveBeenCalled()
+
+    // A changed stored log invalidates the record.
+    await utimes(parent.path, new Date(), new Date(Date.now() + 60_000))
+    await expect(read()).resolves.toEqual({ kind: 'migration-required', values: {} })
+    expect(await readFile(parent.path, 'utf8')).toBe(parent.bytes)
   })
 
   it('reads sequenced projections after write publication replaces the disk format status', async () => {

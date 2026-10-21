@@ -1,5 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
-import { SessionId, type SessionHeader } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION, SessionId, type SessionHeader } from '@deepseek-ai/dsh-session'
+import { MIGRATED_CACHE_VERSION } from '@deepseek-ai/dsh-session-format-catalog'
 import { SessionFormatUnsupportedError, SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence'
 import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -88,6 +89,13 @@ describe.each(['none', 'zstd'] as const)('historical catalog publication (%s)', 
         .rejects.toMatchObject({ code: 'ENOENT' })
     },
   )
+
+  it('binds the historical revision to the migration output fingerprint', async () => {
+    const f = await fixture()
+    const revision = (await f.ctx.sessionPersistence.stat(f.parent))!.revision
+    expect(revision.endsWith(`:v${SESSION_FORMAT_VERSION}.${MIGRATED_CACHE_VERSION}`)).toBe(true)
+    expect((await f.ctx.sessionPersistence.list()).find(row => row.header.id === f.parent)?.revision).toBe(revision)
+  })
 
   it('invalidates lightweight revisions on child membership and contents while retaining stable tokens', async () => {
     const f = await fixture()

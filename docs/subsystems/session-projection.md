@@ -159,15 +159,34 @@ cachedSnapshot( meta: SessionHeader, keys?: readonly Extract<keyof SessionProjec
 cachedPredecessorTitle(meta: SessionHeader): ProjectionSnapshot | undefined
 
 /**
+ * The zero-I/O read for a session whose stored log is still a historical
+ * format: the values folded from its in-memory migrated view, served only
+ * while the stored log revision is the one they were folded from. A
+ * `migration-required` session otherwise has hints only; this lets a second
+ * open skip the migration entirely.
+ * @param source - the stored header and `stat` revision (no log read).
+ * @param keys - optional projection keys required by the caller's audience.
+ * @returns the viewed block, or `undefined` when no record proves this exact log.
+ */
+cachedMigrated( source: { readonly header: SessionHeader; readonly revision: string }, keys?: readonly Extract<keyof SessionProjectionMap, string>[], ): ProjectionSnapshot | undefined
+
+/**
  * Hydrate projection cells for an already-prepared Session without another
  * persistence read. The cache seeds matching rows; the supplied exact log
  * advances every unit to the observation cut. No checkpoint is written
- * because the logical observation may contain recovery events not yet durable.
+ * for a current Session because the logical observation may contain
+ * recovery events not yet durable.
+ *
+ * With `source` the Session is the in-memory migration of a stored
+ * historical log (never published), so nothing durable can be ahead of it:
+ * rows bound to the same stored revision seed the fold, and the folded
+ * checkpoint is persisted (fail-soft) for the next open.
  * @param session - exact unpublished Session retained by persistence.
  * @param events - exact logical event prefix represented by the observation.
+ * @param source - the historical stored log the Session was migrated from.
  * @returns all projection values at the event cut.
  */
-hydratePrepared( session: Session, events: readonly SessionEvent[], ): ProjectionSnapshot
+hydratePrepared( session: Session, events: readonly SessionEvent[], source?: { readonly header: SessionHeader; readonly revision: string }, ): ProjectionSnapshot
 
 /**
  * Durably checkpoint one live session NOW (all mandatory points call

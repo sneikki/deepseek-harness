@@ -60,6 +60,8 @@ interface PreparedEntry {
   readonly revision: SessionPersistenceRevision
   /** Unpublished Session restored from the balanced log; never entered into the store. */
   readonly session: Session
+  /** Stored historical header when the Session is an in-memory migration; its projections persist keyed by `revision`. */
+  readonly migratedFrom?: SessionHeader
   /** Immutable balanced log (stored events plus in-memory interrupted-turn closers). */
   readonly events: readonly SessionEvent[]
   /** Active observation leases; a pinned entry (`refs > 0`) is never evicted. */
@@ -142,6 +144,7 @@ export class SessionObservationReader {
           persistenceIdentity: persistence.identity,
           revision: snapshot.revision,
           session,
+          ...snapshot.formatStatus === 'migration-required' ? { migratedFrom: snapshot.header } : {},
           events: Object.freeze(seed),
           refs: 0,
         }
@@ -321,7 +324,11 @@ export class SessionObservationReader {
     const cache = this.ctx.get('sessionProjectionCache')
     return cache === undefined
       ? registry.hydrate(entry.session, {}, entry.events, SessionLogOffset(0))
-      : cache.hydratePrepared(entry.session, entry.events)
+      : cache.hydratePrepared(
+        entry.session,
+        entry.events,
+        entry.migratedFrom === undefined ? undefined : { header: entry.migratedFrom, revision: entry.revision },
+      )
   }
 }
 
