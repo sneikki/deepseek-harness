@@ -2212,6 +2212,10 @@
   padding: 0;
 }
 
+.cardRich[data-collapsed] [data-diff] [data-row='path'] {
+  display: none;
+}
+
 .cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
 .cardRich[data-collapsed] :global(.md-code-block) > :first-child {
   display: none;
