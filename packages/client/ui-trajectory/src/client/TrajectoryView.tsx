@@ -41,7 +41,6 @@ const EMPTY_TURN_IDS: ReadonlySet<number> = new Set()
 const EMPTY_RECORD_IDS: ReadonlySet<string> = new Set()
 const SEARCH_INDEX_THROTTLE_MS = 3_000
 const HISTORY_PAGE_NODES = 50
-const MAX_IDLE_LOADS = 5
 
 function containsCall(calls: readonly ToolCallBlock[], callId: string): boolean {
   for (const call of calls) {
@@ -99,6 +98,8 @@ export interface TrajectoryViewInjected {
     thinking: SnapshotStore<boolean>
   }
   loadOlder: () => Promise<boolean>
+  /** Page the whole older history in and publish it once. */
+  loadAll: () => Promise<void>
   loadImage: MessageImageLoader
   setActualDuration: (actualDuration: boolean) => void
   setShowThinking: (showThinking: boolean) => void
@@ -160,7 +161,7 @@ function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTree
 }
 
 export function TrajectoryView({
-  sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadImage,
+  sessionId, useSession, useSessions, useTrajectory, useDuration, useThinking, loadOlder, loadAll, loadImage,
   setActualDuration, setShowThinking, openSession, requestProjection,
   viewRequest, completeViewRequest, renderSlot, t, jsonStringWrapping, conversationT, toolCards,
 }: ConvViewProps
@@ -189,7 +190,7 @@ export function TrajectoryView({
   const completeInspection = useTrajectory(snapshot => snapshot)
   const latestNodeSeq = completeInspection.eventNodes.at(-1)?.seq
   const [historyTailSeq, setHistoryTailSeq] = useState(latestNodeSeq)
-  const [historyNodeLimit, setHistoryNodeLimit] = useState(HISTORY_PAGE_NODES)
+  const [historyNodeLimit, setHistoryNodeLimit] = useState(Infinity)
   const fixedTailSeq = historyTailSeq ?? latestNodeSeq
   const historyTailIndex = fixedTailSeq === undefined
     ? -1
@@ -217,26 +218,18 @@ export function TrajectoryView({
   const historyLoading = useSession(snapshot => snapshot.openState === 'loading')
   const olderHistoryLoading = useSession(snapshot => snapshot.loadingOlder)
   const sessionHasOlderHistory = useSession(snapshot => snapshot.hasMore)
-  // Trajectory shows the whole session: lift the resident window, then pull older pages until
-  // none remain. A finished page bumps `autoTick`, which re-runs the effect; `busy` blocks overlap.
-  useEffect(() => { setHistoryNodeLimit(Infinity) }, [sessionId])
-  const [autoTick, setAutoTick] = useState(0)
-  const autoLoad = useRef({ sessionId, busy: false, stopped: false, idle: 0 })
-  if (autoLoad.current.sessionId !== sessionId) autoLoad.current = { sessionId, busy: false, stopped: false, idle: 0 }
+  // Trajectory shows the whole session: one loadAll pulls every older page and publishes once, so
+  // the model derives once. Completion is the session's own hasMore flag; a failure surfaces as
+  // olderError with a retry. The promise result is ignored, so nothing runs after unmount.
+  const olderError = useSession(snapshot => snapshot.olderError)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const startedAttempt = useRef<string | null>(null)
   useEffect(() => {
-    const state = autoLoad.current
-    if (!sessionHasOlderHistory || olderHistoryLoading || state.busy || state.stopped) return
-    state.busy = true
-    loadOlder()
-      .then((changed) => {
-        // The trajectory snapshot lands on the next notifier flush, so one unchanged answer is
-        // not the end; a run of them is (a no-op load would otherwise spin).
-        state.idle = changed ? 0 : state.idle + 1
-        if (state.idle >= MAX_IDLE_LOADS) state.stopped = true
-      })
-      .catch(() => { state.stopped = true })
-      .finally(() => { state.busy = false; setAutoTick(tick => tick + 1) })
-  }, [sessionId, sessionHasOlderHistory, olderHistoryLoading, loadOlder, autoTick])
+    const key = `${sessionId}:${String(loadAttempt)}`
+    if (!sessionHasOlderHistory || olderHistoryLoading || startedAttempt.current === key) return
+    startedAttempt.current = key
+    void loadAll()
+  }, [sessionId, loadAttempt, sessionHasOlderHistory, olderHistoryLoading, loadAll])
   const hasResidentOlderHistory = historyStartIndex > 0
   const hasOlderHistory = hasResidentOlderHistory
     || sessionHasOlderHistory
@@ -622,6 +615,14 @@ export function TrajectoryView({
         agentRows={agentRows}
         onOpenSession={openSession}
       />
+      {olderError !== undefined && !olderHistoryLoading && (
+        <div className={css.historyError} role="alert">
+          <span>{t('history.loadAllFailed', { message: olderError })}</span>
+          <button type="button" onClick={() => { setLoadAttempt(attempt => attempt + 1) }}>
+            {t('history.retry')}
+          </button>
+        </div>
+      )}
       <div className={css.ledger}>
         <TrajectoryTable
           t={t}

@@ -152,7 +152,7 @@ function standaloneHistory(
   snapshot: TrajectorySnapshot,
 ): Pick<
   ComponentProps<typeof TrajectoryView>,
-  'useSession' | 'useTrajectory' | 'loadOlder'
+  'useSession' | 'useTrajectory' | 'loadOlder' | 'loadAll'
 > {
   const session = createSnapshotStore(sessionSnapshot(snapshot.eventNodes))
   const trajectory = createSnapshotStore(snapshot)
@@ -160,6 +160,7 @@ function standaloneHistory(
     useSession: bindSnapshotSelector(session),
     useTrajectory: bindSnapshotSelector(trajectory),
     loadOlder: () => Promise.resolve(false),
+    loadAll: () => Promise.resolve(),
   }
 }
 
@@ -210,7 +211,7 @@ const useProjection: UseProjection = emptyProjection
 
 type StandaloneBaseProps = Omit<
   ComponentProps<typeof TrajectoryView>,
-  'useSession' | 'useTrajectory' | 'useDuration' | 'loadOlder' | 'setActualDuration'
+  'useSession' | 'useTrajectory' | 'useDuration' | 'loadOlder' | 'loadAll' | 'setActualDuration'
   | 'useThinking' | 'setShowThinking'
 >
 
@@ -279,7 +280,7 @@ async function bench(snapshot = historySnapshot(NODES)) {
   await runtime.sessions.add({
     id: SID,
     snapshot: { blank: false },
-    session: { loadOlder },
+    session: { loadOlder, loadThrough: () => Promise.resolve() },
   })
   const reference = runtime.sessions.retain(SID)
   await reference.ready
@@ -403,6 +404,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         const trajectory = injected as TrajectoryViewInjected
         return {
           loadOlder: trajectory.loadOlder,
+          loadAll: trajectory.loadAll,
           loadImage: trajectory.loadImage,
           conversationT: trajectory.conversationT,
           toolCards: trajectory.toolCards,
@@ -1461,70 +1463,93 @@ describe('TrajectoryView state', () => {
   })
 
   describe('auto-loading older history', () => {
-    function setup(pages: number, behave?: (call: number) => void) {
-      const session = createSnapshotStore({ ...sessionSnapshot([]), hasMore: pages > 0 })
-      let remaining = pages
-      let calls = 0
-      let active = 0
-      let maxActive = 0
-      const loadOlder = vi.fn(async () => {
-        calls += 1
-        active += 1
-        maxActive = Math.max(maxActive, active)
-        try {
-          await new Promise(resolve => setTimeout(resolve, 5))
-          behave?.(calls)
-          remaining -= 1
-          session.set({ ...session.getSnapshot(), hasMore: remaining > 0 })
-          return true
-        } finally { active -= 1 }
-      })
+    function setup(
+      hasMore: boolean,
+      loadAll: () => Promise<void>,
+    ) {
+      const session = createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore })
+      const loadAllMock = vi.fn(loadAll)
       const view = render(
         <TrajectoryView
           {...standaloneProps([])}
           {...standaloneHistory(historySnapshot([]))}
           {...standaloneDuration()}
           useSession={bindSnapshotSelector(session)}
-          loadOlder={loadOlder}
+          loadAll={loadAllMock}
         />,
       )
-      return { loadOlder, view, maxActive: () => maxActive }
+      return { session, loadAll: loadAllMock, view }
     }
 
-    it('pages until no older history remains, one load at a time', async () => {
-      const { loadOlder, maxActive } = setup(4)
-      await waitFor(() => { expect(loadOlder).toHaveBeenCalledTimes(4) })
+    it('loads everything once and does not repeat after hasMore clears', async () => {
+      const harness = setup(true, async () => {
+        harness.session.set({ ...harness.session.getSnapshot(), hasMore: false })
+      })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
       await act(async () => { await Promise.resolve() })
-      expect(loadOlder).toHaveBeenCalledTimes(4)
-      expect(maxActive()).toBe(1)
-    })
-
-    it('stops on unmount', async () => {
-      const { loadOlder, view } = setup(50)
-      await waitFor(() => { expect(loadOlder).toHaveBeenCalled() })
-      view.unmount()
-      const calls = loadOlder.mock.calls.length
-      await new Promise(resolve => setTimeout(resolve, 20))
-      expect(loadOlder.mock.calls.length).toBeLessThanOrEqual(calls + 1)
-      expect(loadOlder.mock.calls.length).toBeLessThan(50)
-
-    })
-
-    it('stops on error', async () => {
-      const { loadOlder } = setup(10, (call) => { if (call === 2) throw new Error('boom') })
-      await waitFor(() => { expect(loadOlder).toHaveBeenCalledTimes(2) })
-      await new Promise(resolve => setTimeout(resolve, 20))
-      expect(loadOlder).toHaveBeenCalledTimes(2)
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
     })
 
     it('makes no call when nothing older remains', async () => {
-      const { loadOlder } = setup(0)
-      await new Promise(resolve => setTimeout(resolve, 20))
-      expect(loadOlder).not.toHaveBeenCalled()
+      const { loadAll } = setup(false, () => Promise.resolve())
+      await act(async () => { await Promise.resolve() })
+      expect(loadAll).not.toHaveBeenCalled()
+    })
+
+    it('waits for an in-flight older load, then loads once, never concurrently', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      // The first call ran at mount; a user pull now marks loading: no second call.
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), loadingOlder: true }) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), loadingOlder: false }) })
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows a failure and retries on demand', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), olderError: 'boom' }) })
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain('boom')
+      fireEvent.click(within(alert).getByRole('button'))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+    })
+
+    it('does not start again after a session switch with a pending load', async () => {
+      let release: () => void = () => {}
+      const harness = setup(true, () => new Promise<void>((resolve) => { release = resolve }))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      harness.view.rerender(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          sessionId={'other-session' as SessionId}
+          useSession={bindSnapshotSelector(createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore: true }))}
+          loadAll={harness.loadAll}
+        />,
+      )
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+      release()
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(2)
+    })
+
+    it('makes no call and no state update after unmount', async () => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+      let release: () => void = () => {}
+      const harness = setup(true, () => new Promise<void>((resolve) => { release = resolve }))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      harness.view.unmount()
+      release()
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
+      expect(errors).not.toHaveBeenCalled()
+      errors.mockRestore()
     })
   })
 
-  it('keeps a replacement window bounded when its predecessor tail is absent', () => {
+  it('shows the replacement window whole when its predecessor tail is absent', () => {
     const nodes = (start: number): LegacyConversationSlice['nodes'] => Array.from(
       { length: 100 },
       (_, index) => ({

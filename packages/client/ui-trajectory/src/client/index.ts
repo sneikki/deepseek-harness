@@ -6,7 +6,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq, type SessionId } from '@deepseek-ai/dsh-session/types'
 // Type-only: pulls the tool plugin's Context merge (ctx.toolCards).
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
@@ -131,6 +131,7 @@ export function apply(ctx: Context): void {
           getDefault: () => stringWrapping.getSnapshot(),
           setDefault: (value) => { stringWrapping.set(value) },
         },
+        loadAll: () => session.loadThrough(SessionSeq(0)),
         loadOlder: async () => {
           const before = trajectory.getSnapshot()
           await session.loadOlder()

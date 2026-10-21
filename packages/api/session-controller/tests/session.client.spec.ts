@@ -326,6 +326,7 @@ describe('paging', () => {
     expect(changed).toHaveBeenCalledOnce()
     expect(eventSeqs(session)).toEqual([...middle, ...newest].map(event => event.seq))
     expect(session.getSnapshot()).toMatchObject({ loadingOlder: false, hasMore: true })
+    expect(session.getSnapshot().olderError).toBeTypeOf('string')
   })
 
   it('discards buffered jump pages when the Session replaces its stream', async ({ mock, start }) => {

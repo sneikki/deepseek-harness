@@ -2867,6 +2867,15 @@ export function TrajectoryTable({
           followsTableTail.current =
             pane.scrollHeight - pane.clientHeight - pane.scrollTop
               <= BOTTOM_FOLLOW_THRESHOLD_PX
+          // A bulk older load can land at any time: remember where the user is so the prepend
+          // keeps their rows in place (the layout effect consumes this when the window start moves).
+          if (!followsTableTail.current && !loadingOlder.current && tableScrollInitialized.current) {
+            olderLoadAnchor.current = {
+              historyStartSeq,
+              scrollHeight: pane.scrollHeight,
+              scrollTop: pane.scrollTop,
+            }
+          }
           requestOlder(pane, true)
         }}
         onClick={(event) => {
