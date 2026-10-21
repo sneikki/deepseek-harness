@@ -97,6 +97,11 @@ terminal model 使用浏览器安全入口 `@deepseek-ai/dsh-spill-policy/notice
 
 本包声明可选的 `UserQuestionPanels` 能力；`ui-user-questions` 提供它。`reveal(sessionId, callId)` 打开可回答的面板，`review(sessionId, callId, record)` 以只读方式打开已记录的答案。行通过 `ctx.get('userQuestionPanels')` 读取此能力；未组合问题 UI 时仍保留文本记录。
 
+### 工具卡片正文
+
+`ToolCards`（`ctx.toolCards`）是纯服务，为读取、差异、搜索与终端工具调用推导卡片正文。`ui-trajectory` 将其作为可选注入使用；未安装本包时它回退为纯文本渲染。
+
+
 </details>
 
 -----
