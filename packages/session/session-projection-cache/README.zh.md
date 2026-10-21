@@ -60,7 +60,7 @@ kind: "package-reference"
 
 `cachedSnapshot(meta, keys?)` 是只读面：以零 I/O 从存储域的内存表同步提供客户端值。它接受生命周期身份（`formatVersion`、`createdAt`、`cwd`、`isSeeded`）与 header 匹配的记录，把其中版本和 schema 均匹配的 key 作为一个 block 提供，其 `asOfSeq` 是所服务各行中最低的水位。这个水位是存储记录自己的：header 作证不了 inherited cut，也作证不了行序号与消费者稍后打开的日志可比，因此 Session list 把该 block 标为 `cached`，客户端让建连后的 Session 产出的任何值覆盖它。在同一格式代内，cut 在 fork 时写死，不能区分其他字段区分不了的生命周期，而只读视图也从不播种 fold，所以 seeded（fork 出来的）会话与 unseeded 会话被同样地提供。`cachedPredecessorTitle(meta)` 是跨 Session 格式 edge 的更窄列表专用例外：生命周期匹配且已通过结构准入的 predecessor record 只能公开与当前版本兼容的 `title` row，因为 title 文本在相邻 edge 之间保持不变。其他 predecessor row 仍不可用。`coldSnapshot(meta, inheritedEventCount, events)` 是 fold 面：接受精确切点与完整有序日志，在折叠时跳过已检查点化的前缀，并在自身不读取持久化层的情况下刷新记录。
 
-`cachedMigrated(source, keys?)` 服务于存储日志仍为历史格式的会话。此类日志的首次观察已在内存中迁移并折叠投影；随后 `hydratePrepared(session, events, source)` 将该折叠结果持久化，并绑定到存储头与持久化层的 `stat` 修订（文件标识加历史语料）。只要修订与投影 `stateVersion` 未变，`cachedMigrated` 无需读取日志、无需迁移即可返回值，第二次观察则以该记录为种子。存储日志从不被写入；任何其他修订、生命周期或 `stateVersion` 都不返回结果，下一次观察会重写记录。仅凭头部的读取面拒绝这些记录。该绑定是尽力而为的 stat 令牌，因此文件状态不变而迁移代码变更的情况不会被检测到。
+`cachedMigrated(source, keys?)` 服务于存储日志仍为历史格式的会话。此类日志的首次观察已在内存中迁移并折叠投影；随后 `hydratePrepared(session, events, source)` 将该折叠结果持久化，并绑定到存储头与持久化层的 `stat` 修订（文件标识加历史语料）。只要修订与投影 `stateVersion` 未变，`cachedMigrated` 无需读取日志、无需迁移即可返回值，第二次观察则以该记录为种子。存储日志从不被写入；任何其他修订、生命周期或 `stateVersion` 都不返回结果，下一次观察会重写记录。仅凭头部的读取面拒绝这些记录。修订还嵌入 `MIGRATED_CACHE_VERSION`（session-format-catalog），任何迁移器或编解码器的变更都必须递增它，使迁移输出变化后绝不会提供陈旧的折叠结果；stat 令牌本身仍是尽力而为。
 
 ### 缓存保证什么
 

@@ -10,6 +10,7 @@ import { Context, type Fiber } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
   createSessionFormatCatalogWithChildren,
+  MIGRATED_CACHE_VERSION,
   SessionFormatUnsupportedMigrationError,
   sessionFormatCatalog,
 } from '@deepseek-ai/dsh-session-format-catalog'
@@ -205,6 +206,17 @@ function fileRevision(identity: JsonlPhysicalIdentity): PersistenceRevision {
     identity.mtimeNs,
     identity.ctimeNs,
   ].join(':'))
+}
+
+/**
+ * Change token of a historical (migration-required) log: its file, the historical
+ * corpus it migrates against, and the migration output fingerprint, so anything
+ * persisted from its in-memory migration is invalidated by a migrator change.
+ */
+function historicalRevision(identity: JsonlPhysicalIdentity, corpusRevision: string | undefined): PersistenceRevision {
+  return SessionPersistenceRevision(
+    `${fileRevision(identity)}:${corpusRevision}:v${SESSION_FORMAT_VERSION}.${MIGRATED_CACHE_VERSION}`,
+  )
 }
 
 /** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
@@ -501,7 +513,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       return {
         ...metadata,
         revision: selected.sourceVersion < SESSION_FORMAT_VERSION
-          ? SessionPersistenceRevision(`${fileRevision(identity)}:${await this.historicalCorpusRevision(options?.signal)}`)
+          ? historicalRevision(identity, await this.historicalCorpusRevision(options?.signal))
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
       }
@@ -549,7 +561,7 @@ class JsonlSessionPersistence extends SessionPersistence {
         header: artifact.header,
         formatStatus: artifact.formatStatus,
         revision: artifact.sourceVersion < SESSION_FORMAT_VERSION
-          ? SessionPersistenceRevision(`${fileRevision(identity)}:${corpusRevision}`)
+          ? historicalRevision(identity, corpusRevision)
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
       })

@@ -19,7 +19,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type {
   Session,
   SessionEvent,
@@ -276,23 +276,36 @@ export class SessionProjectionCache extends Service {
       // stale schema cannot make a valid Session unreadable.
       snapshot = this.ctx.sessionProjections.hydrate(session, {}, events, SessionLogOffset(0))
     }
-    if (source !== undefined) this.persistMigrated(session, source, record)
+    if (source !== undefined) this.persistMigrated(session, source)
     return snapshot
   }
 
-  /** Write the migrated fold's checkpoint unless the stored record already holds exactly it. */
-  private persistMigrated(session: Session, source: MigratedSource, stored: CheckpointRecord | undefined): void {
-    const rows = this.ctx.sessionProjections.checkpoint(session)
-    if (stored !== undefined && Object.entries(rows).every(([key, row]) =>
-      stored.rows[key]?.ver === row.ver && stored.rows[key]?.seq === row.seq)) return
-    const identity: CheckpointIdentity = {
-      ...lifecycleIdentityOf(source.header),
-      inheritedEventCount: session.inheritedEventCount,
-      sourceRevision: source.revision,
-    }
-    void this.put(session.id, identity, rows).catch((error: unknown) => {
+  /**
+   * Write the migrated fold's checkpoint unless the stored record already holds
+   * exactly it, or is a current-format checkpoint (the session was published or
+   * lived since; its writer owns the record). Fail-soft end to end: the open
+   * never fails because the derived cache could not be written.
+   */
+  private persistMigrated(session: Session, source: MigratedSource): void {
+    const warn = (error: unknown): void => {
       this.ctx.logger.warn(`session projection cache: migrated write-back for "${session.id}" failed (cache stays stale): ${String(error)}`)
-    })
+    }
+    try {
+      const stored = this.requireTable().get(session.id)
+      if (stored?.identity.sourceRevision === undefined && stored?.identity.formatVersion === SESSION_FORMAT_VERSION) return
+      const rows = this.ctx.sessionProjections.checkpoint(session)
+      if (stored !== undefined && stored.identity.sourceRevision === source.revision
+        && Object.entries(rows).every(([key, row]) =>
+          stored.rows[key]?.ver === row.ver && stored.rows[key]?.seq === row.seq)) return
+      const identity: CheckpointIdentity = {
+        ...lifecycleIdentityOf(source.header),
+        inheritedEventCount: session.inheritedEventCount,
+        sourceRevision: source.revision,
+      }
+      void this.put(session.id, identity, rows).catch(warn)
+    } catch (error: unknown) {
+      warn(error)
+    }
   }
 
   /**
