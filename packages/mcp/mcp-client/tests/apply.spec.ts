@@ -478,3 +478,25 @@ describe('server instruction limits', () => {
     }
   })
 })
+
+describe('server instruction injection', () => {
+  it.each([
+    [undefined, true],
+    [false, false],
+  ])('injects server instructions unless instructions is false (%j)', async (instructions, injected) => {
+    const ctx = await mountRegistry()
+    const spy = vi.spyOn(MockClient.prototype, 'getInstructions').mockReturnValue('Use the docs tool.')
+    try {
+      await apply(ctx, {
+        ...stdioConfig, failOnStartupError: true, reconnect: { enabled: false }, instructions,
+      })
+      const prompt = renderPrompt(await ctx.systemPrompt.assemble())
+      if (injected) expect(prompt).toContain('Use the docs tool.')
+      else expect(prompt).not.toContain('Use the docs tool.')
+      expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
+    } finally {
+      spy.mockRestore()
+      await ctx.fiber.dispose()
+    }
+  })
+})
