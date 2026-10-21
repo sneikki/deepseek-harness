@@ -47,6 +47,7 @@ describe('deriveAgentTree', () => {
       expect(rows.map(row => [row.sessionId, row.depth, row.status])).toEqual([['l1', 1, 'done'], ['call-9', 1, 'running']])
       expect(rows[0]).toMatchObject({ label: 'Do A', startedAt: 100, endedAt: 400, startIndex: 1 })
       expect(rows[1]?.endedAt).toBeNull()
+      expect(rows.map(row => row.hasSession)).toEqual([true, false])
     }
   })
 

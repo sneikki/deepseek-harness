@@ -50,6 +50,8 @@ export interface AgentTreeRow {
   startIndex: number | null
   /** Whether the child's projection is present; false rows show interim lifecycle data and are worth loading. */
   loaded: boolean
+  /** False for blocking calls known only by tool-call id: no session to open or load. */
+  hasSession: boolean
 }
 
 const LIFECYCLE_STATUS = {
@@ -142,6 +144,7 @@ export function deriveAgentTree(
         hasChildren: children.length > 0,
         startIndex: links.get(entry.id) ?? null,
         loaded: projection !== undefined,
+        hasSession: true,
       })
       walk(entry.id, depth + 1, new Map())
     }
@@ -168,6 +171,7 @@ export function deriveAgentTree(
       hasChildren: false,
       startIndex: lifecycle.startIndex,
       loaded: false,
+      hasSession: lifecycle.background,
     })
   }
   return rows

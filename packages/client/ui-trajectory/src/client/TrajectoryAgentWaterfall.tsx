@@ -223,7 +223,7 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                     <span className={css.srOnly}>{status}</span>
                     <span className={css.label}>{row.label}</span>
                     <span className={css.id}>{row.shortId}</span>
-                    {onOpenSession !== undefined && (
+                    {onOpenSession !== undefined && row.hasSession && (
                       <button
                         type="button"
                         tabIndex={-1}

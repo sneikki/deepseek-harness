@@ -38,6 +38,7 @@
 .rows {
   max-height: 220px; /* ~10 rows of 22px */
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .row {

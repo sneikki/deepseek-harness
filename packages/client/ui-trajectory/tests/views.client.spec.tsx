@@ -992,7 +992,7 @@ describe('timeline projection', () => {
   it('lets the wheel scroll the agent list but zooms on pinch', () => {
     const agentRows = [{
       sessionId: 'a1', depth: 1, label: 'agent', shortId: 'a1', status: 'done' as const, startedAt: 0,
-      endedAt: 5, activeMs: null, hasChildren: false, startIndex: null, loaded: false,
+      endedAt: 5, activeMs: null, hasChildren: false, startIndex: null, loaded: false, hasSession: true,
     }]
     const { container } = render(
       <TrajectoryTimeline turns={longTurns} mode="sequence" range={null} onRangeChange={vi.fn()} agentRows={agentRows} />,
