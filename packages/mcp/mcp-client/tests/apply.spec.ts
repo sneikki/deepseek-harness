@@ -481,14 +481,14 @@ describe('server instruction limits', () => {
 
 describe('server instruction injection', () => {
   it.each([
-    [undefined, true],
-    [false, false],
-  ])('injects server instructions unless instructions is false (%j)', async (instructions, injected) => {
+    [{}, true],
+    [{ instructions: false as const }, false],
+  ])('injects server instructions unless instructions is false (%j)', async (extra, injected) => {
     const ctx = await mountRegistry()
     const spy = vi.spyOn(MockClient.prototype, 'getInstructions').mockReturnValue('Use the docs tool.')
     try {
       await apply(ctx, {
-        ...stdioConfig, failOnStartupError: true, reconnect: { enabled: false }, instructions,
+        ...stdioConfig, failOnStartupError: true, reconnect: { enabled: false }, ...extra,
       })
       const prompt = renderPrompt(await ctx.systemPrompt.assemble())
       if (injected) expect(prompt).toContain('Use the docs tool.')
