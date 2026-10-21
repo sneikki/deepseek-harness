@@ -53,6 +53,7 @@ const EMPTY_TURN_IDS: ReadonlySet<number> = new Set()
 const EMPTY_RECORD_IDS: ReadonlySet<string> = new Set()
 const SEARCH_INDEX_THROTTLE_MS = 3_000
 const HISTORY_PAGE_NODES = 50
+const MAX_IDLE_LOADS = 5
 
 function containsCall(
   calls: readonly ToolCallBlock[],
@@ -302,9 +303,9 @@ export function TrajectoryView({
     setHistoryNodeLimit(Infinity)
   }, [sessionId])
   const [autoTick, setAutoTick] = useState(0)
-  const autoLoad = useRef({ sessionId, busy: false, stopped: false })
+  const autoLoad = useRef({ sessionId, busy: false, stopped: false, idle: 0 })
   if (autoLoad.current.sessionId !== sessionId)
-    autoLoad.current = { sessionId, busy: false, stopped: false }
+    autoLoad.current = { sessionId, busy: false, stopped: false, idle: 0 }
   useEffect(() => {
     const state = autoLoad.current
     if (
@@ -317,7 +318,10 @@ export function TrajectoryView({
     state.busy = true
     loadOlder()
       .then((changed) => {
-        if (!changed) state.stopped = true
+        // The trajectory snapshot lands on the next notifier flush, so one unchanged answer is
+        // not the end; a run of them is (a no-op load would otherwise spin).
+        state.idle = changed ? 0 : state.idle + 1
+        if (state.idle >= MAX_IDLE_LOADS) state.stopped = true
       })
       .catch(() => {
         state.stopped = true
