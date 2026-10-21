@@ -416,6 +416,7 @@ export class Session implements SessionFace {
     if (events === undefined) return
     this.loadingOlder = true
     this.olderError = undefined
+    const generation = this.openGeneration
     this.notifier.markDirty()
     try {
       await events.prepend({
@@ -423,7 +424,8 @@ export class Session implements SessionFace {
         ...HISTORY_PAGE_OPTIONS,
       })
     } catch (error) {
-      this.olderError = errorMessage(error)
+      // A failure from a replaced stream says nothing about the rebuilt window.
+      if (generation === this.openGeneration) this.olderError = errorMessage(error)
       if (!isRemoteFailure(error)) {
         console.error('[session-controller] loadOlder failed:', error)
       }
@@ -473,7 +475,7 @@ export class Session implements SessionFace {
           if (pending.beforeSeq >= before) return
         }
       } catch (error) {
-        this.olderError = errorMessage(error)
+        if (generation === this.openGeneration) this.olderError = errorMessage(error)
         if (!isRemoteFailure(error)) {
           console.error('[session-controller] loadThrough failed:', error)
         }
@@ -503,6 +505,7 @@ export class Session implements SessionFace {
     this.openPromise = null
     this.openState = 'cold'
     this.openError = null
+    this.olderError = undefined
     this.baseSeq = SessionLogOffset(0)
     this.notifier.markDirty()
     await this.open()

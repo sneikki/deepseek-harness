@@ -1466,8 +1466,9 @@ describe('TrajectoryView state', () => {
     function setup(
       hasMore: boolean,
       loadAll: () => Promise<void>,
+      initial: Partial<SessionSnapshot> = {},
     ) {
-      const session = createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore })
+      const session = createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore, ...initial })
       const loadAllMock = vi.fn(loadAll)
       const view = render(
         <TrajectoryView
@@ -1496,13 +1497,31 @@ describe('TrajectoryView state', () => {
       expect(loadAll).not.toHaveBeenCalled()
     })
 
-    it('waits for an in-flight older load, then loads once, never concurrently', async () => {
-      const harness = setup(true, () => Promise.resolve())
-      // The first call ran at mount; a user pull now marks loading: no second call.
-      act(() => { harness.session.set({ ...harness.session.getSnapshot(), loadingOlder: true }) })
+    it('does not start while an older pull is already loading, then loads once', async () => {
+      const harness = setup(true, () => Promise.resolve(), { loadingOlder: true })
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).not.toHaveBeenCalled()
       act(() => { harness.session.set({ ...harness.session.getSnapshot(), loadingOlder: false }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
       await act(async () => { await Promise.resolve() })
       expect(harness.loadAll).toHaveBeenCalledTimes(1)
+    })
+
+    it('loads again after a resync rebuilds the window with older history', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      // resync: cold/loading, then an open window with hasMore again.
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), openState: 'loading' }) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), openState: 'open', hasMore: true }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+    })
+
+    it('loads again when hasMore goes false then true', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), hasMore: false }) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), hasMore: true }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
     })
 
     it('shows a failure and retries on demand', async () => {
@@ -1511,8 +1530,13 @@ describe('TrajectoryView state', () => {
       act(() => { harness.session.set({ ...harness.session.getSnapshot(), olderError: 'boom' }) })
       const alert = await screen.findByRole('alert')
       expect(alert.textContent).toContain('boom')
+      // The session clears olderError when the next attempt starts.
+      harness.loadAll.mockImplementationOnce(async () => {
+        harness.session.set({ ...harness.session.getSnapshot(), olderError: undefined })
+      })
       fireEvent.click(within(alert).getByRole('button'))
       await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+      await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
     })
 
     it('does not start again after a session switch with a pending load', async () => {
@@ -1546,6 +1570,53 @@ describe('TrajectoryView state', () => {
       expect(harness.loadAll).toHaveBeenCalledTimes(1)
       expect(errors).not.toHaveBeenCalled()
       errors.mockRestore()
+    })
+  })
+
+  describe('scroll anchor while the whole history lands', () => {
+    function node(seq: number): LegacyConversationSlice['nodes'][number] {
+      return {
+        kind: 'user', seq, time: seq, content: [{ type: 'text', text: `p${String(seq)}` }], source: null,
+      }
+    }
+    function mountPane() {
+      const trajectory = createSnapshotStore(historySnapshot([node(5), node(6)]))
+      render(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          useTrajectory={bindSnapshotSelector(trajectory)}
+        />,
+      )
+      const pane = document.querySelector<HTMLElement>('[data-trajectory-scroll]')!
+      const box = { height: 1000, top: 0 }
+      Object.defineProperty(pane, 'scrollHeight', { configurable: true, get: () => box.height })
+      Object.defineProperty(pane, 'clientHeight', { configurable: true, get: () => 400 })
+      Object.defineProperty(pane, 'scrollTop', {
+        configurable: true, get: () => box.top, set: (value: number) => { box.top = value },
+      })
+      return { trajectory, pane, box }
+    }
+
+    it('keeps the reader in place when history lands while scrolled up', () => {
+      const { trajectory, pane, box } = mountPane()
+      box.top = 100
+      fireEvent.scroll(pane)
+      box.height = 1500
+      act(() => { trajectory.set(historySnapshot([node(1), node(2), node(5), node(6)])) })
+      expect(box.top).toBe(600)
+    })
+
+    it('keeps following the tail after the reader returned to it', () => {
+      const { trajectory, pane, box } = mountPane()
+      box.top = 100
+      fireEvent.scroll(pane)
+      box.top = 600
+      fireEvent.scroll(pane)
+      box.height = 1500
+      act(() => { trajectory.set(historySnapshot([node(1), node(2), node(5), node(6)])) })
+      expect(box.top).toBe(1500)
     })
   })
 

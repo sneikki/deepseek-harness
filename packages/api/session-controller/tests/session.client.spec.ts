@@ -329,6 +329,34 @@ describe('paging', () => {
     expect(session.getSnapshot().olderError).toBeTypeOf('string')
   })
 
+  it('clears olderError on resync and ignores a failure from the replaced stream', async ({ mock, start }) => {
+    const newest = plainTurn(SessionSeq(12), 2, 'new', 'answer')
+    const session = await sessionBench(mock, start, SID)
+    mock.stream(FOLLOW, followScript(history(newest, true)))
+    await session.open()
+    mock.remote.session.page.mockImplementation(pageRule(() => err(new RemoteError('gateway/internal', 'page unavailable', {}))))
+    await session.loadThrough(SessionSeq(0))
+    expect(session.getSnapshot().olderError).toBeTypeOf('string')
+
+    mock.stream(FOLLOW, followScript(history(newest, true)))
+    await session.resync()
+    expect(session.getSnapshot().olderError).toBeUndefined()
+
+    const requested = Promise.withResolvers<undefined>()
+    const failing = Promise.withResolvers<RemoteResult<SessionPage>>()
+    mock.remote.session.page.mockImplementation(pageRule(() => {
+      requested.resolve(undefined)
+      return failing.promise
+    }))
+    const jump = session.loadThrough(SessionSeq(0))
+    await requested.promise
+    mock.stream(FOLLOW, followScript(history(newest, true)))
+    const replacement = session.resync()
+    failing.resolve(err(new RemoteError('gateway/internal', 'stale failure', {})))
+    await Promise.all([jump, replacement])
+    expect(session.getSnapshot().olderError).toBeUndefined()
+  })
+
   it('discards buffered jump pages when the Session replaces its stream', async ({ mock, start }) => {
     const newest = plainTurn(SessionSeq(12), 2, 'new', 'answer')
     const session = await sessionBench(mock, start, SID)

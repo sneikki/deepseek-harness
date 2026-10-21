@@ -222,14 +222,21 @@ export function TrajectoryView({
   // the model derives once. Completion is the session's own hasMore flag; a failure surfaces as
   // olderError with a retry. The promise result is ignored, so nothing runs after unmount.
   const olderError = useSession(snapshot => snapshot.olderError)
+  const sessionOpen = useSession(snapshot => snapshot.openState === 'open')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const startedAttempt = useRef<string | null>(null)
   useEffect(() => {
+    // Not open or nothing older (a resync rebuilds the window to the tail): forget the last start
+    // so the next window with older history loads again.
+    if (!sessionOpen || !sessionHasOlderHistory) {
+      startedAttempt.current = null
+      return
+    }
     const key = `${sessionId}:${String(loadAttempt)}`
-    if (!sessionHasOlderHistory || olderHistoryLoading || startedAttempt.current === key) return
+    if (olderHistoryLoading || startedAttempt.current === key) return
     startedAttempt.current = key
     void loadAll()
-  }, [sessionId, loadAttempt, sessionHasOlderHistory, olderHistoryLoading, loadAll])
+  }, [sessionId, loadAttempt, sessionOpen, sessionHasOlderHistory, olderHistoryLoading, loadAll])
   const hasResidentOlderHistory = historyStartIndex > 0
   const hasOlderHistory = hasResidentOlderHistory
     || sessionHasOlderHistory
