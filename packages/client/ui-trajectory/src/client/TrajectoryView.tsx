@@ -88,10 +88,10 @@ export interface TrajectoryViewInjected {
   /** Conversation-namespace translate, for the rich tool-body labels shared with the chat row. */
   conversationT: TranslateNS<'conversation'>
   /** The chat row's rich tool bodies: the reader of one call's body and the labels of those bodies. */
-  toolCards: {
+  toolCards?: {
     cardBody: ToolCardReader
     labels: (t: TranslateNS<'conversation'>) => ToolCardLabels
-  }
+  } | undefined
   hooks: {
     duration: SnapshotStore<boolean>
     /** Whether thinking rows are shown. */
@@ -354,14 +354,14 @@ export function TrajectoryView({
       requests,
       systemPrompts: inspection.systemPrompts,
       callSchemas,
-      cards: toolCards.cardBody,
+      cards: toolCards?.cardBody,
     }, t)
     return { turns, lastIndex: lastCellIndex(turns) }
   }, [
     nodes, eventLocations, partialTurn, partialStep,
     runningCalls, requests, inspection.systemPrompts, callSchemas, t, toolCards,
   ])
-  const toolLabels = useMemo(() => toolCards.labels(conversationT), [toolCards, conversationT])
+  const toolLabels = useMemo(() => toolCards?.labels(conversationT), [toolCards, conversationT])
   const timelinePartialSignature = partialStructureSignature(partial)
   const partialStartTime = partial?.timing?.stepStartTime
   const partialFirstTokenTime = partial?.timing?.firstTokenTime
@@ -375,7 +375,7 @@ export function TrajectoryView({
     },
   [partialStep, partialTurn, timelinePartialSignature, partialStartTime, partialFirstTokenTime])
   const timelineTurns = useMemo(
-    () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t, toolCards.cardBody),
+    () => appendTrajectoryPartialLayout(finalized.turns, timelinePartial, finalized.lastIndex, t, toolCards?.cardBody),
     [finalized, timelinePartial, t, toolCards],
   )
   const timelineLifecycles = useMemo(() => trajectorySubagentLifecycles(timelineTurns), [timelineTurns])
@@ -392,7 +392,7 @@ export function TrajectoryView({
     ? actualTime ? 'actual' : 'duration'
     : actualTime ? 'time' : 'sequence'
   const partialSearchTurns = useMemo(
-    () => appendTrajectoryPartialLayout([], partial, finalized.lastIndex, t, toolCards.cardBody),
+    () => appendTrajectoryPartialLayout([], partial, finalized.lastIndex, t, toolCards?.cardBody),
     [finalized.lastIndex, partial, t, toolCards],
   )
   const searchLayouts = useMemo(

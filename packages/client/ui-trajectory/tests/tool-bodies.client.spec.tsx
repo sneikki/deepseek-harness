@@ -211,7 +211,7 @@ describe('header subject and standalone bodies', () => {
     const diffs = [{ path: 'src/a.ts', oldText: 'const a = 1', newText: 'const a = 2' }]
     const { container } = renderCard(
       toolCell({ toolName: 'edit', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
-      '{"file_path":"src/a.ts"}', 'Edited src/a.ts',
+      '{"file_path":"src/a.ts"}', 'The file src/a.ts has been updated successfully.',
     )
     expect(container.querySelector('span[title="src/a.ts"]')).not.toBeNull()
     expect(container.querySelector('[data-section="input"]')).not.toBeNull()
@@ -233,9 +233,66 @@ describe('header subject and standalone bodies', () => {
     expect(container.querySelector('[data-section="output"]')).not.toBeNull()
   })
 
-  it('keeps the output text of a failed edit, which has no diff body', () => {
-    renderCard(toolCell({ toolName: 'edit', isError: true }), '{"file_path":"src/a.ts"}', 'File not found')
+  it('keeps the output text of a failed edit, derived from its result', () => {
+    const args = '{"file_path":"src/a.ts","old_string":"a","new_string":"b"}'
+    const nodes = [
+      { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'hi' }], source: null },
+      { kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1, blocks: [{ kind: 'tool-call', callId: 'e1', name: 'edit', argsRaw: args }] },
+      {
+        kind: 'tool-result', seq: 3, time: 2_500, callId: 'e1', name: 'edit', args: PartialArguments.fromText(args),
+        call: { name: 'edit', argsRaw: args }, callTime: 2_100, content: [{ type: 'text', text: 'File not found' }], meta: undefined, isError: true,
+      },
+    ]
+    const cell = deriveTrajectoryLayoutWithLocale({ nodes: nodes as never, partial: null, runningCalls: [], cards }, t)
+      .flatMap(turn => turn.groups.flatMap(group => group.cells))
+      .find(candidate => candidate.kind === 'tool' && candidate.toolName === 'edit')
+    expect(cell).toBeDefined()
+    expect(cell?.toolBody).toBeUndefined()
+    renderCard(cell as TrajectoryCellProps, args, 'File not found')
     expect(screen.getByText('File not found')).toBeTruthy()
+  })
+
+  it('drops only the routine success line of an edit', () => {
+    const diffs = [{ path: 'src/a.ts', oldText: 'const a = 1', newText: 'const a = 2' }]
+    const { container } = renderCard(
+      toolCell({ toolName: 'edit', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
+      '{"file_path":"src/a.ts"}', 'The file src/a.ts has been updated successfully.',
+    )
+    expect(container.querySelector('[data-section="output"]')).toBeNull()
+  })
+
+  it('keeps any other success text of an edit', () => {
+    const diffs = [{ path: 'src/a.ts', oldText: 'const a = 1', newText: 'const a = 2' }]
+    const { container } = renderCard(
+      toolCell({ toolName: 'edit', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
+      '{"file_path":"src/a.ts"}', 'Edited src/a.ts with a warning about trailing spaces',
+    )
+    expect(container.querySelector('[data-section="output"]')).not.toBeNull()
+    expect(screen.getByText('Edited src/a.ts with a warning about trailing spaces')).toBeTruthy()
+  })
+
+  it('drops the routine success envelope of a write', () => {
+    const diffs = [{ path: 'src/a.ts', oldText: '', newText: 'const a = 2' }]
+    const { container } = renderCard(
+      toolCell({ toolName: 'write', toolBody: { kind: 'diff', label: 'src/a.ts', model: { card: { diffs } } } }),
+      '{"file_path":"src/a.ts"}', '<path>src/a.ts</path>\n<type>file</type>\n<content>\nCreated file\n</content>',
+    )
+    expect(container.querySelector('[data-section="output"]')).toBeNull()
+  })
+
+  it('draws a plain box for a call when the tool-card service is absent', () => {
+    render(
+      <TrajectoryCard
+        cell={toolCell({ toolName: 'edit' })}
+        content={{ displayText: 'edit', resultText: 'Edited', callsBadge: undefined, toolCallText: { name: 'edit', program: false, args: '{}' } }}
+        badge="edit"
+        badgeTitle="edit"
+        expanded={false}
+        onToggle={() => {}}
+        t={t}
+      />,
+    )
+    expect(screen.getByText('Edited')).toBeTruthy()
   })
 
   it('marks a collapsed rich body so its frame and header are hidden', () => {

@@ -47,9 +47,24 @@ function isTruncated(text: string): boolean {
   return text.endsWith('…')
 }
 
-/** Keeps a click or key inside a rich body from reaching the ledger row around it. */
-function stopRow(event: { stopPropagation: () => void }): void {
-  event.stopPropagation()
+/**
+ * Keeps a click or key on a body control (copy, wrap) from reaching the ledger row.
+ * The body's text is not a control, so a click there still selects the row.
+ */
+function stopControl(event: { target: EventTarget | null; stopPropagation: () => void }): void {
+  if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea') !== null) {
+    event.stopPropagation()
+  }
+}
+
+/** The edit and write tools' routine success text, the only output a successful diff call drops. */
+const ROUTINE_SUCCESS = [
+  /^The file [^\n]+ has been updated (?:successfully\.|\. All occurrences were successfully replaced\.)$/,
+  /^<path>[^\n]*<\/path>\n<type>file<\/type>\n<content>\n(?:Created|Updated) file\n<\/content>$/,
+]
+
+function isRoutineSuccess(text: string): boolean {
+  return ROUTINE_SUCCESS.some(pattern => pattern.test(text.trim()))
 }
 
 /** Unfolded body height: the box's own clip does the cutting, so the body never folds its middle. */
@@ -74,7 +89,8 @@ function subjectOf(body: TrajectoryToolBody | undefined): string | undefined {
 }
 
 /** Rich INPUT: the program source of a code call, the command of a shell call. */
-function inputRich(cell: TrajectoryCellProps, labels: ToolCardLabels): Rich | undefined {
+function inputRich(cell: TrajectoryCellProps, labels: ToolCardLabels | undefined): Rich | undefined {
+  if (labels === undefined) return undefined
   const program = codeProgram(cell)
   if (program !== undefined) return codeRich(program.source, program.language ?? 'typescript', labels)
   if (cell.toolBody?.kind === 'bash') return codeRich(cell.toolBody.command, 'bash', labels)
@@ -82,9 +98,9 @@ function inputRich(cell: TrajectoryCellProps, labels: ToolCardLabels): Rich | un
 }
 
 /** Rich OUTPUT: the file view, the diff or the search matches of the call. */
-function outputRich(cell: TrajectoryCellProps, labels: ToolCardLabels): Rich | undefined {
+function outputRich(cell: TrajectoryCellProps, labels: ToolCardLabels | undefined): Rich | undefined {
   const body = cell.toolBody
-  if (body === undefined || body.kind === 'bash') return undefined
+  if (labels === undefined || body === undefined || body.kind === 'bash') return undefined
   if (body.kind === 'read') {
     return sameRich(<ReadBlock {...body.model} labels={labels.read} maxLines={UNFOLDED} />)
   }
@@ -109,7 +125,7 @@ export function cardSections(
   cell: TrajectoryCellProps,
   content: TrajectoryCardContent,
   t: TrajectoryTranslate,
-  labels: ToolCardLabels,
+  labels: ToolCardLabels | undefined,
 ): CardSection[] {
   const { toolCallText, resultText, displayText, callsBadge } = content
   if (toolCallText === undefined) {
@@ -135,7 +151,7 @@ export function cardSections(
   const kind = cell.toolBody?.kind
   const sections: CardSection[] = []
   if (kind === 'diff') {
-    // The diff takes the INPUT slot; a settled edit's routine success line adds nothing to the box.
+    // The diff takes the INPUT slot. A settled call's routine success line adds nothing; other text stays.
     sections.push({
       key: 'input',
       ...(outputBody === undefined ? {} : { rich: outputBody }),
@@ -145,6 +161,17 @@ export function cardSections(
       tone: 'primary',
       truncated: false,
     })
+    if (resultText !== undefined && !isRoutineSuccess(resultText)) {
+      sections.push({
+        key: 'output',
+        label: t('column.output'),
+        preview: resultText,
+        previewText: resultText,
+        full: () => cardFullOutput(cell) || resultText,
+        tone: 'output',
+        truncated: isTruncated(resultText),
+      })
+    }
     return sections
   }
   if (kind === 'read' || kind === 'search') {
@@ -214,8 +241,8 @@ export interface TrajectoryCardProps {
   expanded: boolean
   onToggle: () => void
   t: TrajectoryTranslate
-  /** Labels of the rich tool bodies. */
-  toolLabels: ToolCardLabels
+  /** Labels of the rich tool bodies; absent without the tool service, and then no body is drawn. */
+  toolLabels?: ToolCardLabels | undefined
 }
 
 /**
@@ -292,9 +319,9 @@ export function TrajectoryCard({
                     className={css.cardRich}
                     data-collapsed={!expanded || undefined}
                     data-clamp={!expanded ? section.clamp : undefined}
-                    onClick={stopRow}
-                    onDoubleClick={stopRow}
-                    onKeyDown={stopRow}
+                    onClick={stopControl}
+                    onDoubleClick={stopControl}
+                    onKeyDown={stopControl}
                   >
                     {expanded ? section.rich.expanded : section.rich.collapsed}
                   </div>

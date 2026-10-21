@@ -428,7 +428,7 @@ function AssistantTimingPanel({
 /** Props for the trajectory ledger. */
 export interface TrajectoryTableProps {
   /** Labels of the rich tool bodies (code, file, diff, search), from the chat row's builders. */
-  toolLabels: ToolCardLabels
+  toolLabels?: ToolCardLabels | undefined
   /** Wrapping control shared by all JSON inspectors. */
   stringWrapping?: JsonTreeProps['stringWrapping']
   /** Trajectory locale seat. */

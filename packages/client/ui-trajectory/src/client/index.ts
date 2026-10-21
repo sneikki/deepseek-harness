@@ -61,7 +61,7 @@ declare module '@deepseek-ai/dsh-api-session-controller/client' {
 }
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
-export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale', 'toolCards']
+export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale']
 
 /**
  * Client plugin body: register the trajectory view tab. The registration
@@ -110,6 +110,7 @@ export function apply(ctx: Context): void {
     label: () => t('view.trajectory'),
     children: { 'conversation.trajectory.images': { kind: 'single', scope: 'session' } },
     inject: (sessionId: SessionId): TrajectoryViewInjected => {
+      const tools = ctx.get('toolCards')
       const session = ctx.sessions.binding(sessionId)?.session
       if (session === undefined) {
         throw new Error(`ui-trajectory: session "${sessionId}" is unavailable`)
@@ -118,12 +119,13 @@ export function apply(ctx: Context): void {
       return {
         hooks: { duration, thinking },
         conversationT: ctx.locale.bind('conversation'),
-        toolCards: {
+        // Optional: without the tool plugin the view draws plain boxes, with no rich bodies or labels.
+        toolCards: tools === undefined ? undefined : {
           // The session's workspace root is read per call, so a rename lands on the next render.
-          cardBody: (toolName, block) => ctx.toolCards.cardBody(
+          cardBody: (toolName, block) => tools.cardBody(
             toolName, block, ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd,
           ),
-          labels: t => ctx.toolCards.labels(t),
+          labels: t => tools.labels(t),
         },
         jsonStringWrapping: {
           getDefault: () => stringWrapping.getSnapshot(),

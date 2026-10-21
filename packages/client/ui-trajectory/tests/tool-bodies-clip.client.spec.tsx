@@ -78,6 +78,13 @@ describe('See all on a real rich body', () => {
 })
 
 describe('rich body buttons', () => {
+  it('lets a click on the body text reach the row', () => {
+    const onRowClick = vi.fn()
+    const { container } = render(<div onClick={onRowClick}>{card(readCell(), () => {})}</div>)
+    fireEvent.click(container.querySelector('[data-read]') as Element)
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps a copy click inside the real read body from reaching the row', () => {
     const onRowClick = vi.fn()
     const onToggle = vi.fn()

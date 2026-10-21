@@ -14,7 +14,6 @@ import { stubConfigForm } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest'
 import { UiConversation } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
-import { toolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 
 const PLUGIN_ID = '@deepseek-ai/dsh-client-ui-trajectory'
 
@@ -68,7 +67,7 @@ describe('tsdown client artifact', () => {
     expect(handoff.id).toBe(PLUGIN_ID)
     expect(exports.apply).toBeTypeOf('function')
     expect(exports.inject).toEqual([
-      'slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale', 'toolCards',
+      'slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale',
     ])
   })
 
@@ -94,7 +93,6 @@ describe('tsdown client artifact', () => {
     ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
     ctx.provide('remote', { $on: () => () => {} } as never)
     ctx.provide('uiWorkspace', { openSession: () => {} } as never)
-    ctx.provide('toolCards', { cardBody: () => undefined, labels: toolCardLabels } as never)
     ctx.provide('configForms', { developerTools: { enabled: createSnapshotStore(true) }, get: () => stubConfigForm().scope } as never)
     const locale = await import('@deepseek-ai/dsh-client-locale/client')
     await ctx.plugin({ inject: [...locale.inject], apply: locale.apply })
