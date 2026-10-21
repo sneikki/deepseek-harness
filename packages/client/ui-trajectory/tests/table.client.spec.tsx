@@ -14,7 +14,7 @@ import { deriveTrajectoryLayout, type TrajectoryTurnModel } from '../src/client/
 import { trajectoryRecordId, type TrajectoryCellProps } from '../src/client/trajectory-record.ts'
 import { correlateTrajectorySubagents } from '../src/client/trajectory-subagent.ts'
 import { CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_HEIGHT, CARD_ROW_HEIGHT, cardLevel, measureCardRow } from '../src/client/trajectory-card.ts'
-import { conversationT, t, tZh } from './locale.client.ts'
+import { t, tZh, toolLabels } from './locale.client.ts'
 
 const loadImage: MessageImageLoader = async () => 'blob:trajectory'
 const renderNoImages: PropsRenderSlots<'conversation.trajectory.images'>['renderSlot'] = () => null
@@ -60,7 +60,7 @@ async function imageSlotFixture() {
 type TableProps = ComponentProps<typeof LocalizedTrajectoryTable>
 
 function TrajectoryTable(
-  props: Omit<TableProps, 't' | 'conversationT' | 'renderSlot' | 'loadImage'>
+  props: Omit<TableProps, 't' | 'renderSlot' | 'loadImage'>
     & Partial<Pick<TableProps, 'renderSlot' | 'loadImage'>>,
 ) {
   const inferred: Array<NonNullable<typeof props.requestNumbers>[number] & { firstIndex: number }> = []
@@ -98,7 +98,7 @@ function TrajectoryTable(
       renderSlot={renderNoImages} loadImage={loadImage}
       {...props}
       requestNumbers={requestNumbers}
-      t={t} conversationT={conversationT}
+      t={t} toolLabels={toolLabels}
     />
   )
 }
@@ -159,6 +159,7 @@ const FOLD_PROPS = {
   onToggleTurn: () => {},
   collapsedAssistants: new Set<string>(),
   onToggleAssistant: () => {},
+  toolLabels,
 }
 
 describe('TrajectoryTable', () => {
@@ -263,7 +264,7 @@ describe('TrajectoryTable', () => {
     render(
       <LocalizedTrajectoryTable
         t={tZh}
-        conversationT={conversationT}
+        toolLabels={toolLabels}
         renderSlot={renderNoImages} loadImage={loadImage}
         turns={TURNS}
         collapsedTurns={new Set<number>()}
@@ -1061,7 +1062,7 @@ describe('TrajectoryTable', () => {
     }]
     const table = (status: 'running' | 'complete' | 'error') => (
       <LocalizedTrajectoryTable
-        turns={turns} {...FOLD_PROPS} t={translate} conversationT={conversationT} renderSlot={renderNoImages} loadImage={loadImage}
+        turns={turns} {...FOLD_PROPS} t={translate} toolLabels={toolLabels} renderSlot={renderNoImages} loadImage={loadImage}
         requestNumbers={[{
           turn: 1, step: 1, group: 'Step 1', number: 1, status,
           error: 'upstream 503', errorCode: 'SERVER', retry: 1, maxRetries: 2,
@@ -1286,7 +1287,7 @@ describe('TrajectoryTable', () => {
       }, translate)
       const { render, renderSlot: slotRenderer } = await imageSlotFixture()
       const renderSlot = vi.fn((name: 'conversation.trajectory.images', owner: object) => slotRenderer(name, owner as MessageImagesOwnerProps))
-      const view = render(<LocalizedTrajectoryTable turns={turns} {...FOLD_PROPS} t={translate} conversationT={conversationT}
+      const view = render(<LocalizedTrajectoryTable turns={turns} {...FOLD_PROPS} t={translate} toolLabels={toolLabels}
         renderSlot={renderSlot} loadImage={loadImage} />)
       fireEvent.click(view.container.querySelector('[data-trajectory-row-key]')!)
       for (const tab of [summaryTab, previewTab]) {

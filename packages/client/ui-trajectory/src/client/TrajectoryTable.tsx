@@ -22,8 +22,8 @@ import {
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { JsonTreeLabels, JsonTreeProps, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { trajectoryToolLabels } from './trajectory-tool-labels.ts'
+import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ToolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { structuredPatch } from 'diff'
 import type {
   AssistantRequestConfig, ConversationPromptSnapshot, MessageImageLoader,
@@ -427,8 +427,8 @@ function AssistantTimingPanel({
 
 /** Props for the trajectory ledger. */
 export interface TrajectoryTableProps {
-  /** Conversation-namespace translate, for the rich tool-body labels shared with the chat row. */
-  conversationT: TranslateNS<'conversation'>
+  /** Labels of the rich tool bodies (code, file, diff, search), from the chat row's builders. */
+  toolLabels: ToolCardLabels
   /** Wrapping control shared by all JSON inspectors. */
   stringWrapping?: JsonTreeProps['stringWrapping']
   /** Trajectory locale seat. */
@@ -2276,7 +2276,7 @@ function OverviewSection({
  */
 export function TrajectoryTable({
   t,
-  conversationT,
+  toolLabels,
   stringWrapping,
   renderSlot,
   loadImage,
@@ -2304,7 +2304,6 @@ export function TrajectoryTable({
   inspectCallId = null,
   onInspectApplied,
 }: TrajectoryTableProps) {
-  const toolLabels = useMemo(() => trajectoryToolLabels(conversationT), [conversationT])
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')

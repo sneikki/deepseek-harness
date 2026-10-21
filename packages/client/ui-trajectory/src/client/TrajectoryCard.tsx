@@ -8,7 +8,7 @@ import {
 import type { TrajectoryTranslate } from './locales.ts'
 import { codeProgram } from './code-program.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
-import type { TrajectoryToolLabels } from './trajectory-tool-labels.ts'
+import type { ToolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { cardFullInput, cardFullOutput, cardFullText, cardIsCompact } from './trajectory-card.ts'
 import css from './TrajectoryTable.module.css'
 
@@ -45,6 +45,11 @@ function isTruncated(text: string): boolean {
   return text.endsWith('…')
 }
 
+/** Keeps a click or key inside a rich body from reaching the ledger row around it. */
+function stopRow(event: { stopPropagation: () => void }): void {
+  event.stopPropagation()
+}
+
 /** Unfolded body height: the box's own clip does the cutting, so the body never folds its middle. */
 const UNFOLDED = Number.MAX_SAFE_INTEGER
 
@@ -54,14 +59,14 @@ function sameRich(node: ReactNode): Rich {
   return { collapsed: node, expanded: node }
 }
 
-function codeRich(code: string, lang: string, labels: TrajectoryToolLabels): Rich {
+function codeRich(code: string, lang: string, labels: ToolCardLabels): Rich {
   return sameRich(
     <CodeBlock code={code} lang={lang} showHeader={false} copyLabel={labels.copy} copiedLabel={labels.copied} />,
   )
 }
 
 /** Rich INPUT: the program source of a code call, the command of a shell call. */
-function inputRich(cell: TrajectoryCellProps, labels: TrajectoryToolLabels): Rich | undefined {
+function inputRich(cell: TrajectoryCellProps, labels: ToolCardLabels): Rich | undefined {
   const program = codeProgram(cell)
   if (program !== undefined) return codeRich(program.source, program.language ?? 'typescript', labels)
   if (cell.toolBody?.kind === 'bash') return codeRich(cell.toolBody.command, 'bash', labels)
@@ -69,7 +74,7 @@ function inputRich(cell: TrajectoryCellProps, labels: TrajectoryToolLabels): Ric
 }
 
 /** Rich OUTPUT: the file view, the diff or the search matches of the call. */
-function outputRich(cell: TrajectoryCellProps, labels: TrajectoryToolLabels): Rich | undefined {
+function outputRich(cell: TrajectoryCellProps, labels: ToolCardLabels): Rich | undefined {
   const body = cell.toolBody
   if (body === undefined || body.kind === 'bash') return undefined
   if (body.kind === 'read') {
@@ -96,7 +101,7 @@ export function cardSections(
   cell: TrajectoryCellProps,
   content: TrajectoryCardContent,
   t: TrajectoryTranslate,
-  labels: TrajectoryToolLabels,
+  labels: ToolCardLabels,
 ): CardSection[] {
   const { toolCallText, resultText, displayText, callsBadge } = content
   if (toolCallText === undefined) {
@@ -171,7 +176,7 @@ export interface TrajectoryCardProps {
   onToggle: () => void
   t: TrajectoryTranslate
   /** Labels of the rich tool bodies. */
-  toolLabels: TrajectoryToolLabels
+  toolLabels: ToolCardLabels
 }
 
 /**
@@ -240,7 +245,17 @@ export function TrajectoryCard({
                     {expanded ? section.full() : section.preview}
                   </span>
                 )
-                : <div className={css.cardRich}>{expanded ? section.rich.expanded : section.rich.collapsed}</div>}
+                : (
+                  // The body's own buttons (copy, wrap) act on the body, not on the row that selects or folds the call.
+                  <div
+                    className={css.cardRich}
+                    onClick={stopRow}
+                    onDoubleClick={stopRow}
+                    onKeyDown={stopRow}
+                  >
+                    {expanded ? section.rich.expanded : section.rich.collapsed}
+                  </div>
+                )}
             </div>
           ))}
         </div>

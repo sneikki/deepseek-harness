@@ -13,7 +13,6 @@ import type {
   ToolResultNode,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { classifyTool, terminalCardModel, toolBodyModels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,
@@ -48,7 +47,12 @@ export interface TrajectoryLayoutInput {
   runningCalls: TrajectorySnapshot['runningCalls']
   requests?: readonly RequestView[]
   callSchemas?: RequestInspectionSnapshot['callSchemas']
+  /** Rich-body reader of the tool calls; without it every tool box keeps plain text. */
+  cards?: ToolCardReader | undefined
 }
+
+/** The rich body of one tool call, or undefined for the plain box; bound to the session's workspace. */
+export type ToolCardReader = (toolName: string, block: ToolCallBlock) => TrajectoryToolBody | undefined
 
 interface UsageLike {
   inputTokens?: number
@@ -182,7 +186,7 @@ export function deriveTrajectoryLayout(
   t: TrajectoryTranslate,
 ): readonly TrajectoryTurnModel[] {
   const {
-    nodes, eventLocations, partial, runningCalls, requests = [], callSchemas,
+    nodes, eventLocations, partial, runningCalls, requests = [], callSchemas, cards,
   } = input
   const resultByCall = indexResults(nodes)
   const callById = new Map<string, ToolCallBlock>(resultByCall)
@@ -442,7 +446,7 @@ export function deriveTrajectoryLayout(
     }
     if (node.kind === 'assistant') {
       const laidList = withSubCalls(
-        expandAssistant(node, index + 1, prevAbsTime, resultByCall, callStartById, callById, t),
+        expandAssistant(node, index + 1, prevAbsTime, resultByCall, callStartById, callById, cards, t),
         t,
       )
       if (node.step > 0) pushStep(node.turn, node.step, laidList)
@@ -520,6 +524,7 @@ export function deriveTrajectoryLayout(
       resultByCall,
       callStartById,
       callById,
+      cards,
       t,
       { streaming: true, timing: partial.timing },
     ), t)
@@ -590,12 +595,14 @@ export function appendTrajectoryPartialLayout(
   partial: TrajectorySnapshot['partial'],
   lastIndex: number,
   t: TrajectoryTranslate,
+  cards?: ToolCardReader | undefined,
 ): readonly TrajectoryTurnModel[] {
   if (partial === null) return turns
   const partialTurn = deriveTrajectoryLayout({
     nodes: [],
     partial,
     runningCalls: [],
+    cards,
   }, t).at(0)
   if (partialTurn === undefined) return turns
   const streamed: TrajectoryTurnModel = {
@@ -734,6 +741,7 @@ function expandAssistant(
   results: Map<string, ToolResultNode>,
   callStarts: ReadonlyMap<string, number>,
   calls: ReadonlyMap<string, ToolCallBlock>,
+  cards: ToolCardReader | undefined,
   t: TrajectoryTranslate,
   opts?: { streaming?: boolean; timing?: TrajectoryPartialAssistant['timing'] },
 ): LaidCell[] {
@@ -805,7 +813,8 @@ function expandAssistant(
     // Text and reasoning belong to the one Assistant record emitted above.
     if (block.kind !== 'tool-call') continue
     const result = results.get(block.callId)
-    const toolBody = toolBodyOf(result ?? calls.get(block.callId), block.name)
+    const callBlock = result ?? calls.get(block.callId)
+    const toolBody = cards === undefined || callBlock === undefined ? undefined : cards(block.name, callBlock)
     const toolDuration = streaming || result === undefined
       ? null
       : durationSeconds(result.time, result.callTime)
@@ -1125,26 +1134,6 @@ function summarizeCall(
     text: name,
     ...(summary === '' ? {} : { previewMarkdown: summary }),
   }
-}
-
-/**
- * The rich body one root tool call draws, from its settled result or its running call. The
- * order is the chat tool row's: shell command, then diff, file read, search.
- * @param block - the call's settled result or running call, when one exists.
- * @param name - recorded tool name.
- * @returns the body, or undefined for the plain text box.
- */
-function toolBodyOf(block: ToolCallBlock | undefined, name: string): TrajectoryToolBody | undefined {
-  if (block === undefined) return undefined
-  if (classifyTool(name) === 'bash') {
-    const copy = terminalCardModel(block)?.copy
-    if (copy?.kind === 'shell') return { kind: 'bash', command: copy.command }
-  }
-  const { diff, read, search } = toolBodyModels(block)
-  if (diff !== null) return { kind: 'diff', model: diff }
-  if (read !== null) return { kind: 'read', model: read }
-  if (search !== null) return { kind: 'search', model: search }
-  return undefined
 }
 
 function summarizeResult(

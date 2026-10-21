@@ -7,6 +7,8 @@ import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+// Type-only: pulls the tool plugin's Context merge (ctx.toolCards).
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the 'conversation.view' SlotMap row (declared by the slot's
@@ -59,7 +61,7 @@ declare module '@deepseek-ai/dsh-api-session-controller/client' {
 }
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
-export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale']
+export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'uiWorkspace', 'locale', 'toolCards']
 
 /**
  * Client plugin body: register the trajectory view tab. The registration
@@ -116,6 +118,13 @@ export function apply(ctx: Context): void {
       return {
         hooks: { duration, thinking },
         conversationT: ctx.locale.bind('conversation'),
+        toolCards: {
+          // The session's workspace root is read per call, so a rename lands on the next render.
+          cardBody: (toolName, block) => ctx.toolCards.cardBody(
+            toolName, block, ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd,
+          ),
+          labels: t => ctx.toolCards.labels(t),
+        },
         jsonStringWrapping: {
           getDefault: () => stringWrapping.getSnapshot(),
           setDefault: (value) => { stringWrapping.set(value) },

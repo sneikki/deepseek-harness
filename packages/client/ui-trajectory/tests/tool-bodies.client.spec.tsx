@@ -7,9 +7,9 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { TrajectoryCard } from '../src/client/TrajectoryCard.tsx'
 import type { TrajectoryCellProps, TrajectoryToolBody } from '../src/client/trajectory-record.ts'
-import { trajectoryToolLabels } from '../src/client/trajectory-tool-labels.ts'
 import { deriveTrajectoryLayout as deriveTrajectoryLayoutWithLocale } from '../src/client/layout.ts'
 import { conversationT, t } from './locale.client.ts'
+import { toolCardBody, toolCardLabels } from '@deepseek-ai/dsh-client-ui-tool/client'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@deepseek-ai/dsh-client-ui-primitives')>()
@@ -27,7 +27,9 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-const labels = trajectoryToolLabels(conversationT)
+const labels = toolCardLabels(conversationT)
+/** The rich-body reader the view hands the layout, bound to a workspace root. */
+const cards = (toolName: string, block: Parameters<typeof toolCardBody>[1]) => toolCardBody(toolName, block, '/w')
 
 function toolCell(overrides: Partial<TrajectoryCellProps>): TrajectoryCellProps {
   return { index: 1, kind: 'tool', text: '', timeSeconds: 1, toolName: 'bash', ...overrides }
@@ -147,19 +149,21 @@ describe('tool cell body derivation', () => {
       nodes: [{ kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'hi' }], source: null }, ...edit, ...grep] as never,
       partial: null,
       runningCalls: [],
+      cards,
     }, t).flatMap(turn => turn.groups.flatMap(group => group.cells)).filter(cell => cell.kind === 'tool')
     expect(cells.find(cell => cell.toolName === 'edit')?.toolBody?.kind).toBe('diff')
     expect(cells.find(cell => cell.toolName === 'grep')?.toolBody?.kind).toBe('search')
   })
 
-  it('keeps the plain box for a shell call without a description (persistent shell)', () => {
+  it('highlights a shell call without a description (persistent shell) too', () => {
     const bash = settled('p1', 'bash', '{"command":"ls"}', undefined, 'a.txt')
     const cells = deriveTrajectoryLayoutWithLocale({
       nodes: [{ kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'hi' }], source: null }, ...bash] as never,
       partial: null,
       runningCalls: [],
+      cards,
     }, t).flatMap(turn => turn.groups.flatMap(group => group.cells)).filter(cell => cell.kind === 'tool')
-    expect(cells[0]?.toolBody).toBeUndefined()
+    expect(cells[0]?.toolBody).toEqual({ kind: 'bash', command: 'ls' })
   })
   const nodes = [
     { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: 'hi' }], source: null },
@@ -190,12 +194,13 @@ describe('tool cell body derivation', () => {
   ] as Parameters<typeof deriveTrajectoryLayoutWithLocale>[0]['nodes']
 
   it('gives the bash call its command and the read call its file view', () => {
-    const turns = deriveTrajectoryLayoutWithLocale({ nodes, partial: null, runningCalls: [] }, t)
+    const turns = deriveTrajectoryLayoutWithLocale({ nodes, partial: null, runningCalls: [], cards }, t)
     const tools = turns.flatMap(turn => turn.groups.flatMap(group => group.cells))
       .filter(cell => cell.kind === 'tool')
     expect(tools.find(cell => cell.toolName === 'bash')?.toolBody).toEqual({ kind: 'bash', command: 'ls -la' })
     const read = tools.find(cell => cell.toolName === 'read')?.toolBody
     expect(read?.kind).toBe('read')
     expect(read?.kind === 'read' ? read.model.lang : undefined).toBe('typescript')
+    expect(read?.kind === 'read' ? read.model.label : undefined).toBe('a.ts')
   })
 })
