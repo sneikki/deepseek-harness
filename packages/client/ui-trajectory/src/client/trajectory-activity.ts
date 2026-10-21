@@ -19,3 +19,36 @@ export function trajectoryActivityOf(
   if (name === 'subagent' || name.startsWith('subagent_')) return 'proof'
   return 'other'
 }
+
+/** Colour family of a ledger card; one hue per family so the kinds read apart. */
+export type TrajectoryCardTone =
+  | 'user' | 'assistant' | 'thinking' | 'context' | 'subagent'
+  | 'shell' | 'read' | 'edit' | 'mcp' | 'tool' | 'error'
+
+/**
+ * Colour family of a ledger card, built on the activity buckets (shell = deploy,
+ * read/search = review, edit/write = code, subagent = proof); MCP tools get their own.
+ * @param kind - Record kind.
+ * @param toolName - Tool-call name for Tool records.
+ * @param isError - whether the call failed.
+ * @returns the card's colour family.
+ */
+export function trajectoryCardToneOf(
+  kind: string,
+  toolName: string | undefined,
+  isError: boolean | undefined,
+): TrajectoryCardTone {
+  if (kind === 'user') return 'user'
+  if (kind === 'message') return 'assistant'
+  if (kind === 'thinking') return 'thinking'
+  if (kind !== 'tool' && kind !== 'subtool') return 'context'
+  if (toolName?.startsWith('mcp__') === true && isError !== true) return 'mcp'
+  switch (trajectoryActivityOf(toolName ?? '', isError)) {
+    case 'error': return 'error'
+    case 'deploy': return 'shell'
+    case 'review': return 'read'
+    case 'code': return 'edit'
+    case 'proof': return 'subagent'
+    default: return 'tool'
+  }
+}

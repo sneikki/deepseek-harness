@@ -52,7 +52,7 @@ import { trajectoryRowMatchesFilter, type TrajectoryRowFilter } from './trajecto
 import type { TrajectoryKey, TrajectoryTranslate } from './locales.ts'
 import { COMPACTION_INTERRUPTED_ERROR } from './copy-codes.ts'
 import { codeProgram, PTC_TOOL_NAME, type CodeProgram } from './code-program.ts'
-import { trajectoryActivityOf } from './trajectory-activity.ts'
+import { trajectoryActivityOf, trajectoryCardToneOf } from './trajectory-activity.ts'
 import css from './TrajectoryTable.module.css'
 
 const BOTTOM_FOLLOW_THRESHOLD_PX = 2
@@ -3013,6 +3013,7 @@ export function TrajectoryTable({
                       data-activity={record.cell.kind === 'tool' || record.cell.kind === 'subtool'
                         ? trajectoryActivityOf(record.cell.toolName ?? '', record.cell.isError)
                         : undefined}
+                      data-card-tone={trajectoryCardToneOf(record.cell.kind, record.cell.toolName, record.cell.isError)}
                       data-running={stateOf(currentOwner(record)) === 'running' || undefined}
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}
