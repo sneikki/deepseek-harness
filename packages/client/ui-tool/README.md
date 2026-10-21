@@ -97,6 +97,11 @@ The terminal model uses `hasSpillNotice` from the browser-safe `@deepseek-ai/dsh
 
 This package declares the optional `UserQuestionPanels` capability; `ui-user-questions` provides it. `reveal(sessionId, callId)` opens an answerable panel, and `review(sessionId, callId, record)` opens recorded answers read-only. The row reads the capability through `ctx.get('userQuestionPanels')` and keeps its transcript when no question UI is composed.
 
+### Tool-card bodies
+
+`ToolCards` (`ctx.toolCards`) is a pure service that derives card bodies for read, diff, search, and terminal tool calls. `ui-trajectory` takes it as an optional inject, so it renders plain text when this package is absent.
+
+
 </details>
 
 -----
