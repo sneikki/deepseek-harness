@@ -3,6 +3,7 @@
 import type { HTMLAttributes } from 'react'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { ConversationPromptSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { DiffCardModel, ReadCardModel, SearchCardModel } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { TrajectoryTranslate } from './locales.ts'
 import type { TrajectorySubagentInfo } from './trajectory-subagent.ts'
 
@@ -37,6 +38,16 @@ export interface TrajectorySourceBlock {
   callId?: string
   toolName?: string
 }
+
+/**
+ * The rich body a tool call draws in its ledger box, chosen as the chat tool row chooses it.
+ * Null-free: a call without a rich body carries no field.
+ */
+export type TrajectoryToolBody =
+  | { kind: 'bash'; command: string }
+  | { kind: 'read'; model: ReadCardModel }
+  | { kind: 'diff'; model: DiffCardModel }
+  | { kind: 'search'; model: SearchCardModel }
 
 /** Data and optional presentation attributes for one trajectory record. */
 export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
@@ -90,6 +101,8 @@ export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
   callId?: string
   /** Recorded tool name; independent of the display summary. */
   toolName?: string
+  /** Rich body the ledger box draws for this tool call, when its tool has one. */
+  toolBody?: TrajectoryToolBody
   /** Failed operation or interrupted assistant output. */
   isError?: boolean
   /** Own duration in seconds, or `null` when no duration is known. */

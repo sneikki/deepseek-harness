@@ -13,9 +13,11 @@ import type {
   ToolResultNode,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { classifyTool, terminalCardModel, toolBodyModels } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,
+  TrajectoryToolBody,
 } from './trajectory-record.ts'
 import type { TrajectoryPartialAssistant, TrajectorySnapshot } from './trajectory-contract.ts'
 import { displayToolName, formatElapsedSeconds } from './trajectory-record.ts'
@@ -803,6 +805,7 @@ function expandAssistant(
     // Text and reasoning belong to the one Assistant record emitted above.
     if (block.kind !== 'tool-call') continue
     const result = results.get(block.callId)
+    const toolBody = toolBodyOf(result ?? calls.get(block.callId), block.name)
     const toolDuration = streaming || result === undefined
       ? null
       : durationSeconds(result.time, result.callTime)
@@ -819,6 +822,7 @@ function expandAssistant(
         ...summarizeCall(block.name, block.argsRaw),
         inputDetail: block.argsRaw,
         callId: block.callId,
+        ...toolBody === undefined ? {} : { toolBody },
         ...(result !== undefined
           ? {
             outputDetail: detailResult(result, t),
@@ -1121,6 +1125,26 @@ function summarizeCall(
     text: name,
     ...(summary === '' ? {} : { previewMarkdown: summary }),
   }
+}
+
+/**
+ * The rich body one root tool call draws, from its settled result or its running call. The
+ * order is the chat tool row's: shell command, then diff, file read, search.
+ * @param block - the call's settled result or running call, when one exists.
+ * @param name - recorded tool name.
+ * @returns the body, or undefined for the plain text box.
+ */
+function toolBodyOf(block: ToolCallBlock | undefined, name: string): TrajectoryToolBody | undefined {
+  if (block === undefined) return undefined
+  if (classifyTool(name) === 'bash') {
+    const copy = terminalCardModel(block)?.copy
+    if (copy?.kind === 'shell') return { kind: 'bash', command: copy.command }
+  }
+  const { diff, read, search } = toolBodyModels(block)
+  if (diff !== null) return { kind: 'diff', model: diff }
+  if (read !== null) return { kind: 'read', model: read }
+  if (search !== null) return { kind: 'search', model: search }
+  return undefined
 }
 
 function summarizeResult(
