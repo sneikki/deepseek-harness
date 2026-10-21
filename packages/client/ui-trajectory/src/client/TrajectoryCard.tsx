@@ -191,6 +191,7 @@ export function cardSections(
       full: () => cardFullOutput(cell) || resultText,
       tone: cell.isError === true ? 'error' : noOutput ? 'empty' : 'output',
       truncated: isTruncated(resultText),
+      ...(kind === 'bash' ? { clamp: 'line' as const } : {}),
     })
   }
   return sections
@@ -280,7 +281,7 @@ export function TrajectoryCard({
               )}
               {section.rich === undefined
                 ? (
-                  <span className={css.cardText}>
+                  <span className={css.cardText} data-clamp={!expanded ? section.clamp : undefined}>
                     {section.lead}
                     {expanded ? section.full() : section.preview}
                   </span>

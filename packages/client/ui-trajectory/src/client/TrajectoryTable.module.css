@@ -2201,6 +2201,16 @@
   overflow: hidden;
 }
 
+.cardText[data-clamp='line'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardRich[data-collapsed] :global(.md-code-block) [data-code-block-content] {
+  padding: 0;
+}
+
 .cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
 .cardRich[data-collapsed] :global(.md-code-block) > :first-child {
   display: none;
