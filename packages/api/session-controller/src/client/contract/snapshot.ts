@@ -81,6 +81,8 @@ export interface SessionSnapshot {
   readonly openError: RemoteFailure | null
   readonly hasMore: boolean
   readonly loadingOlder: boolean
+  /** Message of the last failed older-history pull; absent after a fresh attempt starts. */
+  readonly olderError?: string
   readonly promptError: PromptError | null
   readonly blank: boolean
   readonly lastAgentError: string | null

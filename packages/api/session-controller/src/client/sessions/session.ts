@@ -61,6 +61,11 @@ const JUMP_PAGE_OPTIONS = {
   turnWindow: { ...HISTORY_PAGE_OPTIONS.turnWindow, minMessages: JUMP_PAGE_MESSAGES },
 }
 
+function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message
+  return String(error)
+}
+
 interface PendingHistory {
   beforeSeq: SessionLogOffset
   hasMore: boolean
@@ -104,6 +109,8 @@ export class Session implements SessionFace {
    *  passes drop all writes once the generation moves on. */
   private openGeneration = 0
   private loadingOlder = false
+  /** Last failed history pull (loadOlder/loadThrough), cleared by the next attempt. */
+  private olderError: string | undefined
   /** Shared low-water target of the running jump loop; null when no jump is paging. */
   private jumpTargetSeq: SessionSeq | null = null
   /** The running jump loop's completion, shared by retargeting callers. */
@@ -408,6 +415,8 @@ export class Session implements SessionFace {
     const events = this.events
     if (events === undefined) return
     this.loadingOlder = true
+    this.olderError = undefined
+    const generation = this.openGeneration
     this.notifier.markDirty()
     try {
       await events.prepend({
@@ -415,6 +424,8 @@ export class Session implements SessionFace {
         ...HISTORY_PAGE_OPTIONS,
       })
     } catch (error) {
+      // A failure from a replaced stream says nothing about the rebuilt window.
+      if (generation === this.openGeneration) this.olderError = errorMessage(error)
       if (!isRemoteFailure(error)) {
         console.error('[session-controller] loadOlder failed:', error)
       }
@@ -447,6 +458,7 @@ export class Session implements SessionFace {
     this.pendingHistory = pending
     this.jumpTargetSeq = seq
     this.loadingOlder = true
+    this.olderError = undefined
     this.notifier.markDirty()
     // Stale-pass guard (the doOpen pattern): a resync mid-loop replaces the
     // stream generation; this pass then stops instead of paging the new
@@ -463,6 +475,7 @@ export class Session implements SessionFace {
           if (pending.beforeSeq >= before) return
         }
       } catch (error) {
+        if (generation === this.openGeneration) this.olderError = errorMessage(error)
         if (!isRemoteFailure(error)) {
           console.error('[session-controller] loadThrough failed:', error)
         }
@@ -492,6 +505,7 @@ export class Session implements SessionFace {
     this.openPromise = null
     this.openState = 'cold'
     this.openError = null
+    this.olderError = undefined
     this.baseSeq = SessionLogOffset(0)
     this.notifier.markDirty()
     await this.open()
@@ -904,6 +918,7 @@ export class Session implements SessionFace {
       openError: this.openError,
       hasMore: this.hasMore,
       loadingOlder: this.loadingOlder,
+      ...(this.olderError === undefined ? {} : { olderError: this.olderError }),
       promptError: this.promptError,
       blank: this.blankBit,
       lastAgentError: this.lastAgentError,

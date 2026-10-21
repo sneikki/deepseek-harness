@@ -152,7 +152,7 @@ function standaloneHistory(
   snapshot: TrajectorySnapshot,
 ): Pick<
   ComponentProps<typeof TrajectoryView>,
-  'useSession' | 'useTrajectory' | 'loadOlder'
+  'useSession' | 'useTrajectory' | 'loadOlder' | 'loadAll'
 > {
   const session = createSnapshotStore(sessionSnapshot(snapshot.eventNodes))
   const trajectory = createSnapshotStore(snapshot)
@@ -160,6 +160,7 @@ function standaloneHistory(
     useSession: bindSnapshotSelector(session),
     useTrajectory: bindSnapshotSelector(trajectory),
     loadOlder: () => Promise.resolve(false),
+    loadAll: () => Promise.resolve(),
   }
 }
 
@@ -210,7 +211,7 @@ const useProjection: UseProjection = emptyProjection
 
 type StandaloneBaseProps = Omit<
   ComponentProps<typeof TrajectoryView>,
-  'useSession' | 'useTrajectory' | 'useDuration' | 'loadOlder' | 'setActualDuration'
+  'useSession' | 'useTrajectory' | 'useDuration' | 'loadOlder' | 'loadAll' | 'setActualDuration'
   | 'useThinking' | 'setShowThinking'
 >
 
@@ -279,7 +280,7 @@ async function bench(snapshot = historySnapshot(NODES)) {
   await runtime.sessions.add({
     id: SID,
     snapshot: { blank: false },
-    session: { loadOlder },
+    session: { loadOlder, loadThrough: () => Promise.resolve() },
   })
   const reference = runtime.sessions.retain(SID)
   await reference.ready
@@ -403,6 +404,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         const trajectory = injected as TrajectoryViewInjected
         return {
           loadOlder: trajectory.loadOlder,
+          loadAll: trajectory.loadAll,
           loadImage: trajectory.loadImage,
           conversationT: trajectory.conversationT,
           toolCards: trajectory.toolCards,
@@ -1439,8 +1441,8 @@ describe('TrajectoryView state', () => {
     expect(within(screen.getByRole('tabpanel')).getByText(status)).toBeTruthy()
   })
 
-  it('reveals resident history one bounded page at a time', async () => {
-    const nodes: LegacyConversationSlice['nodes'] = Array.from({ length: 5_000 }, (_, index) => ({
+  it('shows all resident history without paging', () => {
+    const nodes: LegacyConversationSlice['nodes'] = Array.from({ length: 300 }, (_, index) => ({
       kind: 'user' as const,
       seq: index + 1,
       time: index + 1,
@@ -1448,31 +1450,178 @@ describe('TrajectoryView state', () => {
       source: null,
     }))
     const trajectory = createSnapshotStore(historySnapshot([]))
-    const loadOlder = vi.fn(() => Promise.resolve(false))
     render(
       <TrajectoryView
         {...standaloneProps([])}
         {...standaloneHistory(historySnapshot(nodes))}
         {...standaloneDuration()}
         useTrajectory={bindSnapshotSelector(trajectory)}
-        loadOlder={loadOlder}
       />,
     )
-
     act(() => { trajectory.set(historySnapshot(nodes)) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
-    fireEvent.click(screen.getAllByRole('button', { name: '加载更早的历史' }).at(-1)!)
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('101')
-    expect(loadOlder).not.toHaveBeenCalled()
-
-    act(() => { trajectory.set(historySnapshot([...nodes, {
-      kind: 'user', seq: 5_001, time: 5_001,
-      content: [{ type: 'text', text: 'appended prompt' }], source: null,
-    }])) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('102')
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('300')
   })
 
-  it('keeps a replacement window bounded when its predecessor tail is absent', () => {
+  describe('auto-loading older history', () => {
+    function setup(
+      hasMore: boolean,
+      loadAll: () => Promise<void>,
+      initial: Partial<SessionSnapshot> = {},
+    ) {
+      const session = createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore, ...initial })
+      const loadAllMock = vi.fn(loadAll)
+      const view = render(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          useSession={bindSnapshotSelector(session)}
+          loadAll={loadAllMock}
+        />,
+      )
+      return { session, loadAll: loadAllMock, view }
+    }
+
+    it('loads everything once and does not repeat after hasMore clears', async () => {
+      const harness = setup(true, async () => {
+        harness.session.set({ ...harness.session.getSnapshot(), hasMore: false })
+      })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
+    })
+
+    it('makes no call when nothing older remains', async () => {
+      const { loadAll } = setup(false, () => Promise.resolve())
+      await act(async () => { await Promise.resolve() })
+      expect(loadAll).not.toHaveBeenCalled()
+    })
+
+    it('does not start while an older pull is already loading, then loads once', async () => {
+      const harness = setup(true, () => Promise.resolve(), { loadingOlder: true })
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).not.toHaveBeenCalled()
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), loadingOlder: false }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
+    })
+
+    it('loads again after a resync rebuilds the window with older history', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      // resync: cold/loading, then an open window with hasMore again.
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), openState: 'loading' }) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), openState: 'open', hasMore: true }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+    })
+
+    it('loads again when hasMore goes false then true', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), hasMore: false }) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), hasMore: true }) })
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+    })
+
+    it('shows a failure and retries on demand', async () => {
+      const harness = setup(true, () => Promise.resolve())
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      act(() => { harness.session.set({ ...harness.session.getSnapshot(), olderError: 'boom' }) })
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain('boom')
+      // The session clears olderError when the next attempt starts.
+      harness.loadAll.mockImplementationOnce(async () => {
+        const { olderError: _cleared, ...rest } = harness.session.getSnapshot()
+        harness.session.set(rest)
+      })
+      fireEvent.click(within(alert).getByRole('button'))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+      await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
+    })
+
+    it('does not start again after a session switch with a pending load', async () => {
+      let release: () => void = () => {}
+      const harness = setup(true, () => new Promise<void>((resolve) => { release = resolve }))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      harness.view.rerender(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          sessionId={'other-session' as SessionId}
+          useSession={bindSnapshotSelector(createSnapshotStore<SessionSnapshot>({ ...sessionSnapshot([]), hasMore: true }))}
+          loadAll={harness.loadAll}
+        />,
+      )
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
+      release()
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(2)
+    })
+
+    it('makes no call and no state update after unmount', async () => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+      let release: () => void = () => {}
+      const harness = setup(true, () => new Promise<void>((resolve) => { release = resolve }))
+      await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(1) })
+      harness.view.unmount()
+      release()
+      await act(async () => { await Promise.resolve() })
+      expect(harness.loadAll).toHaveBeenCalledTimes(1)
+      expect(errors).not.toHaveBeenCalled()
+      errors.mockRestore()
+    })
+  })
+
+  describe('scroll anchor while the whole history lands', () => {
+    function node(seq: number): LegacyConversationSlice['nodes'][number] {
+      return {
+        kind: 'user', seq, time: seq, content: [{ type: 'text', text: `p${String(seq)}` }], source: null,
+      }
+    }
+    function mountPane() {
+      const trajectory = createSnapshotStore(historySnapshot([node(5), node(6)]))
+      render(
+        <TrajectoryView
+          {...standaloneProps([])}
+          {...standaloneHistory(historySnapshot([]))}
+          {...standaloneDuration()}
+          useTrajectory={bindSnapshotSelector(trajectory)}
+        />,
+      )
+      const pane = document.querySelector<HTMLElement>('[data-trajectory-scroll]')!
+      const box = { height: 1000, top: 0 }
+      Object.defineProperty(pane, 'scrollHeight', { configurable: true, get: () => box.height })
+      Object.defineProperty(pane, 'clientHeight', { configurable: true, get: () => 400 })
+      Object.defineProperty(pane, 'scrollTop', {
+        configurable: true, get: () => box.top, set: (value: number) => { box.top = value },
+      })
+      return { trajectory, pane, box }
+    }
+
+    it('keeps the reader in place when history lands while scrolled up', () => {
+      const { trajectory, pane, box } = mountPane()
+      box.top = 100
+      fireEvent.scroll(pane)
+      box.height = 1500
+      act(() => { trajectory.set(historySnapshot([node(1), node(2), node(5), node(6)])) })
+      expect(box.top).toBe(600)
+    })
+
+    it('keeps following the tail after the reader returned to it', () => {
+      const { trajectory, pane, box } = mountPane()
+      box.top = 100
+      fireEvent.scroll(pane)
+      box.top = 600
+      fireEvent.scroll(pane)
+      box.height = 1500
+      act(() => { trajectory.set(historySnapshot([node(1), node(2), node(5), node(6)])) })
+      expect(box.top).toBe(1500)
+    })
+  })
+
+  it('shows the replacement window whole when its predecessor tail is absent', () => {
     const nodes = (start: number): LegacyConversationSlice['nodes'] => Array.from(
       { length: 100 },
       (_, index) => ({
@@ -1492,10 +1641,10 @@ describe('TrajectoryView state', () => {
         useTrajectory={bindSnapshotSelector(trajectory)}
       />,
     )
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('100')
 
     act(() => { trajectory.set(historySnapshot(nodes(201))) })
-    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('51')
+    expect(screen.getByRole('table').getAttribute('aria-rowcount')).toBe('100')
   })
 
   it('keeps resident request numbering and cumulative usage outside the layout page', async () => {
