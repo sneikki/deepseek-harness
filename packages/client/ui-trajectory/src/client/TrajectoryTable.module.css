@@ -2197,6 +2197,6 @@
 }
 
 .cardRich[data-collapsed] :is([data-read], [data-diff]) > :first-child,
-.cardRich[data-collapsed] .md-code-block > div:has(> [data-code-block-banner]) {
+.cardRich[data-collapsed] .md-code-block > :first-child {
   display: none;
 }
