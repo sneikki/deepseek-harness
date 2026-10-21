@@ -211,6 +211,52 @@
   --trajectory-tone-text: var(--trajectory-act, var(--amv-text-2));
   --trajectory-body: var(--amv-text-2);
 }
+/* Card hue per family (trajectoryCardToneOf); context stays on the quiet muted default. */
+.table tbody tr[data-card-tone='user'] {
+  --trajectory-tone: var(--amv-text-2);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-text-2) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='assistant'] {
+  --trajectory-tone: var(--amv-accent);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-accent) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='thinking'] {
+  --trajectory-tone: var(--amv-attention);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-attention) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='subagent'] {
+  --trajectory-tone: var(--amv-success);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-success) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='shell'] {
+  --trajectory-tone: var(--amv-act-deploy);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-act-deploy) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='read'] {
+  --trajectory-tone: var(--amv-act-code);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-act-code) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='edit'] {
+  --trajectory-tone: var(--amv-act-test);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-act-test) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='mcp'] {
+  --trajectory-tone: var(--amv-act-review);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-act-review) 82%, var(--amv-text));
+}
+
+.table tbody tr[data-card-tone='error'] {
+  --trajectory-tone: var(--amv-danger);
+  --trajectory-tone-text: color-mix(in srgb, var(--amv-danger) 82%, var(--amv-text));
+}
+
 .table tbody tr[data-collapsed-summary][data-collapsed-summary] {
   --trajectory-tone: var(--amv-muted);
   --trajectory-tone-text: var(--amv-muted);
@@ -513,6 +559,7 @@
   padding: var(--trajectory-card-pad) 14px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--trajectory-tone) 26%, var(--amv-surface));
+  border-left: 3px solid color-mix(in srgb, var(--trajectory-tone) 70%, var(--amv-surface));
   border-radius: 10px;
   background: var(--trajectory-card-tint);
   white-space: normal;
