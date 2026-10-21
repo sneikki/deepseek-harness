@@ -560,7 +560,9 @@ export class SessionController extends TypertRemoteService {
       if (attached !== undefined) return attached
       if (stored === undefined) return null
       if (stored.formatStatus === 'migration-required') {
-        const cached = this.ctx.get('sessionProjectionCache')?.cachedSnapshot(stored.header)
+        const cache = this.ctx.get('sessionProjectionCache')
+        const cached = cache?.cachedMigrated({ header: stored.header, revision: stored.revision })
+          ?? cache?.cachedSnapshot(stored.header)
         return { kind: 'migration-required', values: { ...cached?.values } as SessionProjectionValues }
       }
       using observation = await this.ctx.sessionQuery.observeSession(sessionId, { signal })

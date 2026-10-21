@@ -738,6 +738,52 @@ describe('SessionProjectionCache cold-read seeding', () => {
     })
   })
 
+  it('persists a migrated historical fold and serves it only for the same stored revision and stateVersion', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
+    roots.push(root)
+    const id = SessionId('migrated')
+    const restore = (marks: string[][]) => {
+      const session = Session.fromRestore(id, structuredClone(storedLog(marks)), headerOf(id), SessionLogOffset(0), 'detached')
+      return { session, events: session.snapshotEvents(SessionLogOffset(0), session.seq) }
+    }
+    const stored: SessionHeader = { ...headerOf(id), version: 0 as SessionHeader['version'] }
+    const source = { header: stored, revision: 'rev-1' }
+    const first = await harness({ root })
+    const written = whenWritten(first.ctx, id)
+    // First open: the in-memory migrated Session folds the log and persists the result.
+    const { session, events } = restore([['folded']])
+    expect(first.cache.cachedMigrated(source)).toBeUndefined()
+    first.cache.hydratePrepared(session, events, source)
+    await written
+    expect((await storedRecord(root, id))?.identity.sourceRevision).toBe('rev-1')
+
+    // Header-only faces never serve it: no revision proof.
+    expect(first.cache.cachedSnapshot(stored)).toBeUndefined()
+    expect(first.cache.cachedSnapshot(headerOf(id))).toBeUndefined()
+
+    // After a restart the values come from the record, with no log and no migration.
+    await first.ctx.fiber.dispose()
+    const second = await harness({ root })
+    expect(second.cache.cachedMigrated(source)).toEqual({
+      asOfSeq: 3,
+      values: { 'cache-test/marks': { marks: ['folded'] } },
+    })
+    // The log changed on disk (new revision): not served.
+    expect(second.cache.cachedMigrated({ header: stored, revision: 'rev-2' })).toBeUndefined()
+    // A different lifecycle under the same id: not served.
+    expect(second.cache.cachedMigrated({ header: { ...stored, createdAt: 5 }, revision: 'rev-1' })).toBeUndefined()
+
+    // A second hydrate seeds from the record: the mark is read from the row, not the log.
+    const other = restore([['other']])
+    expect(second.cache.hydratePrepared(other.session, other.events, source).values)
+      .toEqual({ 'cache-test/marks': { marks: ['folded'] } })
+
+    // A projection stateVersion bump discards the row instead of serving it.
+    await second.ctx.fiber.dispose()
+    const bumped = await harness({ root, stateVersion: 2 })
+    expect(bumped.cache.cachedMigrated(source)).toBeUndefined()
+  })
+
   it('coldSnapshot traverses the full log but applies only the events after each cached watermark', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
     roots.push(root)

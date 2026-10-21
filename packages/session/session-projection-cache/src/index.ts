@@ -54,6 +54,9 @@ type CurrentCheckpointIdentity = CheckpointIdentity & {
   inheritedEventCount: SessionLogOffset
 }
 
+/** The stored historical header and persistence `stat` revision a migrated Session was decoded from. */
+type MigratedSource = { readonly header: SessionHeader; readonly revision: string }
+
 const PREDECESSOR_TITLE_KEY = 'title' as Extract<keyof SessionProjectionMap, string>
 
 export { checkpointIdentity, checkpointRecord, checkpointRow, projectionCacheDomainSpec } from './spec.ts'
@@ -211,37 +214,85 @@ export class SessionProjectionCache extends Service {
   }
 
   /**
+   * The zero-I/O read for a session whose stored log is still a historical
+   * format: the values folded from its in-memory migrated view, served only
+   * while the stored log revision is the one they were folded from. A
+   * `migration-required` session otherwise has hints only; this lets a second
+   * open skip the migration entirely.
+   * @param source - the stored header and `stat` revision (no log read).
+   * @param keys - optional projection keys required by the caller's audience.
+   * @returns the viewed block, or `undefined` when no record proves this exact log.
+   */
+  cachedMigrated(
+    source: { readonly header: SessionHeader; readonly revision: string },
+    keys?: readonly Extract<keyof SessionProjectionMap, string>[],
+  ): ProjectionSnapshot | undefined {
+    const record = this.migratedRecord(source)
+    return record === undefined ? undefined : this.viewRecord(record, keys)
+  }
+
+  private migratedRecord(source: MigratedSource, inheritedEventCount?: SessionLogOffset): CheckpointRecord | undefined {
+    const record = this.requireTable().get(source.header.id)
+    if (record === undefined) return undefined
+    const { identity } = record
+    const expected = lifecycleIdentityOf(source.header)
+    return identity.sourceRevision === source.revision
+      && identity.formatVersion === expected.formatVersion
+      && lifecycleIdentityMatches(identity, expected)
+      && (inheritedEventCount === undefined || (identity.inheritedEventCount ?? 0) === inheritedEventCount)
+      ? record
+      : undefined
+  }
+
+  /**
    * Hydrate projection cells for an already-prepared Session without another
    * persistence read. The cache seeds matching rows; the supplied exact log
    * advances every unit to the observation cut. No checkpoint is written
-   * because the logical observation may contain recovery events not yet durable.
+   * for a current Session because the logical observation may contain
+   * recovery events not yet durable.
+   *
+   * With `source` the Session is the in-memory migration of a stored
+   * historical log (never published), so nothing durable can be ahead of it:
+   * rows bound to the same stored revision seed the fold, and the folded
+   * checkpoint is persisted (fail-soft) for the next open.
    * @param session - exact unpublished Session retained by persistence.
    * @param events - exact logical event prefix represented by the observation.
+   * @param source - the historical stored log the Session was migrated from.
    * @returns all projection values at the event cut.
    */
   hydratePrepared(
     session: Session,
     events: readonly SessionEvent[],
+    source?: { readonly header: SessionHeader; readonly revision: string },
   ): ProjectionSnapshot {
-    const record = this.recordFor(
-      session.id,
-      identityOf(session.header, session.inheritedEventCount),
-    )
-    if (record === undefined) {
-      return this.ctx.sessionProjections.hydrate(session, {}, events, SessionLogOffset(0))
-    }
+    const record = source === undefined
+      ? this.recordFor(session.id, identityOf(session.header, session.inheritedEventCount))
+      : this.migratedRecord(source, session.inheritedEventCount)
+    let snapshot: ProjectionSnapshot
     try {
-      return this.ctx.sessionProjections.hydrate(
-        session,
-        record.rows,
-        events,
-        SessionLogOffset(0),
-      )
+      snapshot = this.ctx.sessionProjections.hydrate(session, record?.rows ?? {}, events, SessionLogOffset(0))
     } catch {
       // Cached rows are disposable derived data. Retry from the exact log so a
       // stale schema cannot make a valid Session unreadable.
-      return this.ctx.sessionProjections.hydrate(session, {}, events, SessionLogOffset(0))
+      snapshot = this.ctx.sessionProjections.hydrate(session, {}, events, SessionLogOffset(0))
     }
+    if (source !== undefined) this.persistMigrated(session, source, record)
+    return snapshot
+  }
+
+  /** Write the migrated fold's checkpoint unless the stored record already holds exactly it. */
+  private persistMigrated(session: Session, source: MigratedSource, stored: CheckpointRecord | undefined): void {
+    const rows = this.ctx.sessionProjections.checkpoint(session)
+    if (stored !== undefined && Object.entries(rows).every(([key, row]) =>
+      stored.rows[key]?.ver === row.ver && stored.rows[key]?.seq === row.seq)) return
+    const identity: CheckpointIdentity = {
+      ...lifecycleIdentityOf(source.header),
+      inheritedEventCount: session.inheritedEventCount,
+      sourceRevision: source.revision,
+    }
+    void this.put(session.id, identity, rows).catch((error: unknown) => {
+      this.ctx.logger.warn(`session projection cache: migrated write-back for "${session.id}" failed (cache stays stale): ${String(error)}`)
+    })
   }
 
   /**
@@ -445,6 +496,7 @@ function identityMatches(stored: CheckpointIdentity, expected: CurrentCheckpoint
  */
 function currentLifecycleMatches(stored: CheckpointIdentity, expected: LifecycleIdentity): boolean {
   return stored.formatVersion === expected.formatVersion
+    && stored.sourceRevision === undefined
     && lifecycleIdentityMatches(stored, expected)
 }
 

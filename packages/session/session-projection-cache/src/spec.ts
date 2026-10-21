@@ -55,6 +55,13 @@ export const checkpointIdentity = z.object({
   cwd: z.string().optional(),
   isSeeded: z.boolean().optional(),
   inheritedEventCount: z.number().int().nonnegative().transform(SessionLogOffset).optional(),
+  /**
+   * Stored-log revision a record folded from a migration-required (historical)
+   * log in memory is bound to. Such a record carries the historical
+   * `formatVersion` and only the revision-checked migrated read serves it; the
+   * header-only faces refuse any record that carries one.
+   */
+  sourceRevision: z.string().optional(),
 })
 
 /** The identity fields a record is bound to, inferred from {@link checkpointIdentity}. */
