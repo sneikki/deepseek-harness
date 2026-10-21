@@ -426,6 +426,9 @@ export function TrajectoryView({
     const sync = (layouts: typeof searchLayouts): void => {
       void searchIndex.update(layouts).then((changed) => {
         if (changed) setSearchIndexRevision(revision => revision + 1)
+      }, (error: unknown) => {
+        // The old index stays; the next layout change retries.
+        console.error('Trajectory search index update failed', error)
       })
     }
     if (!searchIndexInitialized.current) {

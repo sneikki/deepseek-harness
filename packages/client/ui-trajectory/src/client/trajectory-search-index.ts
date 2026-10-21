@@ -85,7 +85,6 @@ export class TrajectorySearchIndex {
    */
   async update(layouts: readonly (readonly TrajectoryTurnModel[])[]): Promise<boolean> {
     if (this.layouts === layouts) return false
-    this.layouts = layouts
     const generation = ++this.generation
     const seen = new Set<string>()
     // Markdown of the changed records, in one batch; each record keeps its slot (-1: none).
@@ -114,6 +113,8 @@ export class TrajectorySearchIndex {
     }
     const previews = await trajectoryPreviewTexts(markdown)
     if (generation !== this.generation) return false
+    // Recorded only after a successful parse, so a rejected update leaves the next call a retry.
+    this.layouts = layouts
     for (const { id, sources, cell, preview, result } of changed) {
       this.entries.set(id, {
         sources,
