@@ -190,6 +190,7 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
   chatFileMentions: 'client-side slot-contract accessor (ChatFileMentions) — packages/client/ui-chat/README.md owns the API',
   shortcuts: 'client-side interface-typed keyboard service — packages/client/shortcuts/README.md owns the API',
   userQuestionPanels: 'client-side slot-contract accessor (UserQuestionPanels) — packages/client/ui-tool/README.md owns the API',
+  toolCards: 'client-side pure card-body derivation service (ToolCards) — packages/client/ui-tool/README.md owns the API',
   commandUi: 'client-side interface-typed browser service — packages/client/ui-commands/README.md owns the API',
   feedbackUi: 'client-side feedback dialog service — packages/client/ui-message-feedback/README.md owns the API',
   conversation: 'client-side interface-typed browser service — packages/client/ui-conversation/README.md owns the API',
