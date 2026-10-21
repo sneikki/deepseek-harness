@@ -389,6 +389,8 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
     const root = rootRef.current
     if (root === null) return
     const onWheel = (event: globalThis.WheelEvent): void => {
+      // Plain wheel over the agent list scrolls it; pinch (ctrlKey) still zooms.
+      if (!event.ctrlKey && event.target instanceof Element && event.target.closest('[data-agent-rows]') !== null) return
       event.preventDefault()
       const track = trackRef.current
       if (track === null || model === null) return

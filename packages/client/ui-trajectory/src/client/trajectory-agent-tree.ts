@@ -50,6 +50,8 @@ export interface AgentTreeRow {
   startIndex: number | null
   /** Whether the child's projection is present; false rows show interim lifecycle data and are worth loading. */
   loaded: boolean
+  /** False for blocking calls known only by tool-call id: no session to open or load. */
+  hasSession: boolean
 }
 
 const LIFECYCLE_STATUS = {
@@ -142,10 +144,35 @@ export function deriveAgentTree(
         hasChildren: children.length > 0,
         startIndex: links.get(entry.id) ?? null,
         loaded: projection !== undefined,
+        hasSession: true,
       })
       walk(entry.id, depth + 1, new Map())
     }
   }
-  walk(rootId, 1, startIndexes(projectionsBySession[rootId]?.values.subagentCatalog ?? [], lifecycles))
+  const catalog = projectionsBySession[rootId]?.values.subagentCatalog ?? []
+  const links = startIndexes(catalog, lifecycles)
+  // Blocking calls carry no agent id: with an unpaired one-shot catalog row they may be that row, so skip them.
+  const ambiguous = catalog.some(entry => entry.mode === 'one-shot' && !links.has(entry.id))
+  walk(rootId, 1, links)
+  // The transcript proves these ran even when the catalog (unloaded or old-format root) lacks them.
+  const linked = new Set(links.values())
+  for (const lifecycle of lifecycles) {
+    if (visited.has(lifecycle.id) || linked.has(lifecycle.startIndex)) continue
+    if (ambiguous && !lifecycle.background) continue
+    rows.push({
+      sessionId: lifecycle.id,
+      depth: 1,
+      label: lifecycle.description === '' ? lifecycle.shortId : lifecycle.description,
+      shortId: lifecycle.shortId,
+      status: LIFECYCLE_STATUS[lifecycle.status],
+      startedAt: lifecycle.startedAt,
+      endedAt: lifecycle.status === 'running' ? null : lifecycle.endedAt,
+      activeMs: null,
+      hasChildren: false,
+      startIndex: lifecycle.startIndex,
+      loaded: false,
+      hasSession: lifecycle.background,
+    })
+  }
   return rows
 }

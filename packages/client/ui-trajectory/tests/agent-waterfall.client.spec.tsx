@@ -10,7 +10,7 @@ afterEach(cleanup)
 
 const row = (sessionId: string, depth: number, extra: Partial<AgentTreeRow> = {}): AgentTreeRow => ({
   sessionId, depth, label: `agent-${sessionId}`, shortId: sessionId.padEnd(8, '0'), status: 'done',
-  startedAt: 0, endedAt: 500, activeMs: 300, hasChildren: false, startIndex: null, loaded: true, ...extra,
+  startedAt: 0, endedAt: 500, activeMs: 300, hasChildren: false, startIndex: null, loaded: true, hasSession: true, ...extra,
 })
 const rows = [
   row('a', 1, { hasChildren: true, startIndex: 7 }),
@@ -46,6 +46,16 @@ describe('TrajectoryAgentWaterfall', () => {
     )
     expect(screen.getByText('Agents · 1 · 2 without timing')).toBeTruthy()
     expect(view.container.querySelectorAll('[data-agent-id]')).toHaveLength(1)
+  })
+
+  it('offers no open button for a row without a session', () => {
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={0} domainDuration={1000} domainEnd={1000} toDomain={x => x}
+        onOpenSession={vi.fn()} rows={[row('a', 1), row('call-1', 1, { hasSession: false })]} />,
+    )
+    const buttons = (id: string) => view.container.querySelector(`[data-agent-id="${id}"]`)!.querySelectorAll('button')
+    expect(buttons('a')).toHaveLength(1)
+    expect(buttons('call-1')).toHaveLength(0)
   })
 
   it('collapses a subtree with its chevron', () => {

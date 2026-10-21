@@ -374,7 +374,7 @@ export function TrajectoryView({
   // Rows without a projection, or with one that carries no timing (cache hints of a
   // historical-format child), get it read (bounded, once, one retry); nested children follow.
   useEffect(() => {
-    for (const row of agentRows) if (!row.loaded || row.activeMs === null) requestProjection(row.sessionId)
+    for (const row of agentRows) if (row.hasSession && (!row.loaded || row.activeMs === null)) requestProjection(row.sessionId)
   }, [agentRows, requestProjection])
   const timelineMode: TrajectoryTimelineMode = actualDuration
     ? actualTime ? 'actual' : 'duration'

@@ -37,6 +37,30 @@ describe('deriveAgentTree', () => {
     expect(rows[2]).toMatchObject({ label: 'bbbbbbbb', startIndex: null })
   })
 
+  it('turns lifecycles into depth-1 rows when the catalog is empty or missing', () => {
+    const lifecycles = [
+      { ...life('l1', 1, true), description: 'Do A', status: 'finished' as const, startedAt: 100, endedAt: 400 },
+      { ...life('call-9', 2, false), status: 'running' as const, startedAt: 200 },
+    ]
+    for (const projections of [{}, { root: proj([]) }]) {
+      const rows = deriveAgentTree('root', {}, projections, lifecycles)
+      expect(rows.map(row => [row.sessionId, row.depth, row.status])).toEqual([['l1', 1, 'done'], ['call-9', 1, 'running']])
+      expect(rows[0]).toMatchObject({ label: 'Do A', startedAt: 100, endedAt: 400, startIndex: 1 })
+      expect(rows[1]?.endedAt).toBeNull()
+      expect(rows.map(row => row.hasSession)).toEqual([true, false])
+    }
+  })
+
+  it('adds only the lifecycles the catalog does not cover', () => {
+    const lifecycles = [life('l1', 1, true), life('l2', 2, true), life('call-3', 3, false)]
+    const rows = deriveAgentTree('root', {}, {
+      root: proj([entry('l1', 1, 'L1'), entry('one', 2, undefined, 'one-shot')]),
+    }, lifecycles)
+    // l1 by id, 'one' paired with the only blocking call; l2 is the sole extra.
+    expect(rows.map(row => row.sessionId)).toEqual(['l1', 'one', 'l2'])
+    expect(rows[2]).toMatchObject({ startIndex: 2, status: 'done' })
+  })
+
   it('falls back to the parent lifecycle for an unloaded depth-1 child', () => {
     const lifecycles = [
       { ...life('l1', 1, true), status: 'finished' as const, startedAt: 100, endedAt: 400 },
