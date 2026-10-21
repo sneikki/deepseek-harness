@@ -1532,7 +1532,8 @@ describe('TrajectoryView state', () => {
       expect(alert.textContent).toContain('boom')
       // The session clears olderError when the next attempt starts.
       harness.loadAll.mockImplementationOnce(async () => {
-        harness.session.set({ ...harness.session.getSnapshot(), olderError: undefined })
+        const { olderError: _cleared, ...rest } = harness.session.getSnapshot()
+        harness.session.set(rest)
       })
       fireEvent.click(within(alert).getByRole('button'))
       await waitFor(() => { expect(harness.loadAll).toHaveBeenCalledTimes(2) })
