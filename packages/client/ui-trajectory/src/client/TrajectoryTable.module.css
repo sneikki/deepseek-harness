@@ -2207,7 +2207,8 @@
   white-space: nowrap;
 }
 
-.cardRich[data-collapsed] :global(.md-code-block) [data-code-block-content] {
+.cardRich[data-collapsed] :global(.md-code-block) pre {
+  margin: 0;
   padding: 0;
 }
 
