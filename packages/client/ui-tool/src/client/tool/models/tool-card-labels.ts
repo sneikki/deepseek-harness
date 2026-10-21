@@ -1,12 +1,10 @@
-/** Localized chrome of the rich tool bodies a ledger box draws, from the chat tool row's builders. @module */
+/** Localized chrome of the rich tool bodies, from the chat tool row's label builders. @module */
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import {
-  codeToolbarLabels, diffBlockLabels, readBlockLabels, searchBlockLabels,
-} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { CodeToolbarLabels, DiffBlockLabels, ReadBlockLabels, SearchBlockLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import { codeToolbarLabels, diffBlockLabels, readBlockLabels, searchBlockLabels } from './primitive-labels.ts'
 
 /** Labels for the code, file-read, diff and search bodies, plus the code copy actions. */
-export interface TrajectoryToolLabels {
+export interface ToolCardLabels {
   code: CodeToolbarLabels
   copy: string
   copied: string
@@ -16,11 +14,11 @@ export interface TrajectoryToolLabels {
 }
 
 /**
- * Build the rich-body labels from the conversation locale, so a ledger box and a chat row read the same words.
+ * Build the rich-body labels from the conversation locale.
  * @param t - conversation-namespace translate function.
  * @returns the label set for every rich body.
  */
-export function trajectoryToolLabels(t: TranslateNS<'conversation'>): TrajectoryToolLabels {
+export function toolCardLabels(t: TranslateNS<'conversation'>): ToolCardLabels {
   return {
     code: codeToolbarLabels(t),
     copy: t('copy'),
