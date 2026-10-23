@@ -98,7 +98,9 @@ describe('deriveAgentLanes', () => {
       ...start(A, 'Alpha'),
       ...call('interrupt_agent', 'i1', { agent_id: A }, `interrupted agent ${A}`),
     ])
-    expect(model.lanes[0]).toMatchObject({ status: 'interrupted', events: [{ index: indexOf(A, 'control'), kind: 'interrupt' }] })
+    expect(model.lanes[0]).toMatchObject({
+      status: 'interrupted', endIndex: indexOf(A, 'control'), events: [{ index: indexOf(A, 'control'), kind: 'interrupt' }],
+    })
   })
 
   it('ends an unsettled agent at the first record after its row end time', () => {
@@ -155,6 +157,14 @@ describe('agentLaneCells', () => {
     // Rows between are filtered out: the shown row inherits the spans it skipped over.
     expect(at(indexOf(A, 'start'), indexOf(B, 'finish'))).toEqual(['2:event/report', '6:end'])
     expect(at(cells[0]!.index, indexOf(B, 'finish'))).toEqual(['2:start', '6:end'])
+  })
+
+  it('keeps open lanes through a row older than the rows above it', () => {
+    const { indexOf, cells, at } = build()
+    const inside = indexOf(B, 'start')
+    // Index 1 shown after a row inside both spans: lanes still open there continue as pass, ended ones stay gone.
+    expect(at(inside + 1, 1)).toEqual(['2:pass', '6:pass'])
+    expect(at(cells.at(-1)!.index, 1)).toEqual([])
   })
 
   it('shows nothing outside every span', () => {

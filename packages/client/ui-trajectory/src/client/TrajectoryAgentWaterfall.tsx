@@ -34,7 +34,6 @@ export interface TrajectoryAgentWaterfallProps {
   /** Colour of the transcript lane per row id (rows without a visible lane have none). */
   laneColors?: ReadonlyMap<string, string> | undefined
   /** Row lit by a hovered transcript lane; hovering a row reports it back. */
-  highlightedId?: string | null
   onHover?: ((rowId: string | null) => void) | undefined
   /** Highlight states shared with the overview: selected record, search hits, brushed range (domain units). */
   selectedIndex?: number | null
@@ -63,7 +62,7 @@ const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 /** Collapsible agent-tree waterfall, one 22px row per agent in depth-first order. */
 export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
   t, rows: allRows, domainStart, domainDuration, domainEnd, toDomain, onRecordSelect, onOpenSession,
-  laneColors, highlightedId = null, onHover, selectedIndex = null, searchMatchIndexes = null, activeRange = null,
+  laneColors, onHover, selectedIndex = null, searchMatchIndexes = null, activeRange = null,
 }: TrajectoryAgentWaterfallProps) {
   // Rows with neither status nor interval would be empty lines: count them instead.
   const rows = useMemo(() => allRows.filter(row => row.status !== 'unknown'), [allRows])
@@ -205,7 +204,6 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                   data-status={row.status}
                   data-agent-id={row.sessionId}
                   data-lane={laneColors?.has(row.sessionId) || undefined}
-                  data-lane-hover={highlightedId === row.sessionId || undefined}
                   style={laneColors?.has(row.sessionId) ? { '--lane': laneColors.get(row.sessionId) } as CSSProperties : undefined}
                   onMouseEnter={onHover === undefined ? undefined : () => { onHover(row.sessionId) }}
                   onMouseLeave={onHover === undefined ? undefined : () => { onHover(null) }}

@@ -491,8 +491,6 @@ export interface TrajectoryTableProps {
   agentLanes?: AgentLaneModel
   /** Pointer over a lane: the AGENTS row id to highlight, null on leave. */
   onAgentLaneHover?: ((rowId: string | null) => void) | undefined
-  /** AGENTS row hovered in the waterfall: its lane is emphasised. */
-  highlightedAgentId?: string | null
 }
 
 const NO_LANES: AgentLaneModel = { lanes: [], slots: 0, overflow: 0 }
@@ -2318,7 +2316,6 @@ export function TrajectoryTable({
   onInspectApplied,
   agentLanes: laneModel = NO_LANES,
   onAgentLaneHover,
-  highlightedAgentId = null,
 }: TrajectoryTableProps) {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
@@ -3156,7 +3153,6 @@ export function TrajectoryTable({
                             cells={laneCells}
                             onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
                             onSelect={selectRecord}
-                            highlightedId={highlightedAgentId}
                           />
                         )}
                         {isCollapsedSummary && (

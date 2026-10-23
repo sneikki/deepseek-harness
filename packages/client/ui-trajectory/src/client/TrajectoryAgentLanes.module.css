@@ -43,7 +43,7 @@ tr[data-collapsed-summary] .lanes {
   bottom: calc(100% - var(--lane-y));
 }
 
-.lane[data-highlight] .line,
+.lane[data-lane-hover] .line,
 .lane:hover .line {
   left: 3px;
   width: 4px;
@@ -84,7 +84,7 @@ tr[data-collapsed-summary] .lanes {
 }
 
 .marker:hover,
-.lane[data-highlight] .marker {
+.lane[data-lane-hover] .marker {
   background: color-mix(in srgb, var(--lane) 34%, var(--amv-bg));
 }
 

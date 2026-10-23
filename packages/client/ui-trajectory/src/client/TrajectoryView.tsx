@@ -410,7 +410,17 @@ export function TrajectoryView({
     [timelineTurns, timelineLifecycles, agentRows],
   )
   // AGENTS row id under the pointer, from a gutter lane or a waterfall row: both light up.
-  const [hoveredAgent, setHoveredAgent] = useState<string | null>(null)
+  // Straight on the DOM: React state here would re-render the whole transcript on every lane enter/leave.
+  const viewRef = useRef<HTMLDivElement>(null)
+  const setHoveredAgent = useCallback((rowId: string | null) => {
+    const root = viewRef.current
+    if (root === null) return
+    root.querySelectorAll('[data-lane-hover]').forEach((node) => { node.removeAttribute('data-lane-hover') })
+    if (rowId === null) return
+    const id = CSS.escape(rowId)
+    root.querySelectorAll(`[data-lane-row="${id}"], [data-agent-id="${id}"]`)
+      .forEach((node) => { node.setAttribute('data-lane-hover', '') })
+  }, [])
   const laneColors = useMemo(
     () => new Map(agentLanes.lanes.filter(lane => lane.slot < AGENT_LANE_MAX_VISIBLE)
       .map(lane => [lane.rowId, AGENT_LANE_COLORS[lane.slot] ?? ''])),
@@ -598,7 +608,7 @@ export function TrajectoryView({
   }, [hasResidentOlderHistory, loadOlder])
 
   return (
-    <div className={css.root} data-conversation-composer-overlay="">
+    <div ref={viewRef} className={css.root} data-conversation-composer-overlay="">
       <TrajectoryToolbar
         actualDuration={actualDuration}
         onActualDurationChange={(nextActualDuration) => {
@@ -638,7 +648,6 @@ export function TrajectoryView({
         agentRows={agentRows}
         onOpenSession={openSession}
         laneColors={laneColors}
-        highlightedAgentId={hoveredAgent}
         onAgentHover={setHoveredAgent}
       />
       {olderError !== undefined && !olderHistoryLoading && (
@@ -683,7 +692,6 @@ export function TrajectoryView({
           inspectCallId={inspectCallId}
           onInspectApplied={completeViewRequest}
           agentLanes={agentLanes}
-          highlightedAgentId={hoveredAgent}
           onAgentLaneHover={setHoveredAgent}
         />
       </div>

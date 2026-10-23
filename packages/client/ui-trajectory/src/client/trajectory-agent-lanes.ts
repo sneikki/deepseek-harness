@@ -130,7 +130,8 @@ export function deriveAgentLanes(
       const endedAt = lifecycle.endedAt ?? row?.endedAt ?? null
       endIndex = lifecycle.endIndex
         ?? (endedAt === null
-          ? lastIndex
+          // No settle record and no end time: an interrupted agent ended at the last interrupt call.
+          ? (eventsById.get(lifecycle.id) ?? []).findLast(event => event.kind === 'interrupt')?.index ?? lastIndex
           : cells.find(cell => cell.startedAt != null && cell.startedAt >= endedAt)?.index ?? lastIndex)
     }
     const finishes = (finishById.get(lifecycle.id) ?? []).filter(index => index !== endIndex)
@@ -171,8 +172,15 @@ export function deriveAgentLanes(
  * @returns Active lanes (drawn slots and hidden ones), lane order.
  */
 export function agentLaneCells(model: AgentLaneModel, previousIndex: number | null, index: number): AgentLaneCell[] {
-  const low = previousIndex !== null && previousIndex < index ? previousIndex : index - 1
   const cells: AgentLaneCell[] = []
+  // A row older than the rows above it (system and request rows) sits inside whatever lanes are open there.
+  if (previousIndex !== null && previousIndex >= index) {
+    for (const lane of model.lanes) {
+      if (lane.startIndex <= previousIndex && lane.endIndex > previousIndex) cells.push({ lane, state: 'pass' })
+    }
+    return cells
+  }
+  const low = previousIndex ?? index - 1
   for (const lane of model.lanes) {
     if (lane.startIndex > index || lane.endIndex <= low) continue
     const started = lane.startIndex > low

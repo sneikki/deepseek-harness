@@ -40,7 +40,6 @@ function Marker({ kind, title, onClick }: { kind: keyof typeof GLYPH; title: str
   return (
     <button
       type="button"
-      tabIndex={-1}
       className={css.marker}
       data-marker={kind}
       aria-label={title}
@@ -61,15 +60,13 @@ export interface TrajectoryAgentLanesProps {
   cells: readonly AgentLaneCell[]
   onHover: (rowId: string | null) => void
   onSelect: (index: number) => void
-  /** Row highlighted from outside (the AGENTS waterfall). */
-  highlightedId: string | null
 }
 
 const endMarker = (lane: AgentLane): 'done' | 'failed' => lane.status === 'done' ? 'done' : 'failed'
 
 /** Lanes of one row; renders nothing for a row no lane crosses. */
 export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
-  t, cells, onHover, onSelect, highlightedId,
+  t, cells, onHover, onSelect,
 }: TrajectoryAgentLanesProps) {
   if (cells.length === 0) return null
   const shown = cells.filter(cell => cell.lane.slot < AGENT_LANE_MAX_VISIBLE)
@@ -87,7 +84,7 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               className={css.lane}
               data-state={state}
               data-status={lane.status}
-              data-highlight={highlightedId === lane.rowId || undefined}
+              data-lane-row={lane.rowId}
               data-lane-id={lane.id}
               style={{
                 '--lane': AGENT_LANE_COLORS[lane.slot],
@@ -115,6 +112,8 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
       {hidden.length > 0 && edge && (
         <span
           className={css.more}
+          role="img"
+          aria-label={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join(', ')}
           title={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join('\n')}
           style={{ left: AGENT_LANE_MAX_VISIBLE * AGENT_LANE_PITCH_PX }}
         >

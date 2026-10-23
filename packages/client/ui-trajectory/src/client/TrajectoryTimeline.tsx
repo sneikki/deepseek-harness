@@ -174,7 +174,6 @@ export interface TrajectoryTimelineProps {
   agentRows?: readonly AgentTreeRow[]
   /** Gutter-lane colour per AGENTS row id; pointer state shared with the transcript lanes. */
   laneColors?: ReadonlyMap<string, string> | undefined
-  highlightedAgentId?: string | null
   onAgentHover?: ((rowId: string | null) => void) | undefined
   /** Open one subagent's own session. */
   onOpenSession?: (sessionId: string) => void
@@ -284,7 +283,6 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   agentRows = EMPTY_AGENT_ROWS,
   onOpenSession,
   laneColors,
-  highlightedAgentId = null,
   onAgentHover,
 }: TrajectoryTimelineProps) {
   // Finished descendants cover their waits, so duration mode keeps them.
@@ -804,7 +802,6 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
           onRecordSelect={onRecordSelect}
           onOpenSession={onOpenSession}
           laneColors={laneColors}
-          highlightedId={highlightedAgentId}
           onHover={onAgentHover}
           selectedIndex={selectedIndex}
           searchMatchIndexes={searchMatchIndexes}
