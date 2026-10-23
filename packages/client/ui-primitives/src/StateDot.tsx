@@ -12,13 +12,15 @@ export type StateDotState = 'done' | 'warning' | 'ongoing' | 'error' | 'idle'
  * Pin the loader's CSS animations to document time zero. A CSS animation starts
  * when its element is inserted and restarts when the element is moved or shown
  * again, so loaders started at different moments rotate out of phase; one shared
- * start time keeps every visible loader in step. Mount pins the first start; the
- * element's own `animationstart` listener pins each restart.
+ * start time keeps every visible loader in step. The element's own `animationstart`
+ * listener pins every start, the first included. Pinning at mount instead would call
+ * `getAnimations` inside React's commit, forcing a style and layout pass of the whole
+ * freshly attached tree (~250 ms on a Trajectory with many running agents); the event
+ * fires after the frame's own style pass, so the call is then free and still pre-paint.
  * @param element - the mounted loader, or null on unmount.
  */
 function syncSpinner(element: SVGSVGElement | null): void {
   if (element === null) return
-  pinSpinner(element)
   element.addEventListener('animationstart', () => { pinSpinner(element) })
 }
 
