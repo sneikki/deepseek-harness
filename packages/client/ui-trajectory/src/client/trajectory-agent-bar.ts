@@ -1,8 +1,9 @@
 /** Waterfall bar geometry and duration texts of one agent row; the spawn card reads the same texts. */
 
 import type { TrajectoryTranslate } from './locales.ts'
-import { formatTurnDuration } from './trajectory-record.ts'
+import { formatBoxDuration, formatTurnDuration } from './trajectory-record.ts'
 import { reasonStatus, type AgentTreeRow, type AgentTreeStatus } from './trajectory-agent-tree.ts'
+import type { TrajectorySubagentLifecycle } from './trajectory-subagent.ts'
 
 /** Idle below this is not worth a "work · wall" label. */
 const IDLE_NOTE_MS = 60_000
@@ -69,6 +70,32 @@ export function agentDurationText(row: AgentTreeRow, t: TrajectoryTranslate): st
     return t('timeline.agentWorkWall', { work: formatTurnDuration(row.activeMs, t), wall: formatTurnDuration(wall, t) })
   }
   return formatTurnDuration(work, t)
+}
+
+/**
+ * Duration chip text per start-call record index for the spawn cards: the row's text, else the
+ * lifecycle's wall time (blocking agent with an unloaded child, or an unpaired call).
+ * @param rows - Agent rows.
+ * @param lifecycles - Ledger lifecycles.
+ * @param t - Trajectory locale translator.
+ * @returns Text per start index; calls with no timing are absent.
+ */
+export function agentDurationsByStart(
+  rows: readonly AgentTreeRow[],
+  lifecycles: readonly TrajectorySubagentLifecycle[],
+  t: TrajectoryTranslate,
+): Map<number, string> {
+  const result = new Map<number, string>()
+  for (const lifecycle of lifecycles) {
+    if (lifecycle.startedAt !== null && lifecycle.endedAt !== null) {
+      result.set(lifecycle.startIndex, formatBoxDuration(lifecycle.endedAt - lifecycle.startedAt, t))
+    }
+  }
+  for (const row of rows) {
+    const text = row.depth === 1 && row.startIndex !== null ? agentDurationText(row, t) : null
+    if (text !== null && row.startIndex !== null) result.set(row.startIndex, text)
+  }
+  return result
 }
 
 /**

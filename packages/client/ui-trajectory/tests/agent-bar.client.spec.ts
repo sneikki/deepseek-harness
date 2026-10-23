@@ -1,6 +1,7 @@
 /** Agent bar geometry, duration label and tooltip text for turn segments. */
 import { describe, expect, it } from 'vitest'
-import { agentBarParts, agentDurationText, agentTooltip } from '../src/client/trajectory-agent-bar.ts'
+import { agentBarParts, agentDurationsByStart, agentDurationText, agentTooltip } from '../src/client/trajectory-agent-bar.ts'
+import { formatBoxDuration } from '../src/client/trajectory-record.ts'
 import { deriveAgentTree, type AgentTreeRow } from '../src/client/trajectory-agent-tree.ts'
 import { t } from './locale.client.ts'
 
@@ -54,6 +55,23 @@ describe('agentDurationText', () => {
 
   it('shows work only while running', () => {
     expect(agentDurationText(row({ status: 'running', endedAt: null }), t)).toBe('55 min 0 s')
+  })
+})
+
+describe('agentDurationsByStart', () => {
+  const life = (startIndex: number, startedAt: number | null, endedAt: number | null) => ({
+    id: `c${startIndex}`, shortId: `c${startIndex}`, description: '', background: false, status: 'finished' as const,
+    startIndex, endIndex: null, startedAt, endedAt, reportCount: 0, controlCount: 0,
+  })
+
+  it('falls back to lifecycle wall time without a row or row text, and prefers the row text', () => {
+    const unloaded = row({ startIndex: 1, activeMs: null, startedAt: null, endedAt: null, loaded: false })
+    const lives = [life(1, 0, 90_000), life(2, 0, 30_000), life(3, 0, 5_000), life(4, null, null)]
+    const result = agentDurationsByStart([unloaded, row({ startIndex: 3 })], lives, t)
+    expect(result.get(1)).toBe(formatBoxDuration(90_000, t))
+    expect(result.get(2)).toBe(formatBoxDuration(30_000, t))
+    expect(result.get(3)).toBe('55 min 0 s work · 21 h 55 min')
+    expect(result.has(4)).toBe(false)
   })
 })
 

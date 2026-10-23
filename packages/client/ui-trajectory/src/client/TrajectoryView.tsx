@@ -22,7 +22,7 @@ import {
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
 import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
-import { agentDurationText } from './trajectory-agent-bar.ts'
+import { agentDurationsByStart } from './trajectory-agent-bar.ts'
 import { AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, deriveAgentLanes } from './trajectory-agent-lanes.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
@@ -415,10 +415,8 @@ export function TrajectoryView({
   )
   // The spawn card shows the same text as its waterfall row.
   const agentDurations = useMemo(
-    () => new Map(agentRows.flatMap(row => row.depth === 1 && row.startIndex !== null
-      ? [[row.startIndex, agentDurationText(row, t)] as const]
-      : [])),
-    [agentRows, t],
+    () => agentDurationsByStart(agentRows, timelineLifecycles, t),
+    [agentRows, timelineLifecycles, t],
   )
   const agentLanes = useMemo(
     () => deriveAgentLanes(timelineTurns, timelineLifecycles, agentRows),
