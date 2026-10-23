@@ -163,6 +163,8 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
             const left = clamp01(rawLeft)
             const right = clamp01(rawRight)
             const wallMs = timed && row.endedAt !== null ? row.endedAt - startedAt : null
+            // Bar label is working time: a resumed agent's idle gap is no work.
+            const labelMs = row.activeMs ?? wallMs
             const status = t(STATUS_KEY[row.status])
             const tip = [
               `${row.label} · ${row.shortId}`,
@@ -246,9 +248,9 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                             '--agent-width': `${(right - left) * 100}%`,
                           } as CSSProperties}
                         />
-                        {wallMs !== null && (
+                        {labelMs !== null && (
                           <span className={css.duration} style={{ '--agent-left': `${right * 100}%` } as CSSProperties}>
-                            {formatTurnDuration(wallMs, t)}
+                            {formatTurnDuration(labelMs, t)}
                           </span>
                         )}
                       </>
