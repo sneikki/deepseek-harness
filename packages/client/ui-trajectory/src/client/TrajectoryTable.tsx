@@ -487,7 +487,7 @@ export interface TrajectoryTableProps {
   inspectCallId?: string | null
   /** Acknowledge a consumed (or unresolvable) inspect request. */
   onInspectApplied?: (() => void) | undefined
-  /** Subagent lanes drawn in the gutter (`deriveAgentLanes`). */
+  /** Subagent lanes drawn in the right-side lane zone (`deriveAgentLanes`). */
   agentLanes?: AgentLaneModel
   /** Pointer over a lane: the AGENTS row id to highlight, null on leave. */
   onAgentLaneHover?: ((rowId: string | null) => void) | undefined

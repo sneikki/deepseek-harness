@@ -1,6 +1,6 @@
 /**
  * Subagent lanes: one vertical lane per subagent from its spawn record to its
- * end, drawn in the transcript gutter. Pure derivation over record indexes; a
+ * end, drawn in the right-side lane zone beside the cards. Pure derivation over record indexes; a
  * row asks for the state of every lane over the indexes it stands for, so the
  * lanes stay continuous through hidden (filtered, collapsed) rows.
  */
@@ -55,7 +55,7 @@ export interface AgentLane {
 
 export interface AgentLaneModel {
   lanes: readonly AgentLane[]
-  /** Slots actually drawn: sets the gutter width. */
+  /** Slots actually drawn: sets the lane zone width. */
   slots: number
   /** Lanes folded into "+N" (slot at or above the visible cap). */
   overflow: number

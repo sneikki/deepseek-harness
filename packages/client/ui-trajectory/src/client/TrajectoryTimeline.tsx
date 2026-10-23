@@ -172,7 +172,7 @@ export interface TrajectoryTimelineProps {
   onRecordFocus?: (index: number) => void
   /** Subagent tree rows rendered as the waterfall under the plot. */
   agentRows?: readonly AgentTreeRow[]
-  /** Gutter-lane colour per AGENTS row id; pointer state shared with the transcript lanes. */
+  /** Lane colour per AGENTS row id; pointer state shared with the transcript lanes. */
   laneColors?: ReadonlyMap<string, string> | undefined
   onAgentHover?: ((rowId: string | null) => void) | undefined
   /** Open one subagent's own session. */
