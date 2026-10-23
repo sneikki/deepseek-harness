@@ -71,16 +71,16 @@ export interface AgentLaneCell {
   state: AgentLaneState
   /** The strongest event in the row's range (`event` state), else nothing. */
   event?: AgentLaneEvent
-  /** The row falls inside an idle gap between two of the agent's turns: drawn dashed. */
+  /** The row falls while the agent is idle (between turns, or waiting after its last): drawn dashed. */
   idle?: true
 }
 
-/** True when `at` (wall ms) lies between the end of one turn and the start of the next. */
+/** True when `at` (wall ms) lies after a closed turn and before the next one starts, if any. */
 function inIdleGap(turns: AgentLane['turns'], at: number | null): boolean {
   if (turns === undefined || at === null) return false
   return turns.some((turn, i) => {
     const next = turns[i + 1]
-    return turn.end !== null && next !== undefined && at > turn.end && at < next.start
+    return turn.end !== null && at > turn.end && (next === undefined || at < next.start)
   })
 }
 
