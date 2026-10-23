@@ -3016,7 +3016,7 @@ export function TrajectoryTable({
                   // Hidden rows between this and the previous shown row fold into this row's lane states.
                   const laneCells = laneModel.lanes.length === 0
                     ? []
-                    : agentLaneCells(laneModel, laneLowIndex[position] ?? null, record.cell.index)
+                    : agentLaneCells(laneModel, laneLowIndex[position] ?? null, record.cell.index, record.cell.startedAt ?? null)
                   const spawnLane = laneCells.find(cell =>
                     cell.lane.startIndex === record.cell.index && cell.lane.slot < AGENT_LANE_MAX_VISIBLE)?.lane
                   return (

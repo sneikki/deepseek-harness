@@ -51,6 +51,8 @@ export interface AgentLane {
   slot: number
   /** Ascending by index. */
   events: readonly AgentLaneEvent[]
+  /** The agent's turns (wall ms); absent = no timing, the lane is always solid. */
+  turns?: AgentTreeRow['turns']
 }
 
 export interface AgentLaneModel {
@@ -69,6 +71,17 @@ export interface AgentLaneCell {
   state: AgentLaneState
   /** The strongest event in the row's range (`event` state), else nothing. */
   event?: AgentLaneEvent
+  /** The row falls inside an idle gap between two of the agent's turns: drawn dashed. */
+  idle?: true
+}
+
+/** True when `at` (wall ms) lies between the end of one turn and the start of the next. */
+function inIdleGap(turns: AgentLane['turns'], at: number | null): boolean {
+  if (turns === undefined || at === null) return false
+  return turns.some((turn, i) => {
+    const next = turns[i + 1]
+    return turn.end !== null && next !== undefined && at > turn.end && at < next.start
+  })
 }
 
 const STATUS_OF = {
@@ -149,6 +162,7 @@ export function deriveAgentLanes(
       startIndex: lifecycle.startIndex,
       endIndex: Math.max(endIndex, lifecycle.startIndex),
       events,
+      ...row?.turns === undefined ? {} : { turns: row.turns },
     }
   })
   // A lane owns its end row, so the next one starts a row later; huge cap: hidden slots still stay apart.
@@ -169,14 +183,23 @@ export function deriveAgentLanes(
  * @param model - Derived lanes.
  * @param previousIndex - Index of the row shown before this one (hidden rows between fold into this row); null for the first.
  * @param index - Record index of this row.
+ * @param at - The row record's wall-clock ms; decides `idle` against each lane's turns.
  * @returns Active lanes (drawn slots and hidden ones), lane order.
  */
-export function agentLaneCells(model: AgentLaneModel, previousIndex: number | null, index: number): AgentLaneCell[] {
+export function agentLaneCells(
+  model: AgentLaneModel,
+  previousIndex: number | null,
+  index: number,
+  at: number | null = null,
+): AgentLaneCell[] {
   const cells: AgentLaneCell[] = []
+  const push = (cell: AgentLaneCell) => {
+    cells.push(inIdleGap(cell.lane.turns, at) ? { ...cell, idle: true } : cell)
+  }
   // A row older than the rows above it (system and request rows) sits inside whatever lanes are open there.
   if (previousIndex !== null && previousIndex >= index) {
     for (const lane of model.lanes) {
-      if (lane.startIndex <= previousIndex && lane.endIndex > previousIndex) cells.push({ lane, state: 'pass' })
+      if (lane.startIndex <= previousIndex && lane.endIndex > previousIndex) push({ lane, state: 'pass' })
     }
     return cells
   }
@@ -184,8 +207,8 @@ export function agentLaneCells(model: AgentLaneModel, previousIndex: number | nu
   for (const lane of model.lanes) {
     if (lane.startIndex > index || lane.endIndex <= low) continue
     const started = lane.startIndex > low
-    if (lane.endIndex <= index && lane.status !== 'running') cells.push({ lane, state: 'end' })
-    else if (started) cells.push({ lane, state: 'start' })
+    if (lane.endIndex <= index && lane.status !== 'running') push({ lane, state: 'end' })
+    else if (started) push({ lane, state: 'start' })
     else {
       let event: AgentLaneEvent | undefined
       for (const candidate of lane.events) {
@@ -193,7 +216,7 @@ export function agentLaneCells(model: AgentLaneModel, previousIndex: number | nu
         if (candidate.index > index) break
         if (event === undefined || EVENT_RANK[candidate.kind] < EVENT_RANK[event.kind]) event = candidate
       }
-      cells.push(event === undefined ? { lane, state: 'pass' } : { lane, state: 'event', event })
+      push(event === undefined ? { lane, state: 'pass' } : { lane, state: 'event', event })
     }
   }
   return cells

@@ -84,7 +84,7 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
   const edge = hidden.some(cell => cell.state === 'start' || cell.state === 'end')
   return (
     <span className={css.lanes} data-agent-lanes aria-hidden={shown.length === 0 || undefined}>
-      {shown.map(({ lane, state, event }) => {
+      {shown.map(({ lane, state, event, idle }) => {
         const status = t(STATUS_KEY[lane.status])
         const tip = t('lane.tip', { label: lane.label, status })
         const eventTitle = event === undefined ? undefined : `${tip} · ${t(EVENT_KEY[event.kind])}`
@@ -97,6 +97,7 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               className={css.lane}
               data-state={state}
               data-status={lane.status}
+              data-idle={idle}
               data-lane-row={lane.rowId}
               data-lane-id={lane.id}
               style={{

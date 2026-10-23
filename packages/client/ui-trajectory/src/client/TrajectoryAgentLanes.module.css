@@ -40,6 +40,11 @@ tr[data-collapsed-summary] .lanes {
   transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
 
+/* Idle gap between the agent's turns: the straight segments turn into dashes (bends and markers stay). */
+.lane[data-idle] .line {
+  background: repeating-linear-gradient(to bottom, var(--draw) 0 5px, transparent 5px 9px);
+}
+
 /* A wider hit area than the 5 px stroke. */
 .line::before {
   position: absolute;

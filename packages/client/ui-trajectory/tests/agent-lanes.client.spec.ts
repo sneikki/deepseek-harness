@@ -197,3 +197,20 @@ describe('lane bends', () => {
     expect(laneBend('pass', x)).toBeUndefined()
   })
 })
+
+describe('agentLaneCells idle', () => {
+  const lane = (turns?: { start: number; end: number | null; reason: null }[]) => ({
+    id: 'a', rowId: 'a', label: 'a', shortId: 'a', status: 'running' as const, startIndex: 0,
+    endIndex: Number.POSITIVE_INFINITY, slot: 0, events: [], ...(turns === undefined ? {} : { turns }),
+  })
+  const turns = [{ start: 0, end: 100, reason: null }, { start: 1000, end: null, reason: null }]
+  const idleAt = (l: ReturnType<typeof lane>, at: number) =>
+    agentLaneCells({ lanes: [l], slots: 1, overflow: 0 }, at - 1, at + 1, at)[0]?.idle === true
+  it('marks rows inside the gap, not inside turns', () => {
+    const l = lane(turns)
+    expect([50, 500, 999, 1500].map(at => idleAt(l, at))).toEqual([false, true, true, false])
+  })
+  it('stays solid without turns', () => {
+    expect(idleAt(lane(), 500)).toBe(false)
+  })
+})
