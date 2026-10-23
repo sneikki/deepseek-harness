@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { PartialArguments } from '@deepseek-ai/dsh-util-values'
 import { deriveTrajectoryLayout } from '../src/client/layout.ts'
-import { agentLaneCells, deriveAgentLanes } from '../src/client/trajectory-agent-lanes.ts'
+import { agentLaneCells, deriveAgentLanes, laneBend, laneX } from '../src/client/trajectory-agent-lanes.ts'
 import type { AgentTreeRow } from '../src/client/trajectory-agent-tree.ts'
 import { trajectorySubagentLifecycles } from '../src/client/trajectory-subagent.ts'
 import { t } from './locale.client.ts'
@@ -170,5 +170,30 @@ describe('agentLaneCells', () => {
   it('shows nothing outside every span', () => {
     const { cells, at } = build()
     expect(at(cells.at(-1)!.index, cells.at(-1)!.index + 5)).toEqual([])
+  })
+})
+
+describe('lane bends', () => {
+  const x = laneX(2)
+  it('leaves a spawn card to the right and turns down', () => {
+    const bend = laneBend('start', x)!
+    expect(bend.d.startsWith('M0 0H')).toBe(true)
+    expect(bend.d.endsWith(`${x} ${bend.height}`)).toBe(true)
+    expect(bend.rise).toBe(0)
+  })
+  it('comes down, turns left and stops at the end card', () => {
+    const bend = laneBend('end', x)!
+    expect(bend.d.startsWith(`M${x} 0`)).toBe(true)
+    expect(bend.d.endsWith('H3')).toBe(true)
+    expect(bend.rise).toBe(bend.height)
+  })
+  it('dents into the card at an event and resumes on the same line', () => {
+    const bend = laneBend('event', x)!
+    expect(bend.d.startsWith(`M${x} 0`)).toBe(true)
+    expect(bend.d.endsWith(`${x} ${bend.height}`)).toBe(true)
+    expect(bend.rise * 2).toBe(bend.height)
+  })
+  it('keeps a pass straight', () => {
+    expect(laneBend('pass', x)).toBeUndefined()
   })
 })

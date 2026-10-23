@@ -409,7 +409,7 @@ export function TrajectoryView({
     () => deriveAgentLanes(timelineTurns, timelineLifecycles, agentRows),
     [timelineTurns, timelineLifecycles, agentRows],
   )
-  // AGENTS row id under the pointer, from a gutter lane or a waterfall row: both light up.
+  // AGENTS row id under the pointer, from a lane or a waterfall row: both light up.
   // Straight on the DOM: React state here would re-render the whole transcript on every lane enter/leave.
   const viewRef = useRef<HTMLDivElement>(null)
   const setHoveredAgent = useCallback((rowId: string | null) => {

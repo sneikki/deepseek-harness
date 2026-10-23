@@ -8,10 +8,10 @@ import type { TrajectorySubagentLifecycle, TrajectorySubagentStatus } from './tr
 import css from './TrajectoryTable.module.css'
 
 const STATUS_KEY = {
-  running: 'timeline.subagentRunning',
-  finished: 'timeline.subagentFinished',
-  failed: 'timeline.subagentFailed',
-  interrupted: 'timeline.subagentInterrupted',
+  running: 'card.agentRunning',
+  finished: 'card.agentFinished',
+  failed: 'card.agentFailed',
+  interrupted: 'card.agentInterrupted',
 } as const satisfies Record<TrajectorySubagentStatus, string>
 
 const SETTLED_KEY = {

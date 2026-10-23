@@ -1,4 +1,8 @@
-/** The subagent lanes of one transcript row: coloured vertical lines in the gutter with event markers. */
+/**
+ * The subagent lanes of one transcript row: thick metro-style lines right of the card column.
+ * A lane leaves its spawn card's right edge and turns down; at each event it dents back into that
+ * card's right edge (a station marker sits there); the end card is where it bends in and stops.
+ */
 
 import { memo, type CSSProperties } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -6,14 +10,15 @@ import type { TrajectoryTranslate } from './locales.ts'
 import {
   AGENT_LANE_COLORS,
   AGENT_LANE_MAX_VISIBLE,
+  LANE_PIN,
+  LANE_STROKE,
+  laneBend,
+  laneX,
   type AgentLane,
   type AgentLaneCell,
   type AgentLaneEventKind,
 } from './trajectory-agent-lanes.ts'
 import css from './TrajectoryAgentLanes.module.css'
-
-/** Gutter width one lane takes, px (the table adds `slots * pitch` to its rail column). */
-export const AGENT_LANE_PITCH_PX = 10
 
 const STATUS_KEY = {
   running: 'timeline.subagentRunning',
@@ -36,13 +41,17 @@ const GLYPH: Record<AgentLaneEventKind | 'done' | 'failed', string> = {
   failed: 'M4 4l4 4M8 4l-4 4',
 }
 
-function Marker({ kind, title, onClick }: { kind: keyof typeof GLYPH; title: string; onClick: () => void }) {
+/** Station marker diameter, px (matches `.marker` in the stylesheet). */
+const MARKER_PX = 13
+
+function Marker({ kind, title, left, onClick }: { kind: keyof typeof GLYPH; title: string; left: number; onClick: () => void }) {
   return (
     <button
       type="button"
       className={css.marker}
       data-marker={kind}
       aria-label={title}
+      style={{ left }}
       onClick={(event) => { event.stopPropagation(); onClick() }}
       onDoubleClick={(event) => { event.stopPropagation() }}
     >
@@ -69,7 +78,8 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
   t, cells, onHover, onSelect,
 }: TrajectoryAgentLanesProps) {
   if (cells.length === 0) return null
-  const shown = cells.filter(cell => cell.lane.slot < AGENT_LANE_MAX_VISIBLE)
+  // Outer slots first: inner lanes paint over the connectors that cross them.
+  const shown = cells.filter(cell => cell.lane.slot < AGENT_LANE_MAX_VISIBLE).sort((a, b) => b.lane.slot - a.lane.slot)
   const hidden = cells.filter(cell => cell.lane.slot >= AGENT_LANE_MAX_VISIBLE)
   const edge = hidden.some(cell => cell.state === 'start' || cell.state === 'end')
   return (
@@ -78,6 +88,9 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
         const status = t(STATUS_KEY[lane.status])
         const tip = t('lane.tip', { label: lane.label, status })
         const eventTitle = event === undefined ? undefined : `${tip} · ${t(EVENT_KEY[event.kind])}`
+        const x = laneX(lane.slot)
+        const bend = laneBend(state, x)
+        const markerLeft = LANE_PIN - x - MARKER_PX / 2
         return (
           <Tooltip key={lane.id} label={tip} side="right" delayMs={150} portal>
             <span
@@ -88,22 +101,35 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               data-lane-id={lane.id}
               style={{
                 '--lane': AGENT_LANE_COLORS[lane.slot],
-                left: lane.slot * AGENT_LANE_PITCH_PX,
+                '--above': `${bend?.rise ?? 0}px`,
+                '--below': `${bend === undefined ? 0 : bend.height - bend.rise}px`,
+                left: x,
               } as CSSProperties}
               onMouseEnter={() => { onHover(lane.rowId) }}
               onMouseLeave={() => { onHover(null) }}
+              // The drawn lane (body, bend) is the agent's: never the row's card underneath.
+              onClick={(event) => { event.stopPropagation(); onSelect(lane.startIndex) }}
+              onDoubleClick={(event) => { event.stopPropagation() }}
             >
-              <i className={css.line} />
-              {state === 'start' && <i className={css.cap} />}
+              {state === 'pass' && <i className={css.line} data-part="whole" />}
+              {(state === 'end' || state === 'event') && <i className={css.line} data-part="above" />}
+              {(state === 'start' || state === 'event') && <i className={css.line} data-part="below" />}
+              {bend !== undefined && (
+                <svg
+                  className={css.bend}
+                  width={x + LANE_STROKE}
+                  height={bend.height}
+                  style={{ left: -x, top: `calc(var(--lane-y) - ${bend.rise}px)` }}
+                  aria-hidden="true"
+                >
+                  <path d={bend.d} fill="none" strokeWidth={LANE_STROKE} />
+                </svg>
+              )}
               {state === 'event' && event !== undefined && (
-                <Marker kind={event.kind} title={eventTitle ?? tip} onClick={() => { onSelect(event.index) }} />
+                <Marker kind={event.kind} title={eventTitle ?? tip} left={markerLeft} onClick={() => { onSelect(event.index) }} />
               )}
               {state === 'end' && (
-                <Marker
-                  kind={endMarker(lane)}
-                  title={tip}
-                  onClick={() => { onSelect(lane.endIndex) }}
-                />
+                <Marker kind={endMarker(lane)} title={tip} left={markerLeft} onClick={() => { onSelect(lane.endIndex) }} />
               )}
             </span>
           </Tooltip>
@@ -115,7 +141,9 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
           role="img"
           aria-label={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join(', ')}
           title={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join('\n')}
-          style={{ left: AGENT_LANE_MAX_VISIBLE * AGENT_LANE_PITCH_PX }}
+          style={{ left: laneX(AGENT_LANE_MAX_VISIBLE - 1) + LANE_STROKE / 2 + 6 }}
+          onClick={(event) => { event.stopPropagation() }}
+          onDoubleClick={(event) => { event.stopPropagation() }}
         >
           +{hidden.length}
         </span>

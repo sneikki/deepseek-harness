@@ -1734,7 +1734,8 @@ describe('ledger boxes: clipping, search, subagents', () => {
     render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
 
     const head = rowOf(1)
-    expect(within(head).getByText('Finished')).toBeTruthy()
+    // The pill is the agent's outcome, not the spawn call's.
+    expect(within(head).getByText('Agent finished')).toBeTruthy()
     expect(within(head).getByText('12.2 s')).toBeTruthy()
     expect(within(head).getByText('1 report')).toBeTruthy()
     expect(within(head).getByText('2c619f73')).toBeTruthy()
