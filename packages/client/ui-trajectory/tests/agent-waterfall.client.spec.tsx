@@ -132,6 +132,22 @@ describe('TrajectoryAgentWaterfall', () => {
     expect(part('one', '[data-agent-gap]')).toHaveLength(0)
   })
 
+  it('skips segments and gaps wholly outside the zoom window', () => {
+    const turns = [
+      { start: 0, end: 100, reason: 'interrupted' as const },
+      { start: 300, end: 400, reason: 'interrupted' as const },
+      { start: 800, end: 900, reason: 'completed' as const },
+    ]
+    // Window 500..1000: the first two segments and the gaps before 800 are out.
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={500} domainDuration={500} domainEnd={1000} toDomain={x => x}
+        rows={[row('r', 1, { startedAt: 0, endedAt: 900, activeMs: 300, turns })]} />,
+    )
+    const count = (selector: string) => view.container.querySelectorAll(`[data-agent-id="r"] ${selector}`).length
+    expect(count('[data-agent-segment]')).toBe(1)
+    expect(count('[data-agent-gap]')).toBe(1)
+  })
+
   it('labels the bar with working time and wall, wall only without activity', () => {
     const resumed = row('w', 1, { startedAt: 0, endedAt: 79_380_000, activeMs: 3_360_000 }) // 22 h 3 min wall, 56 min work
     const view = render(

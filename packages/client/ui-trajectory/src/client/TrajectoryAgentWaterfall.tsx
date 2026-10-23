@@ -165,7 +165,9 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
             const parts = agentBarParts(row, toDomain, domainEnd)
             const place = ({ start, end }: { start: number; end: number }) =>
               ({ left: clamp01(fraction(start)), width: clamp01(fraction(end)) - clamp01(fraction(start)) })
-            const spans = parts === null ? [{ left, width: right - left }] : parts.segments.map(place)
+            // A span wholly outside the zoom window would otherwise draw the 3px minimum sliver at an edge.
+            const inWindow = ({ start, end }: { start: number; end: number }) => fraction(end) > 0 && fraction(start) < 1
+            const spans = parts === null ? [{ left, width: right - left }] : parts.segments.filter(inWindow).map(place)
             const labelRight = parts === null ? right : clamp01(fraction(parts.segments.at(-1)?.end ?? 0))
             const labelText = agentDurationText(row, t)
             const status = t(STATUS_KEY[row.status])
@@ -240,9 +242,9 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                   <div className={css.track} aria-hidden="true">
                     {drawn && (
                       <>
-                        {parts?.gaps.map(place).map(gap => (
+                        {parts?.gaps.filter(inWindow).map(place).map((gap, gapIndex) => (
                           <span
-                            key={gap.left}
+                            key={gapIndex}
                             className={css.gap}
                             data-status={row.status}
                             data-agent-gap
