@@ -112,6 +112,28 @@ describe('TrajectoryAgentWaterfall', () => {
     expect(open.style.getPropertyValue('--agent-width')).toBe('80%')
   })
 
+  it('labels the bar with working time, wall only without it', () => {
+    const resumed = row('w', 1, { startedAt: 0, endedAt: 79_380_000, activeMs: 3_360_000 }) // 22 h 3 min wall, 56 min work
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} rows={[resumed, row('x', 1, { activeMs: null, endedAt: 90_000 })]}
+        domainStart={0} domainDuration={79_380_000} domainEnd={79_380_000} toDomain={x => x} />,
+    )
+    const label = (id: string) => view.container.querySelector(`[data-agent-id="${id}"] [class*="duration"]`)!.textContent
+    expect(label('w')).toBe('56 min 0 s')
+    expect(label('x')).toBe('1 min 30 s')
+  })
+
+  it('ends the label at the bar end when the bar reaches the right edge', () => {
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={0} domainDuration={1000} domainEnd={1000} toDomain={x => x}
+        rows={[row('run', 1, { status: 'running', endedAt: null }), row('mid', 1)]} />,
+    )
+    const label = (id: string) => view.container.querySelector<HTMLElement>(`[data-agent-id="${id}"] [class*="duration"]`)!
+    expect(label('run').textContent).toBe('300 ms')
+    expect(label('run').dataset.flip).toBe('true')
+    expect(label('mid').dataset.flip).toBeUndefined()
+  })
+
   it('expands only depth <= 1 by default beyond 12 rows', () => {
     const many = [
       row('p', 1, { hasChildren: true }), row('q', 2, { hasChildren: true }), row('deep', 3),

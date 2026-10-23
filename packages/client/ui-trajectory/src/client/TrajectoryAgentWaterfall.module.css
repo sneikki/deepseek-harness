@@ -191,6 +191,14 @@
   white-space: nowrap;
 }
 
+/* A bar near the right edge would clip its label: end the label at the bar's end instead. */
+.duration[data-flip] {
+  left: auto;
+  right: calc(100% - var(--agent-left));
+  padding: 0 4px;
+  background: var(--amv-bg-deep);
+}
+
 @keyframes agent-spin { to { transform: rotate(360deg); } }
 @keyframes agent-pulse { 50% { opacity: 0.45; } }
 
