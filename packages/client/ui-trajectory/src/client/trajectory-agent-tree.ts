@@ -100,7 +100,9 @@ function startIndexes(
   }
   // Heuristic: blocking calls carry no agent id, so pair by order, and only
   // when both sides have the same count (otherwise the pairing would guess).
-  const blocking = lifecycles.filter(lifecycle => !lifecycle.background && !result.has(lifecycle.id))
+  // An errored call never created a child session, so it has no catalog entry to pair.
+  const blocking = lifecycles.filter(lifecycle =>
+    !lifecycle.background && lifecycle.status !== 'failed' && !result.has(lifecycle.id))
   const unmapped = entries.filter(entry => !result.has(entry.id) && entry.mode === 'one-shot')
   if (unmapped.length === blocking.length) {
     unmapped.forEach((entry, position) => {
