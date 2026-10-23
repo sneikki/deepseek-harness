@@ -39,11 +39,12 @@
   max-height: 220px; /* ~10 rows of 22px */
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: var(--trajectory-gutter, 200px) minmax(0, 1fr);
   height: 22px;
   align-items: center;
 }
