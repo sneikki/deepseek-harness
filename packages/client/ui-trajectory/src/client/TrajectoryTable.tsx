@@ -2433,6 +2433,16 @@ export function TrajectoryTable({
     allRecords, shownRecords, collapsedAssistants, collapsedTurns, hiddenIndexes,
     requestGroups, rowFilter, searchMatchIndexes, t,
   ])
+  // Highest record index above each shown row: records are not strictly ascending (system and
+  // request rows carry old indexes), so a row's lane range starts from the running maximum.
+  const laneLowIndex = useMemo(() => {
+    let highest: number | null = null
+    return records.map((record) => {
+      const below = highest
+      highest = highest === null ? record.cell.index : Math.max(highest, record.cell.index)
+      return below
+    })
+  }, [records])
   // The request label lands on the first row actually shown for its step,
   // which is the fold summary when the step's assistant row is hidden.
   const requestBoundaries = useMemo(
@@ -3008,7 +3018,7 @@ export function TrajectoryTable({
                   // Hidden rows between this and the previous shown row fold into this row's lane states.
                   const laneCells = laneModel.lanes.length === 0
                     ? []
-                    : agentLaneCells(laneModel, records[position - 1]?.cell.index ?? null, record.cell.index)
+                    : agentLaneCells(laneModel, laneLowIndex[position] ?? null, record.cell.index)
                   const spawnLane = laneCells.find(cell =>
                     cell.lane.startIndex === record.cell.index && cell.lane.slot < AGENT_LANE_MAX_VISIBLE)?.lane
                   return (

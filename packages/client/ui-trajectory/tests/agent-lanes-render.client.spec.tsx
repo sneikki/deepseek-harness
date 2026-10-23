@@ -16,26 +16,29 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
 })
 
-const A = '2c619f73-fff4-4203-95f6-ce61ca1f4359'
 const COUNT = 500
 const START = 5
 const END = 400
+const agentId = (n: number) => `2c619f7${n}-fff4-4203-95f6-ce61ca1f4359`
 
-function ledger(): TrajectoryTurnModel[] {
+/** `agents` background agents spawned on consecutive records from START, all settling from END. */
+function ledger(agents = 1): TrajectoryTurnModel[] {
   const cells: TrajectoryCellProps[] = Array.from({ length: COUNT }, (_, position) => {
     const index = position + 1
-    if (index === START) {
+    if (index >= START && index < START + agents) {
+      const id = agentId(index - START)
       return {
-        index, kind: 'tool', text: 'Spawn', toolName: 'subagent', callId: 'c1', timeSeconds: 0.1, startedAt: 1_000,
-        inputDetail: JSON.stringify({ description: 'Lane agent' }), outputDetail: `started subagent ${A}`,
+        index, kind: 'tool', text: 'Spawn', toolName: 'subagent', callId: `c${index}`, timeSeconds: 0.1, startedAt: 1_000,
+        inputDetail: JSON.stringify({ description: `Lane agent ${index - START}` }), outputDetail: `started subagent ${id}`,
       }
     }
-    if (index === END) {
+    if (index >= END && index < END + agents) {
+      const id = agentId(index - END)
       return {
         index, kind: 'context', text: 'Settled', timeSeconds: 0, startedAt: 9_000,
         messageSource: {
-          kind: 'subagent-settled', senderSessionId: A,
-          summary: `Background subagent ${A} finished and will do no further work unless you send it more.`,
+          kind: 'subagent-settled', senderSessionId: id,
+          summary: `Background subagent ${id} finished and will do no further work unless you send it more.`,
         },
       }
     }
@@ -77,5 +80,28 @@ describe('subagent lanes in the virtual ledger', () => {
     expect(middle.length).toBeGreaterThan(5)
     expect(middle.filter(row => row.index < END).every(row => row.state === 'pass')).toBe(true)
     expect(middle.some(row => row.spawn)).toBe(false)
+  })
+
+  it('folds lanes beyond the cap into one +N chip at the row where they start', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+    const turns = ledger(8)
+    const agentLanes = deriveAgentLanes(turns, trajectorySubagentLifecycles(turns))
+    expect(agentLanes).toMatchObject({ slots: 6, overflow: 2 })
+    const view = render(
+      <TrajectoryTable
+        t={t} toolLabels={toolLabels} turns={turns} agentLanes={agentLanes}
+        renderSlot={() => null} loadImage={async () => 'blob:x'}
+        collapsedTurns={new Set()} onToggleTurn={() => {}} collapsedAssistants={new Set()} onToggleAssistant={() => {}}
+      />,
+    )
+    await waitFor(() => { expect(view.container.querySelector('tr[data-record-index="11"]')).toBeTruthy() })
+    const row = (index: number) => view.container.querySelector(`tr[data-record-index="${index}"]`)!
+    expect(row(10).querySelectorAll('[data-lane-id]')).toHaveLength(6)
+    expect(row(10).textContent).not.toContain('+')
+    expect(row(11).textContent).toContain('+1')
+    expect(row(12).textContent).toContain('+2')
+    // Six lanes plus the chip slot widen the gutter.
+    expect(view.container.querySelector<HTMLElement>('col')?.style.width).toBe('109px')
   })
 })
