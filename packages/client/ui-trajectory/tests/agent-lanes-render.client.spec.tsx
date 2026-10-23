@@ -86,6 +86,27 @@ describe('subagent lanes in the virtual ledger', () => {
     expect(middle.some(row => row.spawn)).toBe(false)
   })
 
+  it('handles a click on a lane itself: the spawn record, never the card underneath', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+    const turns = ledger()
+    const agentLanes = deriveAgentLanes(turns, trajectorySubagentLifecycles(turns))
+    const onRecordSelect = vi.fn()
+    const view = render(
+      <TrajectoryTable
+        t={t} toolLabels={toolLabels} turns={turns} agentLanes={agentLanes} onRecordSelect={onRecordSelect}
+        renderSlot={() => null} loadImage={async () => 'blob:x'}
+        collapsedTurns={new Set()} onToggleTurn={() => {}} collapsedAssistants={new Set()} onToggleAssistant={() => {}}
+      />,
+    )
+    await waitFor(() => { expect(view.container.querySelector(`tr[data-record-index="${START + 3}"]`)).toBeTruthy() })
+    const unrelated = view.container.querySelector(`tr[data-record-index="${START + 3}"]`)!
+    fireEvent.click(unrelated.querySelector('[data-lane-id] i')!)
+    expect(onRecordSelect).toHaveBeenCalledTimes(1)
+    expect(onRecordSelect).toHaveBeenCalledWith(START)
+    expect(unrelated.getAttribute('aria-selected')).toBe('false')
+  })
+
   it('folds lanes beyond the cap into one +N chip at the row where they start', async () => {
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })

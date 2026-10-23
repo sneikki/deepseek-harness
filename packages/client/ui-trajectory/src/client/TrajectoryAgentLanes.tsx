@@ -107,6 +107,9 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               } as CSSProperties}
               onMouseEnter={() => { onHover(lane.rowId) }}
               onMouseLeave={() => { onHover(null) }}
+              // The drawn lane (body, bend) is the agent's: never the row's card underneath.
+              onClick={(event) => { event.stopPropagation(); onSelect(lane.startIndex) }}
+              onDoubleClick={(event) => { event.stopPropagation() }}
             >
               {state === 'pass' && <i className={css.line} data-part="whole" />}
               {(state === 'end' || state === 'event') && <i className={css.line} data-part="above" />}
@@ -139,6 +142,8 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
           aria-label={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join(', ')}
           title={[t('lane.more', { count: hidden.length }), ...hidden.map(cell => cell.lane.label)].join('\n')}
           style={{ left: laneX(AGENT_LANE_MAX_VISIBLE - 1) + LANE_STROKE / 2 + 6 }}
+          onClick={(event) => { event.stopPropagation() }}
+          onDoubleClick={(event) => { event.stopPropagation() }}
         >
           +{hidden.length}
         </span>
