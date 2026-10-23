@@ -45,9 +45,9 @@ import { trajectoryPreviewText } from './trajectory-preview.ts'
 import { TrajectoryCard } from './TrajectoryCard.tsx'
 import { subagentBadges, subagentNoticeText } from './TrajectorySubagentBadges.tsx'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
-import { TrajectoryAgentLanes, AGENT_LANE_PITCH_PX } from './TrajectoryAgentLanes.tsx'
+import { TrajectoryAgentLanes } from './TrajectoryAgentLanes.tsx'
 import {
-  AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, agentLaneCells, type AgentLaneModel,
+  AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, agentLaneCells, laneZoneWidth, type AgentLaneModel,
 } from './trajectory-agent-lanes.ts'
 import {
   CARD_BODY_LINES, CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
@@ -2362,10 +2362,11 @@ export function TrajectoryTable({
     () => new Map(trajectorySubagentLifecycles(turns).map(lifecycle => [lifecycle.startIndex, lifecycle])),
     [turns],
   )
-  // One extra slot holds the "+N" chip when lanes overflow the cap.
-  const laneGutterPx = laneModel.slots === 0
-    ? 0
-    : (laneModel.slots + (laneModel.overflow > 0 ? 1 : 0)) * AGENT_LANE_PITCH_PX + 6
+  // Lanes run right of the cards: the card column is padded by the lane zone.
+  const laneZonePx = laneZoneWidth(laneModel)
+  const tableStyle = useMemo(() => laneZonePx === 0
+    ? CARD_STYLE
+    : { ...CARD_STYLE, '--trajectory-lane-zone': `${laneZonePx}px` } as CSSProperties, [laneZonePx])
   const streamingCellsByIndex = useMemo(
     () => new Map(streamingCells.map(cell => [cell.index, cell])),
     [streamingCells],
@@ -2918,15 +2919,12 @@ export function TrajectoryTable({
         )}
         <table
           className={css.table}
-          style={CARD_STYLE}
+          style={tableStyle}
           data-scroll-ready={tableScrollReady || undefined}
           aria-rowcount={records.length + historyRowOffset}
         >
           <colgroup>
-            <col
-              className={css.eventColumn}
-              style={laneGutterPx === 0 ? undefined : { width: 33 + laneGutterPx }}
-            />
+            <col className={css.eventColumn} />
             <col className={css.contentColumn} />
           </colgroup>
           <tbody>
@@ -3147,14 +3145,6 @@ export function TrajectoryTable({
                             <KindGlyph kind={record.cell.kind} t={t} />
                           </span>
                         )}
-                        {laneCells.length > 0 && (
-                          <TrajectoryAgentLanes
-                            t={t}
-                            cells={laneCells}
-                            onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
-                            onSelect={selectRecord}
-                          />
-                        )}
                         {isCollapsedSummary && (
                           <span className={css.glyphSlot}>
                             <span className={css.glyph} aria-hidden="true">
@@ -3164,6 +3154,14 @@ export function TrajectoryTable({
                         )}
                       </td>
                       <td className={css.content}>
+                        {laneCells.length > 0 && (
+                          <TrajectoryAgentLanes
+                            t={t}
+                            cells={laneCells}
+                            onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
+                            onSelect={selectRecord}
+                          />
+                        )}
                         {!isCollapsedSummary
                           && !isRequestOnly
                           && record.turnStart && (

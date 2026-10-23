@@ -69,8 +69,12 @@ describe('subagent lanes in the virtual ledger', () => {
     expect(states().length).toBeLessThan(COUNT)
     expect(states().find(row => row.index === START)).toEqual({ index: START, state: 'start', spawn: true })
     expect(states().filter(row => row.index < START).every(row => row.state === undefined)).toBe(true)
-    // Gutter widened for one lane.
-    expect(view.container.querySelector<HTMLElement>('col')?.style.width).toBe('49px')
+    // The card column is padded for one lane; the rail column keeps its width.
+    expect(view.container.querySelector<HTMLElement>('table')?.style.getPropertyValue('--trajectory-lane-zone')).toBe('31px')
+    expect(view.container.querySelector<HTMLElement>('col')?.style.width).toBe('')
+    // The lane is drawn in the card cell (right of the cards), bending out of the spawn card.
+    const spawnRow = view.container.querySelector(`tr[data-record-index="${START}"]`)!
+    expect(spawnRow.querySelector('td:last-child [data-lane-id] svg path')).not.toBeNull()
 
     const pane = view.container.querySelector('table')!.parentElement as HTMLElement
     pane.scrollTop = 9_000
@@ -101,7 +105,7 @@ describe('subagent lanes in the virtual ledger', () => {
     expect(row(10).textContent).not.toContain('+')
     expect(row(11).textContent).toContain('+1')
     expect(row(12).textContent).toContain('+2')
-    // Six lanes plus the chip slot widen the gutter.
-    expect(view.container.querySelector<HTMLElement>('col')?.style.width).toBe('109px')
+    // Six lanes plus the chip slot widen the zone.
+    expect(view.container.querySelector<HTMLElement>('table')?.style.getPropertyValue('--trajectory-lane-zone')).toBe('105px')
   })
 })

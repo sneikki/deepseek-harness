@@ -437,7 +437,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Fixed to the rail column's base width: the lane gutter may widen the cell. */
   width: 33px;
   height: calc(2 * var(--trajectory-glyph-y));
   margin-top: var(--trajectory-head, 0px);
@@ -535,7 +534,9 @@
 }
 
 .content {
-  padding: 0 !important;
+  position: relative;
+  /* Subagent lanes run right of the cards; the card row already keeps 12px to its right. */
+  padding: 0 max(0px, calc(var(--trajectory-lane-zone, 0px) - 12px)) 0 0 !important;
   color: var(--amv-text);
 }
 

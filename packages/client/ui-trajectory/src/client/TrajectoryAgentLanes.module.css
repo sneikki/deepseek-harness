@@ -1,4 +1,5 @@
-/* Lane layer: sits in the rail cell, right of the rail line; one lane per slot. */
+/* Lane layer: right of the card column, in the content cell. Its left edge is the cards' right edge;
+   the table pads the cell by the zone width (--trajectory-lane-zone), so the cards stay clear of it. */
 .lanes {
   --lane-y: calc(var(--trajectory-head, 0px) + var(--trajectory-glyph-y));
 
@@ -6,8 +7,8 @@
   z-index: 2;
   top: 0;
   bottom: 0;
-  left: 33px;
-  width: 0;
+  left: min(calc(var(--trajectory-card-width, 760px) + 4px), calc(100% - var(--trajectory-lane-zone, 0px)));
+  width: var(--trajectory-lane-zone, 0);
   pointer-events: none;
 }
 
@@ -15,67 +16,83 @@ tr[data-collapsed-summary] .lanes {
   --lane-y: 10px;
 }
 
+/* A lane is anchored at its centre line; everything inside is positioned from there. */
 .lane {
+  --draw: color-mix(in srgb, var(--lane) 78%, var(--amv-bg));
+
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 10px;
-  pointer-events: auto;
-  cursor: default;
+  width: 0;
+}
+
+.lane:hover,
+.lane[data-lane-hover] {
+  --draw: var(--lane);
 }
 
 .line {
   position: absolute;
+  left: -2.5px;
+  width: 5px;
+  background: var(--draw);
+  pointer-events: auto;
+  transition: background-color var(--amv-dur-1) var(--amv-ease);
+}
+
+/* A wider hit area than the 5 px stroke. */
+.line::before {
+  position: absolute;
+  inset: 0 -3px;
+  content: '';
+}
+
+.line[data-part='whole'] {
   top: 0;
   bottom: 0;
-  left: 4px;
-  width: 2px;
-  border-radius: 1px;
-  background: color-mix(in srgb, var(--lane) 62%, transparent);
-  transition: background-color var(--amv-dur-1) var(--amv-ease), width var(--amv-dur-1) var(--amv-ease);
 }
 
-.lane[data-state='start'] .line {
-  top: var(--lane-y);
+/* Above the bend: stops --above before the card's header line. */
+.line[data-part='above'] {
+  top: 0;
+  bottom: calc(100% - var(--lane-y) + var(--above));
 }
 
-.lane[data-state='end'] .line {
-  bottom: calc(100% - var(--lane-y));
+/* Below the bend: resumes --below after it. */
+.line[data-part='below'] {
+  top: calc(var(--lane-y) + var(--below));
+  bottom: 0;
 }
 
-.lane[data-lane-hover] .line,
-.lane:hover .line {
-  left: 3px;
-  width: 4px;
-  background: var(--lane);
-}
-
-.cap {
+.bend {
   position: absolute;
-  top: calc(var(--lane-y) - 3px);
-  left: 2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--lane);
+  overflow: visible;
+  pointer-events: none;
 }
 
+.bend path {
+  stroke: var(--draw);
+  pointer-events: stroke;
+  transition: stroke var(--amv-dur-1) var(--amv-ease);
+}
+
+/* Station: where the lane touches a card. */
 .marker {
   position: absolute;
-  top: calc(var(--lane-y) - 6px);
-  left: -1px;
+  top: calc(var(--lane-y) - 6.5px);
   display: grid;
   place-items: center;
   box-sizing: border-box;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   padding: 0;
-  border: 1px solid var(--lane);
+  border: 1.5px solid var(--lane);
   border-radius: 50%;
   color: var(--lane);
-  /* Opaque so the lane line does not show through the circle. */
+  /* Opaque so the line does not show through the circle. */
   background: color-mix(in srgb, var(--lane) 16%, var(--amv-bg));
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .marker svg {

@@ -198,3 +198,62 @@ export function agentLaneCells(model: AgentLaneModel, previousIndex: number | nu
   }
   return cells
 }
+
+/** Lane geometry, px. Lanes sit right of the card column; x runs from the cards' right edge. */
+export const LANE_STROKE = 5
+/** Centre-to-centre distance of neighbouring slots. */
+export const LANE_PITCH = 10
+/** Card edge to the centre of slot 0. */
+export const LANE_ORIGIN = 22
+/** Corner radius of a bend (stroke centre line). */
+export const LANE_RADIUS = 6
+/** Half height of the dent a lane makes into a card at an event. */
+export const LANE_DENT = 9
+/** Card edge to the centre of the station marker where a lane touches a card. */
+export const LANE_PIN = 3
+
+/** Centre x of a slot's lane. */
+export const laneX = (slot: number): number => LANE_ORIGIN + slot * LANE_PITCH
+
+/**
+ * Width of the lane zone right of the cards (the table pads its card column by this minus the card gap).
+ * @param model - Derived lanes.
+ * @returns px; 0 without lanes. One extra slot holds the "+N" chip when lanes overflow the cap.
+ */
+export function laneZoneWidth(model: AgentLaneModel): number {
+  if (model.slots === 0) return 0
+  return Math.ceil(laneX(model.slots - 1) + LANE_STROKE / 2 + 6) + (model.overflow > 0 ? 24 : 0)
+}
+
+export interface LaneBend {
+  /** SVG path in a box whose left edge is the card edge and whose top is `rise` above the card's header centre line. */
+  d: string
+  /** px between the box top and the header centre line (also where the straight lane stops or resumes). */
+  rise: number
+  height: number
+}
+
+/**
+ * Rounded metro-style bend of one lane at its card's header line.
+ * - `start`: leaves the card's right edge, turns down.
+ * - `end`: comes down, turns left and stops at the card's right edge.
+ * - `event`: comes down, dents left to the card's right edge, goes back out and on down.
+ * @param state - Row state of the lane.
+ * @param x - Centre x of the lane, {@link laneX}.
+ * @returns the path to stroke, or undefined for a straight `pass`.
+ */
+export function laneBend(state: AgentLaneState, x: number): LaneBend | undefined {
+  const r = LANE_RADIUS
+  const arc = (sweep: 0 | 1, toX: number, toY: number) => `A${r} ${r} 0 0 ${sweep} ${toX} ${toY}`
+  if (state === 'start') return { d: `M0 0H${x - r}${arc(1, x, r)}`, rise: 0, height: r }
+  if (state === 'end') return { d: `M${x} 0${arc(1, x - r, r)}H${LANE_PIN}`, rise: r, height: r }
+  if (state === 'pass') return undefined
+  const d = LANE_DENT
+  const rise = d + r
+  return {
+    d: `M${x} 0${arc(1, x - r, r)}H${LANE_PIN + r}${arc(0, LANE_PIN, 2 * r)}V${2 * d}`
+      + `${arc(0, LANE_PIN + r, 2 * d + r)}H${x - r}${arc(1, x, 2 * rise)}`,
+    rise,
+    height: 2 * rise,
+  }
+}
