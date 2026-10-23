@@ -57,6 +57,8 @@ export interface AgentLaneModel {
   lanes: readonly AgentLane[]
   /** Slots actually drawn: sets the gutter width. */
   slots: number
+  /** Lanes folded into "+N" (slot at or above the visible cap). */
+  overflow: number
 }
 
 export type AgentLaneState = 'pass' | 'start' | 'event' | 'end'
@@ -85,7 +87,7 @@ export function deriveAgentLanes(
   lifecycles: readonly TrajectorySubagentLifecycle[],
   agentRows: readonly AgentTreeRow[] = [],
 ): AgentLaneModel {
-  if (lifecycles.length === 0) return { lanes: [], slots: 0 }
+  if (lifecycles.length === 0) return { lanes: [], slots: 0, overflow: 0 }
   const cells = turns.flatMap(turn => turn.groups.flatMap(group => group.cells))
     .sort((left, right) => left.index - right.index)
   const lastIndex = cells.at(-1)?.index ?? 0
@@ -154,7 +156,11 @@ export function deriveAgentLanes(
     Number.MAX_SAFE_INTEGER,
   )
   const lanes = drafts.map((draft, position): AgentLane => ({ ...draft, slot: packed.tracks[position] ?? 0 }))
-  return { lanes, slots: Math.min(AGENT_LANE_MAX_VISIBLE, packed.count) }
+  return {
+    lanes,
+    slots: Math.min(AGENT_LANE_MAX_VISIBLE, packed.count),
+    overflow: lanes.filter(lane => lane.slot >= AGENT_LANE_MAX_VISIBLE).length,
+  }
 }
 
 /**

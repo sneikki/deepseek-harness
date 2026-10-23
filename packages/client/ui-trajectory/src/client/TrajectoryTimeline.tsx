@@ -172,6 +172,10 @@ export interface TrajectoryTimelineProps {
   onRecordFocus?: (index: number) => void
   /** Subagent tree rows rendered as the waterfall under the plot. */
   agentRows?: readonly AgentTreeRow[]
+  /** Gutter-lane colour per AGENTS row id; pointer state shared with the transcript lanes. */
+  laneColors?: ReadonlyMap<string, string> | undefined
+  highlightedAgentId?: string | null
+  onAgentHover?: ((rowId: string | null) => void) | undefined
   /** Open one subagent's own session. */
   onOpenSession?: (sessionId: string) => void
 }
@@ -279,6 +283,9 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   onRecordFocus,
   agentRows = EMPTY_AGENT_ROWS,
   onOpenSession,
+  laneColors,
+  highlightedAgentId = null,
+  onAgentHover,
 }: TrajectoryTimelineProps) {
   // Finished descendants cover their waits, so duration mode keeps them.
   const covered = useMemo(() => agentRows.flatMap(row =>
@@ -796,6 +803,9 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
           toDomain={model.wallToDomain}
           onRecordSelect={onRecordSelect}
           onOpenSession={onOpenSession}
+          laneColors={laneColors}
+          highlightedId={highlightedAgentId}
+          onHover={onAgentHover}
           selectedIndex={selectedIndex}
           searchMatchIndexes={searchMatchIndexes}
           activeRange={activeRange}

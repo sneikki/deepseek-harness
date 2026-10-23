@@ -57,6 +57,14 @@
   background: color-mix(in srgb, var(--amv-text-2) 6%, transparent);
 }
 
+.row[data-lane] {
+  box-shadow: inset 2px 0 0 var(--lane);
+}
+
+.row[data-lane-hover] {
+  background: color-mix(in srgb, var(--lane, var(--amv-text-2)) 16%, transparent);
+}
+
 .row[data-current] {
   background: color-mix(in srgb, var(--amv-accent) 14%, transparent);
   box-shadow: inset 2px 0 0 var(--amv-accent);

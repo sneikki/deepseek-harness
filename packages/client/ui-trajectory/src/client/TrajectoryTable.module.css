@@ -437,6 +437,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Fixed to the rail column's base width: the lane gutter may widen the cell. */
+  width: 33px;
   height: calc(2 * var(--trajectory-glyph-y));
   margin-top: var(--trajectory-head, 0px);
   padding-right: 1px;
@@ -584,6 +586,11 @@
   height: auto;
   min-height: var(--trajectory-card-height);
   overflow: visible;
+}
+
+/* The spawn card of a subagent lane wears the lane colour. */
+.table tbody tr .cardRow[data-lane-spawn] .card {
+  border-left-color: var(--trajectory-lane);
 }
 
 .table tbody tr:not([data-collapsed-summary]):hover .card {

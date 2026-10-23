@@ -45,6 +45,10 @@ import { trajectoryPreviewText } from './trajectory-preview.ts'
 import { TrajectoryCard } from './TrajectoryCard.tsx'
 import { subagentBadges, subagentNoticeText } from './TrajectorySubagentBadges.tsx'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
+import { TrajectoryAgentLanes, AGENT_LANE_PITCH_PX } from './TrajectoryAgentLanes.tsx'
+import {
+  AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, agentLaneCells, type AgentLaneModel,
+} from './trajectory-agent-lanes.ts'
 import {
   CARD_BODY_LINES, CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
   CARD_LINE_HEIGHT, CARD_MAX_WIDTH, CARD_PADDING_Y, CARD_ROW_HEIGHT, cardIsCompact, cardLevel, measureCardRow,
@@ -483,7 +487,16 @@ export interface TrajectoryTableProps {
   inspectCallId?: string | null
   /** Acknowledge a consumed (or unresolvable) inspect request. */
   onInspectApplied?: (() => void) | undefined
+  /** Subagent lanes drawn in the gutter (`deriveAgentLanes`). */
+  agentLanes?: AgentLaneModel
+  /** Pointer over a lane: the AGENTS row id to highlight, null on leave. */
+  onAgentLaneHover?: ((rowId: string | null) => void) | undefined
+  /** AGENTS row hovered in the waterfall: its lane is emphasised. */
+  highlightedAgentId?: string | null
 }
+
+const NO_LANES: AgentLaneModel = { lanes: [], slots: 0, overflow: 0 }
+const NOOP_LANE_HOVER = () => undefined
 
 /** Request-inspector fields shared by ordinary generation and compaction. */
 interface TrajectoryRequestNumberBase {
@@ -2303,6 +2316,9 @@ export function TrajectoryTable({
   onToggleAssistant,
   inspectCallId = null,
   onInspectApplied,
+  agentLanes: laneModel = NO_LANES,
+  onAgentLaneHover,
+  highlightedAgentId = null,
 }: TrajectoryTableProps) {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
@@ -2349,6 +2365,10 @@ export function TrajectoryTable({
     () => new Map(trajectorySubagentLifecycles(turns).map(lifecycle => [lifecycle.startIndex, lifecycle])),
     [turns],
   )
+  // One extra slot holds the "+N" chip when lanes overflow the cap.
+  const laneGutterPx = laneModel.slots === 0
+    ? 0
+    : (laneModel.slots + (laneModel.overflow > 0 ? 1 : 0)) * AGENT_LANE_PITCH_PX + 6
   const streamingCellsByIndex = useMemo(
     () => new Map(streamingCells.map(cell => [cell.index, cell])),
     [streamingCells],
@@ -2896,7 +2916,10 @@ export function TrajectoryTable({
           aria-rowcount={records.length + historyRowOffset}
         >
           <colgroup>
-            <col className={css.eventColumn} />
+            <col
+              className={css.eventColumn}
+              style={laneGutterPx === 0 ? undefined : { width: 33 + laneGutterPx }}
+            />
             <col className={css.contentColumn} />
           </colgroup>
           <tbody>
@@ -2982,6 +3005,12 @@ export function TrajectoryTable({
                   const singleToolNotice = record.cell.kind === 'context'
                     && record.cell.sourceBlocks?.length === 1
                     && record.cell.sourceBlocks.every(block => block.type === 'tool-addition' || block.type === 'tool-removal')
+                  // Hidden rows between this and the previous shown row fold into this row's lane states.
+                  const laneCells = laneModel.lanes.length === 0
+                    ? []
+                    : agentLaneCells(laneModel, records[position - 1]?.cell.index ?? null, record.cell.index)
+                  const spawnLane = laneCells.find(cell =>
+                    cell.lane.startIndex === record.cell.index && cell.lane.slot < AGENT_LANE_MAX_VISIBLE)?.lane
                   return (
                     <tr
                       ref={virtualizationEnabled && !isRequestOnly && !isCollapsedSummary
@@ -3111,6 +3140,15 @@ export function TrajectoryTable({
                             <KindGlyph kind={record.cell.kind} t={t} />
                           </span>
                         )}
+                        {laneCells.length > 0 && (
+                          <TrajectoryAgentLanes
+                            t={t}
+                            cells={laneCells}
+                            onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
+                            onSelect={selectRecord}
+                            highlightedId={highlightedAgentId}
+                          />
+                        )}
                         {isCollapsedSummary && (
                           <span className={css.glyphSlot}>
                             <span className={css.glyph} aria-hidden="true">
@@ -3141,8 +3179,10 @@ export function TrajectoryTable({
                             : (
                               <div
                                 className={css.cardRow}
+                                data-lane-spawn={spawnLane !== undefined || undefined}
                                 style={{
                                   '--trajectory-card-level': cardLevel(record.cell.kind),
+                                  ...(spawnLane === undefined ? {} : { '--trajectory-lane': AGENT_LANE_COLORS[spawnLane.slot] }),
                                 } as CSSProperties}
                               >
                                 <TrajectoryCard
