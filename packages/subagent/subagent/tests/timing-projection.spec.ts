@@ -66,7 +66,56 @@ describe('subagent timing projection', () => {
       event('turn/end', 5, 4_100),
       event('turn/start', 6, 10_000),
       event('turn/end', 7, 12_000),
-    ])).toEqual({ settledMs: 5_100, lastTurnCompleted: true, lastTurnEnd: { at: 12_000, reason: 'completed' } })
+    ])).toEqual({
+      settledMs: 5_100,
+      lastTurnCompleted: true,
+      lastTurnEnd: { at: 12_000, reason: 'completed' },
+      turns: [
+        { start: 1_000, end: 4_100, reason: 'completed' },
+        { start: 10_000, end: 12_000, reason: 'completed' },
+      ],
+    })
+  })
+
+  it('lists interrupted, resumed and running turns in order with the open one last', () => {
+    expect(fold([
+      event('turn/start', 0, 100),
+      event('subagent/descriptor', 1, 110),
+      event('turn/end', 2, 600, { kind: 'interrupted' }),
+      event('turn/start', 3, 9_000),
+      event('turn/end', 4, 9_500),
+      event('turn/start', 5, 20_000),
+      event('assistant/attempt', 6, 20_300),
+    ])).toEqual({
+      settledMs: 500 + 500,
+      active: { since: 20_000, through: 20_300 },
+      lastTurnEnd: { at: 9_500, reason: 'completed' },
+      turns: [
+        { start: 100, end: 600, reason: 'interrupted' },
+        { start: 9_000, end: 9_500, reason: 'completed' },
+        { start: 20_000, end: null, reason: null },
+      ],
+    })
+  })
+
+  it('clamps a reversed turn end to its start', () => {
+    expect(fold([
+      event('subagent/descriptor', 0, 1),
+      event('turn/start', 1, 1_000),
+      event('turn/end', 2, 900),
+    ]).turns).toEqual([{ start: 1_000, end: 1_000, reason: 'completed' }])
+  })
+
+  it('closes an open turn at the next turn start with an unknown reason', () => {
+    expect(fold([
+      event('subagent/descriptor', 0, 1),
+      event('turn/start', 1, 1_000),
+      event('turn/start', 2, 3_000),
+    ])).toMatchObject({
+      settledMs: 2_000,
+      active: { since: 3_000, through: 3_000 },
+      turns: [{ start: 1_000, end: 3_000, reason: null }, { start: 3_000, end: null, reason: null }],
+    })
   })
 
   it('exposes an open turn start and never subtracts time for reversed boundaries', () => {
@@ -80,6 +129,7 @@ describe('subagent timing projection', () => {
       settledMs: 0,
       active: { since: 2_000, through: 2_500 },
       lastTurnEnd: { at: 900, reason: 'completed' },
+      turns: [{ start: 1_000, end: 1_000, reason: 'completed' }, { start: 2_000, end: null, reason: null }],
     })
   })
 
@@ -90,14 +140,14 @@ describe('subagent timing projection', () => {
       event('turn/end', 2, 200),
       event('turn/start', 3, 300),
       event('turn/end', 4, 400, { kind: 'interrupted' }),
-    ])).toEqual({ settledMs: 200, lastTurnCompleted: false, lastTurnEnd: { at: 400, reason: 'interrupted' } })
+    ])).toMatchObject({ settledMs: 200, lastTurnCompleted: false, lastTurnEnd: { at: 400, reason: 'interrupted' } })
 
     expect(fold([
       event('turn/start', 0, 100),
       event('subagent/descriptor', 1, 110),
       event('turn/end', 2, 200),
       event('turn/start', 3, 300),
-    ])).toEqual({
+    ])).toMatchObject({
       settledMs: 100,
       active: { since: 300, through: 300 },
       lastTurnEnd: { at: 200, reason: 'completed' },
@@ -135,7 +185,8 @@ describe('subagent timing projection', () => {
       event('subagent/descriptor', 1, 110),
       event('turn/start', 2, 150),
       event('turn/end', 3, 200),
-    ])).toEqual({ settledMs: 50, lastTurnCompleted: true, lastTurnEnd: { at: 200, reason: 'completed' } })
+    // The unended turn opened at 100 is closed by the start at 150 (50 ms), then 150..200 completes.
+    ])).toMatchObject({ settledMs: 100, lastTurnCompleted: true, lastTurnEnd: { at: 200, reason: 'completed' } })
   })
 
   it('overwrites the recorded end with the second turn', () => {
@@ -145,7 +196,7 @@ describe('subagent timing projection', () => {
       event('turn/end', 2, 200),
       event('turn/start', 3, 300),
       event('turn/end', 4, 500, { kind: 'blocked' }),
-    ])).toEqual({ settledMs: 250, lastTurnCompleted: false, lastTurnEnd: { at: 500, reason: 'blocked' } })
+    ])).toMatchObject({ settledMs: 250, lastTurnCompleted: false, lastTurnEnd: { at: 500, reason: 'blocked' } })
   })
 
   it('resets the recorded end at a fork-seed descriptor', () => {
@@ -159,8 +210,8 @@ describe('subagent timing projection', () => {
     expect(view).not.toHaveProperty('lastTurnEnd')
   })
 
-  it('is stateVersion 4 and its recorded end survives the state schema', () => {
-    expect(subagentTimingProjectionDefinition.stateVersion).toBe(4)
+  it('is stateVersion 5 and its recorded end survives the state schema', () => {
+    expect(subagentTimingProjectionDefinition.stateVersion).toBe(5)
     const state = subagentTimingProjectionDefinition.apply(
       subagentTimingProjectionDefinition.init(),
       event('subagent/descriptor', 0, 110),
@@ -175,6 +226,7 @@ describe('subagent timing projection', () => {
       descriptorSeen: true,
       settledMs: 0,
       lastTurnEnd: { at: 5, reason: 'plugin-custom' },
+      turns: [{ start: 1, end: 5, reason: 'plugin-custom' }],
     }
     expect(subagentTimingProjectionDefinition.stateSchema.parse(state)).toEqual(state)
     // A plugin-added kind is outside the built-in union; the schemas must still accept it.
@@ -183,6 +235,7 @@ describe('subagent timing projection', () => {
     expect(subagentTimingProjectionDefinition.wire.viewSchema.parse(view)).toEqual({
       settledMs: 0,
       lastTurnEnd: { at: 5, reason: 'plugin-custom' },
+      turns: [{ start: 1, end: 5, reason: 'plugin-custom' }],
     })
   })
 })

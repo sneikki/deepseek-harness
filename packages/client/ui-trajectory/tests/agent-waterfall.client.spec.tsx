@@ -112,14 +112,50 @@ describe('TrajectoryAgentWaterfall', () => {
     expect(open.style.getPropertyValue('--agent-width')).toBe('80%')
   })
 
-  it('labels the bar with working time, wall only without it', () => {
+  it('draws a solid segment per turn and a dashed connector over the idle gap', () => {
+    const turns = [
+      { start: 0, end: 300, reason: 'interrupted' as const },
+      { start: 800, end: 900, reason: 'completed' as const },
+    ]
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={0} domainDuration={1000} domainEnd={1000} toDomain={x => x}
+        rows={[row('r', 1, { startedAt: 0, endedAt: 900, activeMs: 400, turns }), row('one', 1)]} />,
+    )
+    const part = (id: string, selector: string) =>
+      Array.from(view.container.querySelectorAll<HTMLElement>(`[data-agent-id="${id}"] ${selector}`))
+    const geometry = (nodes: HTMLElement[]) =>
+      nodes.map(node => ['--agent-left', '--agent-width'].map(name => `${Number.parseFloat(node.style.getPropertyValue(name)).toFixed(2)}%`))
+    expect(geometry(part('r', '[data-agent-segment]'))).toEqual([['0.00%', '30.00%'], ['80.00%', '10.00%']])
+    expect(geometry(part('r', '[data-agent-gap]'))).toEqual([['30.00%', '50.00%']])
+    // No turns: today's single bar, no connector.
+    expect(part('one', '[data-agent-segment]')).toHaveLength(1)
+    expect(part('one', '[data-agent-gap]')).toHaveLength(0)
+  })
+
+  it('skips segments and gaps wholly outside the zoom window', () => {
+    const turns = [
+      { start: 0, end: 100, reason: 'interrupted' as const },
+      { start: 300, end: 400, reason: 'interrupted' as const },
+      { start: 800, end: 900, reason: 'completed' as const },
+    ]
+    // Window 500..1000: the first two segments and the gaps before 800 are out.
+    const view = render(
+      <TrajectoryAgentWaterfall t={t} domainStart={500} domainDuration={500} domainEnd={1000} toDomain={x => x}
+        rows={[row('r', 1, { startedAt: 0, endedAt: 900, activeMs: 300, turns })]} />,
+    )
+    const count = (selector: string) => view.container.querySelectorAll(`[data-agent-id="r"] ${selector}`).length
+    expect(count('[data-agent-segment]')).toBe(1)
+    expect(count('[data-agent-gap]')).toBe(1)
+  })
+
+  it('labels the bar with working time and wall, wall only without activity', () => {
     const resumed = row('w', 1, { startedAt: 0, endedAt: 79_380_000, activeMs: 3_360_000 }) // 22 h 3 min wall, 56 min work
     const view = render(
       <TrajectoryAgentWaterfall t={t} rows={[resumed, row('x', 1, { activeMs: null, endedAt: 90_000 })]}
         domainStart={0} domainDuration={79_380_000} domainEnd={79_380_000} toDomain={x => x} />,
     )
     const label = (id: string) => view.container.querySelector(`[data-agent-id="${id}"] [class*="duration"]`)!.textContent
-    expect(label('w')).toBe('56 min 0 s')
+    expect(label('w')).toBe('56 min 0 s work · 22 h 3 min')
     expect(label('x')).toBe('1 min 30 s')
   })
 

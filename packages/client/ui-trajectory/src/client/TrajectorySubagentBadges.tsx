@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import type { TrajectoryTranslate } from './locales.ts'
-import { formatBoxDuration } from './trajectory-record.ts'
 import type { TrajectoryCellProps } from './trajectory-record.ts'
 import type { TrajectorySubagentLifecycle, TrajectorySubagentStatus } from './trajectory-subagent.ts'
 import css from './TrajectoryTable.module.css'
@@ -44,27 +43,26 @@ export function subagentNoticeText(
  * @param cell - Record carrying `subagent` info.
  * @param lifecycle - The agent's lifecycle when `cell` is its start call.
  * @param t - Trajectory locale translator.
+ * @param duration - The agent row's `agentDurationText`; no duration chip without it.
  * @returns Badge elements, or undefined when the record has no lifecycle.
  */
 export function subagentBadges(
   cell: TrajectoryCellProps,
   lifecycle: TrajectorySubagentLifecycle | undefined,
   t: TrajectoryTranslate,
+  duration?: string | null,
 ): ReactNode {
   const { subagent } = cell
   if (subagent === undefined) return undefined
   const chip = <span className={css.subagentChip}>{subagent.shortId}</span>
   if (subagent.phase !== 'start' || lifecycle === undefined) return chip
-  const duration = lifecycle.startedAt !== null && lifecycle.endedAt !== null
-    ? formatBoxDuration(lifecycle.endedAt - lifecycle.startedAt, t)
-    : undefined
   return (
     <>
       <span className={css.subagentPill} data-status={lifecycle.status}>
         <span className={css.subagentDot} aria-hidden="true" />
         {t(STATUS_KEY[lifecycle.status])}
       </span>
-      {duration !== undefined && <span className={css.subagentChip}>{duration}</span>}
+      {duration != null && <span className={css.subagentChip}>{duration}</span>}
       {lifecycle.reportCount > 0 && (
         <span className={css.subagentChip}>
           {lifecycle.reportCount === 1

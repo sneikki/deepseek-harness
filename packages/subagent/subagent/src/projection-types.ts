@@ -19,6 +19,16 @@ export type SubagentCatalogEntry =
     | { readonly mode: 'unknown'; readonly label?: string }
   )
 
+/** One turn after the child's own descriptor: `end`/`reason` are null while it is open. */
+export interface SubagentTurnSpan {
+  /** Event time of `turn/start`. */
+  start: number
+  /** Event time of `turn/end`, never before `start`; null while the turn is open. */
+  end: number | null
+  /** Kind of the reason that closed it; null while the turn is open. */
+  reason: TurnEndReason['kind'] | null
+}
+
 /** Durable active-turn timing for one descriptor-backed child session. */
 export interface SubagentTimingProjection {
   /** Milliseconds accumulated across completed turns after the child's own descriptor. */
@@ -45,6 +55,11 @@ export interface SubagentTimingProjection {
     /** Kind of the reason that closed it. */
     reason: TurnEndReason['kind']
   }
+  /**
+   * Every turn after the child's own descriptor in order, the open one last;
+   * absent before one starts. Gaps between spans are idle waits.
+   */
+  turns?: SubagentTurnSpan[]
 }
 
 /**

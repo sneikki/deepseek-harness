@@ -153,6 +153,23 @@ describe('deriveAgentTree', () => {
     }, [life('call-1', 7, false)])
     expect(rows.map(row => row.startIndex)).toEqual([null, null])
   })
+
+  it('never pairs an errored blocking call with a catalog entry', () => {
+    const failed = { ...life('call-1', 7, false), status: 'failed' as const }
+    const rows = deriveAgentTree('root', {}, {
+      root: proj([entry('x1', 1, undefined, 'one-shot')]),
+    }, [failed, life('call-2', 9, false)])
+    // x1 is the child of the call that ran; the errored call shows as its own row.
+    expect(Object.fromEntries(rows.map(row => [row.sessionId, row.startIndex]))).toEqual({ x1: 9, 'call-1': 7 })
+  })
+
+  it('still pairs an errored blocking call whose child was created', () => {
+    const failed = { ...life('call-1', 7, false), status: 'failed' as const }
+    const rows = deriveAgentTree('root', {}, {
+      root: proj([entry('x1', 1, undefined, 'one-shot'), entry('x2', 2, undefined, 'one-shot')]),
+    }, [failed, life('call-2', 9, false)])
+    expect(rows.map(row => [row.sessionId, row.startIndex])).toEqual([['x1', 7], ['x2', 9]])
+  })
 })
 
 const cell = (index: number, startedAt: number, timeSeconds: number) => ({

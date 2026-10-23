@@ -16,11 +16,19 @@ interface TimingLike {
   readonly active?: { readonly since: number; readonly through: number } | undefined
   readonly lastTurnCompleted?: boolean | undefined
   readonly lastTurnEnd?: { readonly at: number; readonly reason: TurnEndKind } | undefined
+  readonly turns?: readonly AgentTurn[] | undefined
 }
 
 /** Mirrors the `kind`s of `TurnEndReasonMap` (core/session types). */
 export type TurnEndKind =
   | 'completed' | 'aborted' | 'blocked' | 'error' | 'max-tokens' | 'interrupted' | 'forked'
+
+/** One turn of an agent; `end`/`reason` are null while it runs. */
+export interface AgentTurn {
+  readonly start: number
+  readonly end: number | null
+  readonly reason: TurnEndKind | null
+}
 
 /** Structural subset of a session projection snapshot. */
 export interface AgentTreeProjectionLike {
@@ -45,6 +53,8 @@ export interface AgentTreeRow {
   endedAt: number | null
   /** Settled time plus the open turn up to `active.through`; a live consumer extends it to now. Null when untimed. */
   activeMs: number | null
+  /** Turns in order, the running one last; absent when the projection has none (draw one bar). */
+  turns?: readonly AgentTurn[]
   hasChildren: boolean
   /** Ledger record index of the start call; depth-1 rows only. */
   startIndex: number | null
@@ -58,18 +68,21 @@ const LIFECYCLE_STATUS = {
   running: 'running', finished: 'done', failed: 'failed', interrupted: 'interrupted',
 } as const
 
+/** Status an agent shows when a turn ended for `reason`. */
+export function reasonStatus(reason: TurnEndKind): AgentTreeStatus {
+  switch (reason) {
+    case 'completed':
+    case 'forked': return 'done'
+    case 'aborted':
+    case 'interrupted':
+    case 'blocked': return 'interrupted'
+    default: return 'failed'
+  }
+}
+
 function endStatus(timing: TimingLike): AgentTreeStatus {
   const reason = timing.lastTurnEnd?.reason
-  if (reason !== undefined) {
-    switch (reason) {
-      case 'completed':
-      case 'forked': return 'done'
-      case 'aborted':
-      case 'interrupted':
-      case 'blocked': return 'interrupted'
-      default: return 'failed'
-    }
-  }
+  if (reason !== undefined) return reasonStatus(reason)
   if (timing.lastTurnCompleted === undefined) return 'unknown'
   return timing.lastTurnCompleted ? 'done' : 'failed'
 }
@@ -87,8 +100,11 @@ function startIndexes(
   }
   // Heuristic: blocking calls carry no agent id, so pair by order, and only
   // when both sides have the same count (otherwise the pairing would guess).
-  const blocking = lifecycles.filter(lifecycle => !lifecycle.background && !result.has(lifecycle.id))
+  // `failed` is set from the call error alone: a startup rejection created no child, a failed
+  // child did. So try all calls first and drop the failed ones only when that makes the counts fit.
+  const all = lifecycles.filter(lifecycle => !lifecycle.background && !result.has(lifecycle.id))
   const unmapped = entries.filter(entry => !result.has(entry.id) && entry.mode === 'one-shot')
+  const blocking = all.length === unmapped.length ? all : all.filter(lifecycle => lifecycle.status !== 'failed')
   if (unmapped.length === blocking.length) {
     unmapped.forEach((entry, position) => {
       const lifecycle = blocking[position]
@@ -141,6 +157,7 @@ export function deriveAgentTree(
         activeMs: timing === undefined
           ? null
           : timing.settledMs + (timing.active === undefined ? 0 : Math.max(0, timing.active.through - timing.active.since)),
+        ...timing?.turns === undefined || timing.turns.length === 0 ? {} : { turns: timing.turns },
         hasChildren: children.length > 0,
         startIndex: links.get(entry.id) ?? null,
         loaded: projection !== undefined,

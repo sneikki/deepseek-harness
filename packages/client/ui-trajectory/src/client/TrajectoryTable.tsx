@@ -445,6 +445,8 @@ export interface TrajectoryTableProps {
   requestNumbers?: readonly TrajectoryRequestNumber[]
   /** Grouped records in display order. */
   turns: readonly TrajectoryTurnModel[]
+  /** Agent row duration text (`agentDurationText`) per subagent start-call record index. */
+  agentDurations?: ReadonlyMap<number, string | null>
   /** In-flight cells whose content replaces the matching structural record index. */
   streamingCells?: readonly TrajectoryCellProps[]
   /** Record indexes emphasized by the active timeline focus. */
@@ -2293,6 +2295,7 @@ export function TrajectoryTable({
   loadImage,
   requestNumbers: sessionRequestNumbers,
   turns,
+  agentDurations,
   streamingCells = [],
   timelineFocusIndexes = null,
   searchMatchIndexes = null,
@@ -3207,6 +3210,7 @@ export function TrajectoryTable({
                                     record.cell,
                                     subagentByStart.get(record.cell.index),
                                     t,
+                                    agentDurations?.get(record.cell.index),
                                   )}
                                   badgeTitle={toolCallText?.name || t(KIND_LABEL_KEY[record.cell.kind])}
                                   {...(record.cell.timeSeconds !== null && record.cell.timeSeconds > 0
