@@ -185,7 +185,8 @@ describe('subagent timing projection', () => {
       event('subagent/descriptor', 1, 110),
       event('turn/start', 2, 150),
       event('turn/end', 3, 200),
-    ])).toMatchObject({ settledMs: 50, lastTurnCompleted: true, lastTurnEnd: { at: 200, reason: 'completed' } })
+    // The unended turn opened at 100 is closed by the start at 150 (50 ms), then 150..200 completes.
+    ])).toMatchObject({ settledMs: 100, lastTurnCompleted: true, lastTurnEnd: { at: 200, reason: 'completed' } })
   })
 
   it('overwrites the recorded end with the second turn', () => {
