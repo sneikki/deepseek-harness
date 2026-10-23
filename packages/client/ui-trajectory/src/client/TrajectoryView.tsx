@@ -22,6 +22,7 @@ import {
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
 import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
+import { AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, deriveAgentLanes } from './trajectory-agent-lanes.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
   appendTrajectoryPartialLayout, deriveTrajectoryLayout,
@@ -404,6 +405,27 @@ export function TrajectoryView({
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
   )
+  const agentLanes = useMemo(
+    () => deriveAgentLanes(timelineTurns, timelineLifecycles, agentRows),
+    [timelineTurns, timelineLifecycles, agentRows],
+  )
+  // AGENTS row id under the pointer, from a gutter lane or a waterfall row: both light up.
+  // Straight on the DOM: React state here would re-render the whole transcript on every lane enter/leave.
+  const viewRef = useRef<HTMLDivElement>(null)
+  const setHoveredAgent = useCallback((rowId: string | null) => {
+    const root = viewRef.current
+    if (root === null) return
+    root.querySelectorAll('[data-lane-hover]').forEach((node) => { node.removeAttribute('data-lane-hover') })
+    if (rowId === null) return
+    const id = CSS.escape(rowId)
+    root.querySelectorAll(`[data-lane-row="${id}"], [data-agent-id="${id}"]`)
+      .forEach((node) => { node.setAttribute('data-lane-hover', '') })
+  }, [])
+  const laneColors = useMemo(
+    () => new Map(agentLanes.lanes.filter(lane => lane.slot < AGENT_LANE_MAX_VISIBLE)
+      .map(lane => [lane.rowId, AGENT_LANE_COLORS[lane.slot] ?? ''])),
+    [agentLanes],
+  )
   // Rows without a projection, or with one that carries no timing (cache hints of a
   // historical-format child), get it read (bounded, once, one retry); nested children follow.
   useEffect(() => {
@@ -586,7 +608,7 @@ export function TrajectoryView({
   }, [hasResidentOlderHistory, loadOlder])
 
   return (
-    <div className={css.root} data-conversation-composer-overlay="">
+    <div ref={viewRef} className={css.root} data-conversation-composer-overlay="">
       <TrajectoryToolbar
         actualDuration={actualDuration}
         onActualDurationChange={(nextActualDuration) => {
@@ -625,6 +647,8 @@ export function TrajectoryView({
         onRecordFocus={handleTimelineRecordFocus}
         agentRows={agentRows}
         onOpenSession={openSession}
+        laneColors={laneColors}
+        onAgentHover={setHoveredAgent}
       />
       {olderError !== undefined && !olderHistoryLoading && (
         <div className={css.historyError} role="alert">
@@ -667,6 +691,8 @@ export function TrajectoryView({
           onToggleAssistant={toggleAssistant}
           inspectCallId={inspectCallId}
           onInspectApplied={completeViewRequest}
+          agentLanes={agentLanes}
+          onAgentLaneHover={setHoveredAgent}
         />
       </div>
     </div>
