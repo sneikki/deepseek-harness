@@ -27,8 +27,8 @@ export interface TimingState {
   lastTurnCompleted?: boolean | undefined
   /** Wall-clock end of the latest post-descriptor `turn/end`; kept across turn starts and reset by a descriptor. */
   lastTurnEnd?: { at: number; reason: TurnEndReason['kind'] } | undefined
-  /** Closed post-descriptor turns in order; the open one is derived from `active` in the wire view. */
-  turns: Array<{ start: number; end: number; reason: TurnEndReason['kind'] }>
+  /** Closed post-descriptor turns in order; the open one is derived from `active` in the wire view. Null reason: closed by next start. */
+  turns: Array<{ start: number; end: number; reason: TurnEndReason['kind'] | null }>
 }
 
 const activeIntervalSchema = z.object({
@@ -44,7 +44,7 @@ const lastTurnEndSchema = z.object({
 const closedTurnSchema = z.object({
   start: z.number().int().nonnegative(),
   end: z.number().int().nonnegative(),
-  reason: z.string().min(1).transform(kind => kind as TurnEndReason['kind']),
+  reason: z.string().min(1).transform(kind => kind as TurnEndReason['kind']).nullable(),
 }).strict()
 
 const turnSpanSchema = z.object({
