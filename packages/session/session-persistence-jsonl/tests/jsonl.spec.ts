@@ -1268,15 +1268,21 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
       .rejects.toThrow(/released v0 physical header lacks required member "type"/)
   })
 
-  it('tracks a disappearing corpus member and propagates its storage faults in historical revisions', async () => {
+  it('tracks a disappearing child and propagates its storage faults in historical revisions', async () => {
     const parent = meta('corpus-revision-parent', '/work')
-    const child = meta('corpus-revision-child', '/work')
-    for (const header of [parent, child]) {
+    const child: SessionHeader = {
+      ...meta('corpus-revision-child', '/work'), parentSession: parent.id, origin: 'subagent', delegationDepth: 1,
+    }
+    const unrelated = meta('corpus-revision-unrelated', '/work')
+    for (const header of [parent, child, unrelated]) {
       const path = historicalLogPath(root, header.cwd, header.id)
       await mkdir(dirname(path), { recursive: true })
       await writeFile(path, `${JSON.stringify(releasedV0Header(header))}\n`)
     }
     const present = await ctx.sessionPersistence.stat(parent.id)
+    await appendFile(historicalLogPath(root, unrelated.cwd, unrelated.id), '\n')
+    expect((await ctx.sessionPersistence.stat(parent.id))?.revision).toBe(present?.revision)
+    expect((await ctx.sessionPersistence.list()).find(s => s.header.id === parent.id)?.revision).toBe(present?.revision)
     statFailure.path = historicalLogPath(root, child.cwd, child.id)
     statFailure.error = Object.assign(new Error('member disappeared'), { code: 'ENOENT' })
     const missing = await ctx.sessionPersistence.stat(parent.id)

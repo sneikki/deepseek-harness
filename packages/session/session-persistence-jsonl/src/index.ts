@@ -209,14 +209,46 @@ function fileRevision(identity: JsonlPhysicalIdentity): PersistenceRevision {
 }
 
 /**
- * Change token of a historical (migration-required) log: its file, the historical
- * corpus it migrates against, and the migration output fingerprint, so anything
- * persisted from its in-memory migration is invalidated by a migrator change.
+ * Change token of a historical (migration-required) log: its file, the related
+ * logs its migration depends on (see {@link relatedPathsOf}), and the migration
+ * output fingerprint, so anything persisted from its in-memory migration is
+ * invalidated by a migrator change but not by unrelated sessions being written.
  */
-function historicalRevision(identity: JsonlPhysicalIdentity, corpusRevision: string | undefined): PersistenceRevision {
+function historicalRevision(identity: JsonlPhysicalIdentity, relatedRevision: string): PersistenceRevision {
   return SessionPersistenceRevision(
-    `${fileRevision(identity)}:${corpusRevision}:v${SESSION_FORMAT_VERSION}.${MIGRATED_CACHE_VERSION}`,
+    `${fileRevision(identity)}:${relatedRevision}:v${SESSION_FORMAT_VERSION}.${MIGRATED_CACHE_VERSION}`,
   )
+}
+
+/** A stored generation whose header was read. */
+type ListedArtifact = GenerationHeader & { readonly path: string; readonly sourceVersion: number }
+
+/** One store scan: readable generations, the paths of unreadable ones, and every path's file revision (`missing` once vanished). */
+interface Discovery {
+  readonly artifacts: readonly ListedArtifact[]
+  readonly opaque: readonly string[]
+  readonly revisions: ReadonlyMap<string, string>
+}
+
+/**
+ * Sorted paths a historical migration of `id` depends on besides its own log:
+ * its direct subagent children, whose catalog facts it reads, and every log
+ * with an unreadable header (`opaque`), which could be a child no header names.
+ */
+function relatedPathsOf(id: SessionId, artifacts: readonly ListedArtifact[], opaque: readonly string[]): string[] {
+  return [
+    ...artifacts
+      .filter(artifact => artifact.header.origin === 'subagent' && artifact.header.parentSession === id)
+      .map(artifact => artifact.path),
+    ...opaque,
+  ].sort()
+}
+
+/** Digest of related log paths and their file revisions; `revisions` holds every path (`missing` once a log vanished). */
+function relatedDigest(paths: readonly string[], revisions: ReadonlyMap<string, string>): string {
+  const hash = createHash('sha256')
+  for (const path of paths) hash.update(JSON.stringify([path, revisions.get(path)]))
+  return hash.digest('hex')
 }
 
 /** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
@@ -324,6 +356,16 @@ class JsonlSessionPersistence extends SessionPersistence {
   private readonly coldLogMemo = new Map<SessionId, StoredLog>()
   /** One joinable decode/migration operation per selected historical Session file revision. */
   private readonly migrationPreparations = new Map<SessionId, MigrationPreparation>()
+  /**
+   * Discovery headers by log path, valid while the stat-derived revision matches.
+   * ponytail: entries of deleted logs stay until restart (one small header each).
+   */
+  private readonly listedHeaders = new Map<string, {
+    readonly revision: PersistenceRevision
+    readonly metadata: Promise<GenerationHeader | undefined>
+  }>()
+  /** The store scan historical stats are joining, while one is in flight. */
+  private sharedDiscovery: Promise<Discovery> | undefined
 
   constructor(ctx: Context, public config: Config, private readonly tracker: JsonlBackendTracker) {
     super(ctx)
@@ -513,7 +555,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       return {
         ...metadata,
         revision: selected.sourceVersion < SESSION_FORMAT_VERSION
-          ? historicalRevision(identity, await this.historicalCorpusRevision(options?.signal))
+          ? historicalRevision(identity, await this.relatedRevision(id, options?.signal))
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
       }
@@ -539,8 +581,8 @@ class JsonlSessionPersistence extends SessionPersistence {
     // predate the scan), so create-to-list visibility never has a hole.
     const pending = [...this.tracker.pendingEntries()]
     const artifacts = await this.listArtifacts(signal)
-    const corpusRevision = artifacts.some(artifact => artifact.sourceVersion < SESSION_FORMAT_VERSION)
-      ? await this.historicalCorpusRevision(signal) : undefined
+    const opaque = artifacts.some(artifact => artifact.sourceVersion < SESSION_FORMAT_VERSION)
+      ? await this.opaquePaths(artifacts, signal) : []
     const statted = settledValues(await settleLimited(this.listLimit, artifacts, async (artifact) => {
       signal?.throwIfAborted()
       try {
@@ -553,6 +595,11 @@ class JsonlSessionPersistence extends SessionPersistence {
         return undefined
       }
     }))
+    const revisions = await this.revisionsOf(opaque, signal)
+    artifacts.forEach((artifact, index) => {
+      const entry = statted[index]
+      revisions.set(artifact.path, entry === undefined ? 'missing' : fileRevision(entry.identity))
+    })
     for (const entry of statted) {
       if (entry === undefined) continue
       const { artifact, identity } = entry
@@ -561,7 +608,7 @@ class JsonlSessionPersistence extends SessionPersistence {
         header: artifact.header,
         formatStatus: artifact.formatStatus,
         revision: artifact.sourceVersion < SESSION_FORMAT_VERSION
-          ? historicalRevision(identity, corpusRevision)
+          ? historicalRevision(identity, relatedDigest(relatedPathsOf(artifact.header.id, artifacts, opaque), revisions))
           : fileRevision(identity),
         sizeBytes: Number(identity.size),
       })
@@ -1127,48 +1174,100 @@ class JsonlSessionPersistence extends SessionPersistence {
     return results
   }
 
-  /** Historical logical events depend on the corpus, including members with unreadable headers. */
-  private async historicalCorpusRevision(signal?: AbortSignal): Promise<string> {
-    const paths = (await this.listGenerations(signal)).map(source => source.sourcePath).sort()
-    const entries = settledValues(await settleLimited(this.listLimit, paths, async (path) => {
-      signal?.throwIfAborted()
-      try {
-        return { path, revision: fileRevision(await stat(path, { bigint: true })) }
-      } catch (error: unknown) {
-        if (!isENOENT(error)) throw error
-        return { path, revision: 'missing' }
-      }
-    }))
-    const hash = createHash('sha256')
-    for (const { path, revision } of entries) hash.update(JSON.stringify([path, revision]))
-    signal?.throwIfAborted()
-    return hash.digest('hex')
+  /** Revision of the logs a historical migration of `id` depends on besides its own (see {@link relatedPathsOf}). */
+  private async relatedRevision(id: SessionId, signal?: AbortSignal): Promise<string> {
+    // Joins a discovery already in flight: the children of every historical log
+    // a client loads at once are found by one store scan, not one scan each.
+    this.sharedDiscovery ??= this.discover().finally(() => { this.sharedDiscovery = undefined })
+    const discovery = await waitWithAbort(this.sharedDiscovery, signal)
+    return relatedDigest(relatedPathsOf(id, discovery.artifacts, discovery.opaque), discovery.revisions)
   }
 
-  private async listArtifacts(
+  /** File revision of each path, `missing` for a vanished one; other storage faults surface. */
+  private async revisionsOf(paths: readonly string[], signal?: AbortSignal): Promise<Map<string, string>> {
+    const entries = settledValues(await settleLimited(this.listLimit, paths, async (path): Promise<[string, string]> => {
+      signal?.throwIfAborted()
+      try {
+        return [path, fileRevision(await stat(path, { bigint: true }))]
+      } catch (error: unknown) {
+        /* v8 ignore next -- discovery stats the same paths first and surfaces such a fault there; only a race reaches this. */
+        if (!isENOENT(error)) throw error
+        return [path, 'missing']
+      }
+    }))
+    signal?.throwIfAborted()
+    return new Map(entries)
+  }
+
+  /** Paths of the stored generations whose header {@link listArtifacts} could not read. */
+  private async opaquePaths(artifacts: readonly ListedArtifact[], signal?: AbortSignal): Promise<string[]> {
+    const readable = new Set(artifacts.map(artifact => artifact.path))
+    return (await this.listGenerations(signal)).map(source => source.sourcePath).filter(path => !readable.has(path))
+  }
+
+  /**
+   * {@link readGenerationHeader} for discovery, reused while the file revision is
+   * unchanged: a historical stat discovers the store to find its children, once per child.
+   */
+  private async listedHeader(
+    selected: ResolvedJsonlGeneration,
+    revision: PersistenceRevision,
     signal?: AbortSignal,
-  ): Promise<Array<GenerationHeader & { path: string; sourceVersion: number }>> {
+  ): Promise<GenerationHeader | undefined> {
+    const memoized = this.listedHeaders.get(selected.sourcePath)
+    if (memoized?.revision === revision) return waitWithAbort(memoized.metadata, signal)
+    // Shared while in flight, so concurrent discoveries read each header once;
+    // the read is not tied to `signal` because later discoveries may join it.
+    const metadata = this.readGenerationHeader(selected)
+    const entry = { revision, metadata }
+    this.listedHeaders.set(selected.sourcePath, entry)
+    metadata.catch(() => {
+      if (this.listedHeaders.get(selected.sourcePath) === entry) this.listedHeaders.delete(selected.sourcePath)
+    })
+    return waitWithAbort(metadata, signal)
+  }
+
+  private async listArtifacts(signal?: AbortSignal): Promise<readonly ListedArtifact[]> {
+    return (await this.discover(signal)).artifacts
+  }
+
+  /** Every stored generation: readable ones as artifacts, the rest as `opaque`, each with its file revision. */
+  private async discover(signal?: AbortSignal): Promise<Discovery> {
     signal?.throwIfAborted()
     await this.ensureRootEncoding()
     signal?.throwIfAborted()
     const generations = await this.listGenerations(signal)
     const headers = await settleLimited(this.listLimit, generations, async (selected) => {
       signal?.throwIfAborted()
+      let revision: PersistenceRevision
       try {
-        return { selected, metadata: await this.readGenerationHeader(selected, undefined, signal) }
+        revision = fileRevision(await stat(selected.sourcePath, { bigint: true }))
+      } catch (error: unknown) {
+        signal?.throwIfAborted()
+        if (!isENOENT(error)) throw error
+        return { selected, revision: 'missing', metadata: undefined }
+      }
+      try {
+        return { selected, revision, metadata: await this.listedHeader(selected, revision, signal) }
       } catch (error: unknown) {
         if (error instanceof SessionFormatUnsupportedError || error instanceof SessionPersistenceCorruptionError) {
-          return { selected, metadata: undefined }
+          return { selected, revision, metadata: undefined }
         }
         throw error
       }
     })
     const artifacts: Array<GenerationHeader & { path: string; sourceVersion: number }> = []
+    const opaque: string[] = []
+    const revisions = new Map<string, string>()
     const ids = new Set<SessionId>()
     for (const outcome of headers) {
       if (outcome.status === 'rejected') throw outcome.reason
-      const { selected, metadata } = outcome.value
-      if (metadata === undefined) continue
+      const { selected, revision, metadata } = outcome.value
+      revisions.set(selected.sourcePath, revision)
+      if (metadata === undefined) {
+        opaque.push(selected.sourcePath)
+        continue
+      }
       if (ids.has(metadata.header.id)) {
         throw new Error(`duplicate JSONL session id "${metadata.header.id}" appears in multiple project directories`)
       }
@@ -1176,7 +1275,7 @@ class JsonlSessionPersistence extends SessionPersistence {
       artifacts.push({ ...metadata, path: selected.sourcePath, sourceVersion: selected.sourceVersion })
     }
     signal?.throwIfAborted()
-    return artifacts
+    return { artifacts, opaque, revisions }
   }
 
   /** Read and translate one selected generation header without inspecting its body. */
