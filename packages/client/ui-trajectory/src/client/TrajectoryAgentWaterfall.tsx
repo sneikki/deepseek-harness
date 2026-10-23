@@ -9,6 +9,8 @@ import css from './TrajectoryAgentWaterfall.module.css'
 
 const DEFAULT_EXPAND_ALL_LIMIT = 12
 const TOOLTIP_DELAY_MS = 500
+// Past this fraction of the track a label after the bar end would be clipped.
+const LABEL_FLIP_AT = 0.85
 const STATUS_KEY = {
   running: 'timeline.subagentRunning',
   done: 'timeline.subagentFinished',
@@ -249,7 +251,11 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                           } as CSSProperties}
                         />
                         {labelMs !== null && (
-                          <span className={css.duration} style={{ '--agent-left': `${right * 100}%` } as CSSProperties}>
+                          <span
+                            className={css.duration}
+                            data-flip={right > LABEL_FLIP_AT || undefined}
+                            style={{ '--agent-left': `${right * 100}%` } as CSSProperties}
+                          >
                             {formatTurnDuration(labelMs, t)}
                           </span>
                         )}
