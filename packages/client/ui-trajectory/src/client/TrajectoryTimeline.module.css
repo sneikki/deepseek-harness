@@ -1,4 +1,6 @@
+/* Plot and agent rows share one label column and scrollbar gutter, so one x is one moment in both. */
 .root {
+  --trajectory-gutter: 200px;
   position: relative;
   z-index: 1;
   isolation: isolate;
@@ -13,9 +15,10 @@
 
 .plot {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: var(--trajectory-gutter) minmax(0, 1fr);
   height: var(--trajectory-plot-height);
   overflow: hidden;
+  scrollbar-gutter: stable;
   background: var(--amv-bg-deep);
 }
 
