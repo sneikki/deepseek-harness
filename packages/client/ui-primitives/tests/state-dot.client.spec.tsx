@@ -66,13 +66,16 @@ it('renders completed steps with a check and pending steps without one', () => {
 })
 
 describe('StateDot ongoing phase', () => {
-  it('pins every loader animation to document time zero on mount', () => {
+  it('pins every loader animation to document time zero when its animations start, not at mount', () => {
     const animations = [{ startTime: 42 }, { startTime: 7 }]
     const getAnimations = vi.fn(() => animations)
     const proto = SVGElement.prototype as { getAnimations?: () => { startTime: number }[] }
     proto.getAnimations = getAnimations
     try {
-      const { unmount } = render(<StateDot state="ongoing" />)
+      const { container, unmount } = render(<StateDot state="ongoing" />)
+      // A call during commit forces layout of the whole attached tree.
+      expect(getAnimations).not.toHaveBeenCalled()
+      container.querySelector('circle')!.dispatchEvent(new Event('animationstart', { bubbles: true }))
       expect(getAnimations).toHaveBeenCalledWith({ subtree: true })
       expect(animations.map(animation => animation.startTime)).toEqual([0, 0])
       unmount()
