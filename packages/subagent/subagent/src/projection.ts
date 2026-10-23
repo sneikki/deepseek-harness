@@ -99,9 +99,16 @@ export const subagentTimingProjectionDefinition = {
   apply: (state, event) => {
     if (event.type === 'turn/start') {
       const { lastTurnCompleted: _closed, ...openState } = state
-      return state.descriptorSeen
-        ? { ...openState, active: { since: event.time, through: event.time } }
-        : { ...openState, pendingTurnStart: event.time }
+      if (!state.descriptorSeen) return { ...openState, pendingTurnStart: event.time }
+      // A start while a turn is open (its end was never recorded) closes that turn here, reason unknown.
+      const { active } = state
+      const closed = active === undefined
+        ? {}
+        : {
+          turns: [...state.turns, { start: active.since, end: Math.max(active.since, event.time), reason: null }],
+          settledMs: state.settledMs + Math.max(0, event.time - active.since),
+        }
+      return { ...openState, ...closed, active: { since: event.time, through: event.time } }
     }
     if (event.type === 'subagent/descriptor') {
       const activeSince = state.active?.since ?? state.pendingTurnStart

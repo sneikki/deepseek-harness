@@ -106,6 +106,18 @@ describe('subagent timing projection', () => {
     ]).turns).toEqual([{ start: 1_000, end: 1_000, reason: 'completed' }])
   })
 
+  it('closes an open turn at the next turn start with an unknown reason', () => {
+    expect(fold([
+      event('subagent/descriptor', 0, 1),
+      event('turn/start', 1, 1_000),
+      event('turn/start', 2, 3_000),
+    ])).toMatchObject({
+      settledMs: 2_000,
+      active: { since: 3_000, through: 3_000 },
+      turns: [{ start: 1_000, end: 3_000, reason: null }, { start: 3_000, end: null, reason: null }],
+    })
+  })
+
   it('exposes an open turn start and never subtracts time for reversed boundaries', () => {
     expect(fold([
       event('turn/start', 0, 1_000),
