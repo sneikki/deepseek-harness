@@ -210,6 +210,16 @@ describe('agentLaneCells idle', () => {
     const l = lane(turns)
     expect([50, 500, 999, 1500].map(at => idleAt(l, at))).toEqual([false, true, true, false])
   })
+  it('marks rows after the last closed turn: the agent waits', () => {
+    const l = lane([{ start: 0, end: 100, reason: null }])
+    expect([50, 500].map(at => idleAt(l, at))).toEqual([false, true])
+  })
+  it('keeps the end bend solid: a finished agent is not waiting', () => {
+    const l = { ...lane([{ start: 0, end: 100, reason: null }]), status: 'done' as const, endIndex: 10 }
+    const [cell] = agentLaneCells({ lanes: [l], slots: 1, overflow: 0 }, 9, 10, 500)
+    expect(cell?.state).toBe('end')
+    expect(cell?.idle).toBeUndefined()
+  })
   it('stays solid without turns', () => {
     expect(idleAt(lane(), 500)).toBe(false)
   })
