@@ -182,7 +182,24 @@
   background: color-mix(in srgb, var(--agent-color) 14%, transparent);
 }
 
+/* Idle wait between two turns: a thin dashed line at the bar's mid height. */
+.gap {
+  --agent-color: var(--amv-success);
+  position: absolute;
+  top: 11px;
+  left: var(--agent-left);
+  width: var(--agent-width);
+  height: 0;
+  border-top: 1.5px dashed color-mix(in srgb, var(--agent-color) 70%, transparent);
+}
+
+.gap[data-status='failed'] { --agent-color: var(--amv-danger); }
+.gap[data-status='running'] { --agent-color: var(--amv-accent); }
+.gap[data-status='interrupted'],
+.gap[data-status='unknown'] { --agent-color: var(--amv-muted); }
+
 .bar[data-status='failed'] { --agent-color: var(--amv-danger); }
+.bar[data-status='running'][data-settled] { animation: none; }
 .bar[data-status='running'] {
   --agent-color: var(--amv-accent);
   animation: agent-pulse 1.6s ease-in-out infinite;

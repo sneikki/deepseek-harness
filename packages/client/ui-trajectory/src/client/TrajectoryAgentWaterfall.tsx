@@ -3,7 +3,7 @@
 import { memo, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TrajectoryTranslate } from './locales.ts'
-import { formatTurnDuration } from './trajectory-record.ts'
+import { agentBarParts, agentDurationText, agentTooltip, STATUS_KEY } from './trajectory-agent-bar.ts'
 import type { AgentTreeRow } from './trajectory-agent-tree.ts'
 import css from './TrajectoryAgentWaterfall.module.css'
 
@@ -11,13 +11,6 @@ const DEFAULT_EXPAND_ALL_LIMIT = 12
 const TOOLTIP_DELAY_MS = 500
 // Past this fraction of the track a label after the bar end would be clipped.
 const LABEL_FLIP_AT = 0.85
-const STATUS_KEY = {
-  running: 'timeline.subagentRunning',
-  done: 'timeline.subagentFinished',
-  failed: 'timeline.subagentFailed',
-  interrupted: 'timeline.subagentInterrupted',
-  unknown: 'timeline.agentUnknown',
-} as const
 
 /** Props of the waterfall; the x scale is the overview's own domain and zoom. */
 export interface TrajectoryAgentWaterfallProps {
@@ -168,18 +161,15 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
             const drawn = timed && endDomain !== null && rawRight > 0 && rawLeft < 1
             const left = clamp01(rawLeft)
             const right = clamp01(rawRight)
-            const wallMs = timed && row.endedAt !== null ? row.endedAt - startedAt : null
-            // Bar label is working time: a resumed agent's idle gap is no work.
-            const labelMs = row.activeMs ?? wallMs
+            // Solid segment per turn with a dashed connector over each idle gap; no turns: one bar.
+            const parts = agentBarParts(row, toDomain, domainEnd)
+            const place = ({ start, end }: { start: number; end: number }) =>
+              ({ left: clamp01(fraction(start)), width: clamp01(fraction(end)) - clamp01(fraction(start)) })
+            const spans = parts === null ? [{ left, width: right - left }] : parts.segments.map(place)
+            const labelRight = parts === null ? right : clamp01(fraction(parts.segments.at(-1)?.end ?? 0))
+            const labelText = agentDurationText(row, t)
             const status = t(STATUS_KEY[row.status])
-            const tip = [
-              `${row.label} · ${row.shortId}`,
-              [
-                status,
-                wallMs === null ? null : t('timeline.agentWall', { duration: formatTurnDuration(wallMs, t) }),
-                row.activeMs === null ? null : t('timeline.agentActive', { duration: formatTurnDuration(row.activeMs, t) }),
-              ].filter(part => part !== null).join(' · '),
-            ].join('\n')
+            const tip = agentTooltip(row, t)
             const current = selectedIndex !== null
               && (row.startIndex === selectedIndex || ancestor.startIndex === selectedIndex)
             const match = searchMatchIndexes === null
@@ -250,21 +240,38 @@ export const TrajectoryAgentWaterfall = memo(function TrajectoryAgentWaterfall({
                   <div className={css.track} aria-hidden="true">
                     {drawn && (
                       <>
-                        <span
-                          className={css.bar}
-                          data-status={row.status}
-                          style={{
-                            '--agent-left': `${left * 100}%`,
-                            '--agent-width': `${(right - left) * 100}%`,
-                          } as CSSProperties}
-                        />
-                        {labelMs !== null && (
+                        {parts?.gaps.map(place).map(gap => (
+                          <span
+                            key={gap.left}
+                            className={css.gap}
+                            data-status={row.status}
+                            data-agent-gap
+                            style={{
+                              '--agent-left': `${gap.left * 100}%`,
+                              '--agent-width': `${gap.width * 100}%`,
+                            } as CSSProperties}
+                          />
+                        ))}
+                        {spans.map(({ left: spanLeft, width }, spanIndex) => (
+                          <span
+                            key={spanIndex}
+                            className={css.bar}
+                            data-status={row.status}
+                            data-agent-segment
+                            data-settled={spanIndex < spans.length - 1 || undefined}
+                            style={{
+                              '--agent-left': `${spanLeft * 100}%`,
+                              '--agent-width': `${width * 100}%`,
+                            } as CSSProperties}
+                          />
+                        ))}
+                        {labelText !== null && (
                           <span
                             className={css.duration}
-                            data-flip={right > LABEL_FLIP_AT || undefined}
-                            style={{ '--agent-left': `${right * 100}%` } as CSSProperties}
+                            data-flip={labelRight > LABEL_FLIP_AT || undefined}
+                            style={{ '--agent-left': `${labelRight * 100}%` } as CSSProperties}
                           >
-                            {formatTurnDuration(labelMs, t)}
+                            {labelText}
                           </span>
                         )}
                       </>

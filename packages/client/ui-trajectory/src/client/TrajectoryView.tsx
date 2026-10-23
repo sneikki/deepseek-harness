@@ -22,6 +22,7 @@ import {
 } from './trajectory-noise.ts'
 import { TrajectoryTimeline } from './TrajectoryTimeline.tsx'
 import { deriveAgentTree, type AgentTreeRow } from './trajectory-agent-tree.ts'
+import { agentDurationText } from './trajectory-agent-bar.ts'
 import { AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, deriveAgentLanes } from './trajectory-agent-lanes.ts'
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import {
@@ -154,10 +155,17 @@ function addUsage(
   }
 }
 
+function equalTurns(left: AgentTreeRow['turns'], right: AgentTreeRow['turns']): boolean {
+  return left === right || left !== undefined && right !== undefined && left.length === right.length
+    && left.every((turn, index) => turn.start === right[index]?.start && turn.end === right[index]?.end
+      && turn.reason === right[index]?.reason)
+}
+
 function equalAgentRows(left: readonly AgentTreeRow[], right: readonly AgentTreeRow[]): boolean {
   return left.length === right.length && left.every((row, index) => {
     const other = right[index]
-    return other !== undefined && (Object.keys(row) as (keyof AgentTreeRow)[]).every(key => row[key] === other[key])
+    return other !== undefined && (Object.keys(row) as (keyof AgentTreeRow)[]).every(key =>
+      key === 'turns' ? equalTurns(row.turns, other.turns) : row[key] === other[key])
   })
 }
 
@@ -404,6 +412,13 @@ export function TrajectoryView({
   const agentRows = useSessions(
     state => deriveAgentTree(sessionId, state.byId, state.projectionsBySession, timelineLifecycles),
     equalAgentRows,
+  )
+  // The spawn card shows the same text as its waterfall row.
+  const agentDurations = useMemo(
+    () => new Map(agentRows.flatMap(row => row.depth === 1 && row.startIndex !== null
+      ? [[row.startIndex, agentDurationText(row, t)] as const]
+      : [])),
+    [agentRows, t],
   )
   const agentLanes = useMemo(
     () => deriveAgentLanes(timelineTurns, timelineLifecycles, agentRows),
@@ -670,6 +685,7 @@ export function TrajectoryView({
           loadImage={loadImage}
           requestNumbers={requestNumbers}
           turns={timelineTurns}
+          agentDurations={agentDurations}
           streamingCells={streamingCells}
           timelineFocusIndexes={timelineFocusIndexes}
           searchMatchIndexes={searchMatchIndexes}

@@ -1731,12 +1731,13 @@ describe('ledger boxes: clipping, search, subagents', () => {
       },
     }
     const turns = correlateTrajectorySubagents(turnOf([start, report, finish]))
-    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+    // The duration chip is the agent row's text, not a computation of the card.
+    render(<TrajectoryTable turns={turns} agentDurations={new Map([[1, '5 min 0 s work · 3 h 1 min']])} {...FOLD_PROPS} />)
 
     const head = rowOf(1)
     // The pill is the agent's outcome, not the spawn call's.
     expect(within(head).getByText('Agent finished')).toBeTruthy()
-    expect(within(head).getByText('12.2 s')).toBeTruthy()
+    expect(within(head).getByText('5 min 0 s work · 3 h 1 min')).toBeTruthy()
     expect(within(head).getByText('1 report')).toBeTruthy()
     expect(within(head).getByText('2c619f73')).toBeTruthy()
     expect(within(rowOf(2)).getByText('Subagent')).toBeTruthy()
