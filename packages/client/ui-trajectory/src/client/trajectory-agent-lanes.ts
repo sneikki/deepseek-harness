@@ -194,7 +194,8 @@ export function agentLaneCells(
 ): AgentLaneCell[] {
   const cells: AgentLaneCell[] = []
   const push = (cell: AgentLaneCell) => {
-    cells.push(inIdleGap(cell.lane.turns, at) ? { ...cell, idle: true } : cell)
+    // The end bend joins the outcome marker: a finished agent is not waiting.
+    cells.push(cell.state !== 'end' && inIdleGap(cell.lane.turns, at) ? { ...cell, idle: true } : cell)
   }
   // A row older than the rows above it (system and request rows) sits inside whatever lanes are open there.
   if (previousIndex !== null && previousIndex >= index) {
