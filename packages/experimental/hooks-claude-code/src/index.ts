@@ -222,8 +222,11 @@ export function apply(ctx: Context, config: Config): void {
   // --- UserPromptSubmit → PreStepDecision. The prompt text is the payload; no
   // matcher subject (CC ignores matchers for this event). ---
   ctx.on('agent/pre-step', async ({ agent, messages, turn, signal }, next): Promise<PreStepDecision> => {
-    if (messages.length === 0) return next()
-    const content = messages.flatMap(message => message.content)
+    // Only a prompt the user submitted fires UserPromptSubmit; hook context,
+    // inbox records and goal rounds also enter steps but are not user prompts.
+    const prompts = messages.filter(message => message.source.kind === 'user')
+    if (prompts.length === 0) return next()
+    const content = prompts.flatMap(message => message.content)
     const merged = await runPoint('UserPromptSubmit', '', promptPayload(agent, content), { agent, turn, signal })
     if (merged.decision === 'deny') {
       return { kind: 'reject' }
