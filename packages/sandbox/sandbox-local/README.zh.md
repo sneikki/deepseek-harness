@@ -72,7 +72,7 @@ kind: "package-reference"
 
 ### 平台 profile
 
-bwrap profile 组合只读宿主根目录、全新 `/dev` 与共享 PID 命名空间的 `/proc`——命令可看到并可向宿主进程发送信号，但通过 procfs 魔法链接（`/proc/<pid>/root`）的写入、对宿主进程 `environ` 与 `mem` 的读取以及对其的 ptrace 仍被拒绝；`workspace-write` 另加临时的 `/tmp` 与可写工作区绑定挂载。[历史私有 PID 笔记](../../../.agents/notes/archived/bug-fix/2026-08-06-bwrap-private-pid-namespace.md)记录此前的边界。
+bwrap profile 组合只读宿主根目录、全新 `/dev` 与共享 PID 命名空间的 `/proc`——命令可看到并可向宿主进程发送信号，但通过 procfs 魔法链接（`/proc/<pid>/root`）的写入、对宿主进程 `environ` 与 `mem` 的读取以及对其的 ptrace 仍被拒绝；`workspace-write` 另加临时的 `/tmp` 与可写工作区绑定挂载。[历史私有 PID 笔记](../../../.agents/notes/archived/bug-fix/2026-08-06-bwrap-private-pid-namespace.md)记录此前的边界。`--die-with-parent` 只结束受限命令本身：其启动的后台子进程在 harness 崩溃或被 SIGKILL 后仍会存活，与 Full access 模式的现有行为一致。
 
 `@deepseek-ai/node-addon-system/landlock-run` API 提供平台 launcher、功能探测与授权词汇；此提供方只做模式到授权的映射，把路径解析与探测解析保留在带版本的 binary 中。
 
