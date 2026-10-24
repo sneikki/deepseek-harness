@@ -85,6 +85,8 @@ interface ListingEntry {
   maxTokens?: unknown
   limit?: ListingLimit | null
   top_provider?: ListingTopProvider | null
+  /** OpenRouter lists `reasoning` here for a model that accepts it. */
+  supported_parameters?: unknown
 }
 
 /** A positive integer field of a listing entry, or `undefined` when absent or unusable. */
@@ -178,7 +180,7 @@ async function readBounded(response: Response, url: string): Promise<string> {
  * a working endpoint's catalog. Missing names fall back to the adopted id so
  * the Web form receives a complete human-readable row.
  */
-function readListing(body: unknown): LlmDiscoveredModel[] {
+function readListing(body: unknown): ListedModel[] {
   const listing = body as { data?: unknown; models?: unknown } | null
   const data = listing?.data
   let listed: { readonly key?: string; readonly raw: unknown }[]
@@ -198,7 +200,7 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
       .filter(([, raw]) => raw !== null && typeof raw === 'object' && !Array.isArray(raw))
       .map(([key, raw]) => ({ key, raw }))
   }
-  const models: LlmDiscoveredModel[] = []
+  const models: ListedModel[] = []
   for (const { key, raw } of listed) {
     const entry = raw as ListingEntry | null
     const id = label(key, entry?.id)
@@ -224,6 +226,9 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
       name,
       ...contextWindow === undefined ? {} : { contextWindow },
       ...maxTokens === undefined ? {} : { maxTokens },
+      ...Array.isArray(entry?.supported_parameters) && entry.supported_parameters.includes('reasoning')
+        ? { reasoning: true as const }
+        : {},
     })
   }
   return models
@@ -304,7 +309,6 @@ export async function discoverModels(
       'DISCOVERY_UNSUPPORTED',
     )
   }
-  const url = listingUrl(request.baseURL, api)
   // A key typed into the form wins: it may replace the stored key that is
   // failing. The stored profile is asked past the catalog and protocol checks,
   // and its credential resolver remains lazy so a typed key cannot fail over a
@@ -313,9 +317,54 @@ export async function discoverModels(
   const stored = storedProfile?.()
   const supplied = request.apiKey ?? await stored?.resolveApiKey()
   const apiKey = supplied === undefined ? undefined : usableProbeKey(supplied)
+  const listed = await fetchListing({
+    baseURL: request.baseURL,
+    api,
+    headers: stored?.headers,
+    apiKey,
+    signal: request.signal,
+  })
+  return listed.map(({ reasoning: _reasoning, ...model }) => model)
+}
+
+/** One model-listing request: a supported protocol, an already usable key, and the route's headers. */
+export interface ListingRequest {
+  baseURL: string
+  /** One of the listable protocols. */
+  api: string
+  headers?: Readonly<Record<string, string>> | undefined
+  /** A key {@link usableProbeKey} accepted, or `undefined` to send none. */
+  apiKey?: string | undefined
+  signal?: AbortSignal | undefined
+}
+
+/** A listed model plus what the live catalog reads beyond the discovery contract. */
+export interface ListedModel extends LlmDiscoveredModel {
+  /** `true` only when the listing states the model reasons (OpenRouter `supported_parameters`). */
+  reasoning?: true
+}
+
+/**
+ * Whether {@link fetchListing} can read this protocol's model listing.
+ * @param api - pi-ai protocol name.
+ * @returns `true` for the OpenAI and Anthropic Messages protocols.
+ */
+export function isListableProtocol(api: string): boolean {
+  return LISTABLE_PROTOCOLS.has(api)
+}
+
+/**
+ * GET one endpoint's model listing and parse it.
+ * @param request - endpoint, protocol, credential and headers.
+ * @returns the advertised models in endpoint order.
+ * @throws LlmError when the endpoint refuses or fails the request or the reply is not a model listing.
+ */
+export async function fetchListing(request: ListingRequest): Promise<ListedModel[]> {
+  const { api, apiKey } = request
+  const url = listingUrl(request.baseURL, api)
   let response: Response
   try {
-    const headers = new Headers(stored?.headers === undefined ? undefined : Object.entries(stored.headers))
+    const headers = new Headers(request.headers === undefined ? undefined : Object.entries(request.headers))
     headers.set('accept', 'application/json')
     if (api === 'anthropic-messages') {
       headers.set('anthropic-version', ANTHROPIC_VERSION)

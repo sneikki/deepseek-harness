@@ -68,7 +68,10 @@ export async function mockServer(script: {
   /** Keep the SSE response open after its scripted events until the client disconnects. */
   holdOpen?: boolean
   headers?: Record<string, string>
-}[]): Promise<MockServer> {
+}[], options: {
+  /** A `GET …/models` consumes the script like any request, for tests of model discovery itself. */
+  scriptedListing?: boolean
+} = {}): Promise<MockServer> {
   const paths: string[] = []
   const requests: unknown[] = []
   const headers: IncomingMessage['headers'][] = []
@@ -76,6 +79,13 @@ export async function mockServer(script: {
   const requestReceived = Promise.withResolvers<undefined>()
   const responseClosed = Promise.withResolvers<undefined>()
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
+    // The plugin lists a catalog route's models at start; that probe is not a
+    // scripted generation, so it is refused without consuming the script.
+    if (!options.scriptedListing && request.method === 'GET' && /\/models(\?|$)/.test(request.url ?? '')) {
+      response.writeHead(404, { 'content-type': 'application/json' })
+      response.end('{}')
+      return
+    }
     let timer: ReturnType<typeof setTimeout> | undefined
     response.on('close', () => {
       clearTimeout(timer)
