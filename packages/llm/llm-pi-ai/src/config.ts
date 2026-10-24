@@ -34,6 +34,7 @@ import {
   THINKING_TOKEN_BUDGET_FIELDS,
 } from './catalog.ts'
 import type {
+  LiveModel,
   PiAiCompatProfile,
   PiAiModality,
   PiAiModelOverride,
@@ -405,11 +406,13 @@ function assertValidHeaders(provider: string, headers: Readonly<Record<string, s
  * routes. An omitted dict resolves to the empty, dormant route set.
  * @param providers - configured provider profiles keyed by route.
  * @param validation - writes require a complete catalog; stored reads retain catalog diagnostics.
+ * @param live - last good live listing by route; joins a route's installed catalog, see {@link LiveModel}.
  * @returns validated profiles in configuration order.
  */
 export function resolveProfiles(
   providers: Readonly<Record<string, PiAiProviderProfile>> | undefined,
   validation: 'strict' | 'deferred' = 'strict',
+  live?: ReadonlyMap<string, readonly LiveModel[]>,
 ): Map<string, ResolvedPiAiProviderProfile> {
   if (Array.isArray(providers)) {
     throw new Error('llm-pi-ai: providers is now a dict keyed by provider route, not an array of profiles')
@@ -459,6 +462,7 @@ export function resolveProfiles(
     // always shown route keys, and a catalog route must not silently rename
     // itself on every configuration surface just because it gained a profile.
     const displayName = source.displayName ?? provider
+    const liveRows = live?.get(provider)
     let catalog: RouteCatalog | undefined
     let piProvider: Provider | undefined
     let catalogError: string | undefined
@@ -470,6 +474,7 @@ export function resolveProfiles(
         ...source.models === undefined ? {} : { models: source.models },
         ...source.modelOverrides === undefined ? {} : { modelOverrides: source.modelOverrides },
         ...source.compat === undefined ? {} : { compat: source.compat },
+        ...liveRows === undefined ? {} : { live: liveRows },
         defaultInput,
         defaultContextWindow: source.defaultContextWindow ?? DEFAULT_CONTEXT_WINDOW,
         defaultMaxTokens: source.defaultMaxTokens ?? DEFAULT_MAX_TOKENS,

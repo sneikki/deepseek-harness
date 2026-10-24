@@ -71,6 +71,7 @@ import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { discoverModels } from './discovery.ts'
 import type { StoredModelDiscoveryProfile } from './discovery.ts'
+import { createLiveCatalog, LIVE_REFRESH_MS } from './live.ts'
 import { registerPiAiFlows } from './login.ts'
 import { providerDefaultsOf } from './provider-data.ts'
 
@@ -155,6 +156,34 @@ export function apply(ctx: Context, config: Config): void {
   ctx.inject(['settings'], (child) => { child.effect(() => child.settings.configure({ auto: false }, ctx.fiber)) })
   const settingsNs = ctx.fiber.entry?.options.id ?? NS
   let lastRaw: ReturnType<Config['providers']['get']> | undefined
+  let lastListings: ReturnType<typeof createLiveCatalog>['listings'] | undefined
+  // Live listings: a route serving the whole installed catalog also asks its
+  // endpoint what it serves now, at start and hourly, so a model released
+  // after the installed catalog was cut is selectable without an upgrade. The
+  // result enters through `profiles()` like a configuration change, and the
+  // same-routes `replace` announces `llm/adapters-updated` to selectors. The
+  // callbacks run only after `apply` has finished wiring.
+  const abort = new AbortController()
+  const live = createLiveCatalog({
+    providers: () => config.providers.get(),
+    apiKey: async (provider) => {
+      const profile = profiles().get(provider)
+      if (profile === undefined) return undefined
+      try { return await resolveApiKey(provider, profile) }
+      catch (error) {
+        if (error instanceof LlmError && error.code === 'MISSING_CREDENTIAL') return undefined
+        throw error
+      }
+    },
+    changed: () => {
+      try { registration?.replace([...profiles().keys()]) }
+      catch (error) {
+        ctx.logger.error('llm-pi-ai: publishing refreshed model listings failed')
+        ctx.logger.error(error)
+      }
+    },
+    warn: (message) => { ctx.logger.warn(message) },
+  })
   let memoized: ReadonlyMap<string, ResolvedPiAiProviderProfile> | undefined
   /**
    * The resolved profiles for the current configuration, memoized by the raw
@@ -163,13 +192,20 @@ export function apply(ctx: Context, config: Config): void {
    *
    * Catalog diagnostics stay in the snapshot beside serviceable models, so
    * stored configuration remains visible after an installed catalog changes.
-   * Scalar configuration errors still reject resolution.
+   * Scalar configuration errors still reject resolution. A refreshed live
+   * listing replaces the memo exactly as a changed configuration does.
    */
   const profiles = (): ReadonlyMap<string, ResolvedPiAiProviderProfile> => {
     const raw = config.providers.get()
-    if (raw === lastRaw && memoized !== undefined) return memoized
-    const next = resolveProfiles(structuredClone(raw) as import('./config.ts').Options['providers'], 'deferred')
+    const { listings } = live
+    if (raw === lastRaw && listings === lastListings && memoized !== undefined) return memoized
+    const next = resolveProfiles(
+      structuredClone(raw) as import('./config.ts').Options['providers'],
+      'deferred',
+      live.applicable(raw),
+    )
     lastRaw = raw
+    lastListings = listings
     memoized = next
     return next
   }
@@ -318,5 +354,12 @@ export function apply(ctx: Context, config: Config): void {
       ctx.logger.error('llm-pi-ai: configuration conflicts with an existing provider route')
       ctx.logger.error(error)
     }
+    if (live.stale()) void live.refresh(abort.signal)
   })
+  ctx.effect(() => {
+    const timer = setInterval(() => { void live.refresh(abort.signal) }, LIVE_REFRESH_MS)
+    timer.unref()
+    void live.refresh(abort.signal)
+    return () => { clearInterval(timer); abort.abort() }
+  }, 'llm-pi-ai: live model listing')
 }

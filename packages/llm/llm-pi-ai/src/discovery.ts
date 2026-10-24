@@ -85,6 +85,8 @@ interface ListingEntry {
   maxTokens?: unknown
   limit?: ListingLimit | null
   top_provider?: ListingTopProvider | null
+  /** OpenRouter lists `reasoning` here for a model that accepts it. */
+  supported_parameters?: unknown
 }
 
 /** A positive integer field of a listing entry, or `undefined` when absent or unusable. */
@@ -178,7 +180,7 @@ async function readBounded(response: Response, url: string): Promise<string> {
  * a working endpoint's catalog. Missing names fall back to the adopted id so
  * the Web form receives a complete human-readable row.
  */
-function readListing(body: unknown): LlmDiscoveredModel[] {
+function readListing(body: unknown): ListedModel[] {
   const listing = body as { data?: unknown; models?: unknown } | null
   const data = listing?.data
   let listed: { readonly key?: string; readonly raw: unknown }[]
@@ -198,7 +200,7 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
       .filter(([, raw]) => raw !== null && typeof raw === 'object' && !Array.isArray(raw))
       .map(([key, raw]) => ({ key, raw }))
   }
-  const models: LlmDiscoveredModel[] = []
+  const models: ListedModel[] = []
   for (const { key, raw } of listed) {
     const entry = raw as ListingEntry | null
     const id = label(key, entry?.id)
@@ -224,6 +226,9 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
       name,
       ...contextWindow === undefined ? {} : { contextWindow },
       ...maxTokens === undefined ? {} : { maxTokens },
+      ...Array.isArray(entry?.supported_parameters) && entry.supported_parameters.includes('reasoning')
+        ? { reasoning: true as const }
+        : {},
     })
   }
   return models
@@ -304,7 +309,6 @@ export async function discoverModels(
       'DISCOVERY_UNSUPPORTED',
     )
   }
-  const url = listingUrl(request.baseURL, api)
   // A key typed into the form wins: it may replace the stored key that is
   // failing. The stored profile is asked past the catalog and protocol checks,
   // and its credential resolver remains lazy so a typed key cannot fail over a
@@ -313,13 +317,120 @@ export async function discoverModels(
   const stored = storedProfile?.()
   const supplied = request.apiKey ?? await stored?.resolveApiKey()
   const apiKey = supplied === undefined ? undefined : usableProbeKey(supplied)
+  const listed = await fetchListing({
+    baseURL: request.baseURL,
+    api,
+    headers: stored?.headers,
+    apiKey,
+    signal: request.signal,
+  })
+  return listed.map(({ reasoning: _reasoning, ...model }) => model)
+}
+
+/** One model-listing request: a supported protocol, an already usable key, and the route's headers. */
+export interface ListingRequest {
+  baseURL: string
+  /** One of the listable protocols. */
+  api: string
+  headers?: Readonly<Record<string, string>> | undefined
+  /** A key {@link usableProbeKey} accepted, or `undefined` to send none. */
+  apiKey?: string | undefined
+  signal?: AbortSignal | undefined
+}
+
+/** A listed model plus what the live catalog reads beyond the discovery contract. */
+export interface ListedModel extends LlmDiscoveredModel {
+  /** `true` only when the listing states the model reasons (OpenRouter `supported_parameters`). */
+  reasoning?: true
+}
+
+/**
+ * Whether {@link fetchListing} can read this protocol's model listing.
+ * @param api - pi-ai protocol name.
+ * @returns `true` for the OpenAI, Anthropic Messages and Google protocols.
+ */
+export function isListableProtocol(api: string): boolean {
+  return LISTABLE_PROTOCOLS.has(api) || api === GOOGLE_API
+}
+
+/**
+ * GET one endpoint's model listing and parse it.
+ * @param request - endpoint, protocol, credential and headers.
+ * @returns the advertised models in endpoint order.
+ * @throws LlmError when the endpoint refuses or fails the request or the reply is not a model listing.
+ */
+export async function fetchListing(request: ListingRequest): Promise<ListedModel[]> {
+  if (request.api === GOOGLE_API) return fetchGoogleListing(request)
+  return readListing(await getJson(listingUrl(request.baseURL, request.api), request))
+}
+
+/** Pi-ai's Google Generative AI protocol; listed only by the live catalog. */
+const GOOGLE_API = 'google-generative-ai'
+
+/** Page size Google accepts at most, and the page count after which a looping `nextPageToken` is abandoned. */
+const GOOGLE_PAGE_SIZE = 1000
+const GOOGLE_MAX_PAGES = 20
+
+/** One entry of Google's `models` array. */
+interface GoogleEntry {
+  name?: unknown
+  displayName?: unknown
+  inputTokenLimit?: unknown
+  outputTokenLimit?: unknown
+  supportedGenerationMethods?: unknown
+}
+
+/**
+ * Google's `GET {base}/models`: the key rides the `x-goog-api-key` header
+ * (never a `?key=` query, which would leak into URLs and logs), pages follow
+ * `nextPageToken`, and only models that support `generateContent` are chat
+ * candidates. Ids drop the `models/` prefix requests do not use.
+ */
+async function fetchGoogleListing(request: ListingRequest): Promise<ListedModel[]> {
+  const base = `${request.baseURL.replace(/\/+$/, '')}/models`
+  const models: ListedModel[] = []
+  let pageToken: string | undefined
+  for (let page = 0; page < GOOGLE_MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({ pageSize: String(GOOGLE_PAGE_SIZE) })
+    if (pageToken !== undefined) query.set('pageToken', pageToken)
+    const body = await getJson(`${base}?${query.toString()}`, request) as
+      { models?: unknown; nextPageToken?: unknown } | null
+    if (!Array.isArray(body?.models)) {
+      throw new LlmError('the endpoint\'s model listing has no "models" array', 'DISCOVERY_FAILED')
+    }
+    for (const raw of body.models as (GoogleEntry | null)[]) {
+      const methods = raw?.supportedGenerationMethods
+      if (!Array.isArray(methods) || !methods.includes('generateContent')) continue
+      const id = label(raw?.name)?.replace(/^models\//, '')
+      if (id === undefined || id.length === 0) continue
+      const name = label(raw?.displayName)
+      const contextWindow = capacity(raw?.inputTokenLimit)
+      const maxTokens = capacity(raw?.outputTokenLimit)
+      models.push({
+        id,
+        ...name === undefined ? {} : { name },
+        ...contextWindow === undefined ? {} : { contextWindow },
+        ...maxTokens === undefined ? {} : { maxTokens },
+      })
+    }
+    pageToken = label(body.nextPageToken)
+    if (pageToken === undefined) break
+  }
+  return models
+}
+
+/** GET one URL with the protocol's authentication, bounded and parsed as JSON. */
+async function getJson(url: string, request: ListingRequest): Promise<unknown> {
+  const { api, apiKey } = request
   let response: Response
   try {
-    const headers = new Headers(stored?.headers === undefined ? undefined : Object.entries(stored.headers))
+    const headers = new Headers(request.headers === undefined ? undefined : Object.entries(request.headers))
     headers.set('accept', 'application/json')
     if (api === 'anthropic-messages') {
       headers.set('anthropic-version', ANTHROPIC_VERSION)
       if (apiKey !== undefined) headers.set('x-api-key', apiKey)
+    } else if (api === GOOGLE_API) {
+      if (apiKey !== undefined) headers.set('x-goog-api-key', apiKey)
     } else if (apiKey !== undefined) {
       headers.set('authorization', `Bearer ${apiKey}`)
     }
@@ -359,5 +470,5 @@ export async function discoverModels(
   } catch (error: unknown) {
     throw new LlmError(`${url} did not answer with JSON`, 'DISCOVERY_FAILED', { cause: error })
   }
-  return readListing(body)
+  return body
 }

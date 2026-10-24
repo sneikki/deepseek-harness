@@ -647,8 +647,30 @@ export interface PiAiModelProfile {
  */
 export type PiAiModelOverride = Omit<PiAiModelProfile, 'id'>
 
+/**
+ * One model a live endpoint listing states, beyond the installed catalog.
+ * Carries only what the listing disclosed; everything else falls to the
+ * route's defaults, never to another model's capabilities.
+ */
+export interface LiveModel {
+  id: string
+  /** Protocol of the endpoint that listed the id; served over it at the route's endpoint. */
+  api?: string | undefined
+  name?: string | undefined
+  contextWindow?: number | undefined
+  maxTokens?: number | undefined
+  /** The listing states the model reasons; says nothing about level spellings. */
+  reasoning?: true | undefined
+}
+
 /** The route-level facts model materialization reads. */
 export interface RouteCatalogRequest {
+  /**
+   * Models the route's live listing advertised. Those absent from the
+   * installed catalog join it; ignored beside a `models` list. Installed
+   * entries and `modelOverrides` are never changed by it.
+   */
+  live?: readonly LiveModel[]
   /** Provider route key, stamped onto every materialized model. */
   provider: string
   /** Wire protocol override; absent defers to each catalog model's own API. */
@@ -684,8 +706,10 @@ function invalid(provider: string, detail: string): never {
  * already use. A route whose shipped models disagree (an OpenAI-style catalog
  * spanning Responses and Chat Completions) has no such answer, so a model it
  * does not describe must name its protocol at the route.
+ * @param defaults - the route's installed catalog models.
+ * @returns the shared protocol, or `undefined` when the models disagree.
  */
-function sharedCatalogApi(defaults: ReadonlyMap<string, Model<Api>>): string | undefined {
+export function sharedCatalogApi(defaults: ReadonlyMap<string, Model<Api>>): string | undefined {
   const apis = new Set<string>()
   for (const model of defaults.values()) apis.add(model.api)
   return apis.size === 1 ? [...apis][0] : undefined
@@ -894,14 +918,27 @@ export function resolveRouteModels(
   // An override becomes the catalog entry's configuration, so everything a
   // models entry may declare — capacities, efforts, compat — resolves through
   // the same path with the same diagnostics and request-default semantics.
+  const routeApi = sharedCatalogApi(defaults)
+  // Live ids are appended after the installed catalog and only while the route
+  // serves it (no `models` list). An id needs a protocol to be servable: the
+  // route's api, else the protocol of the endpoint that listed it (a fact about
+  // where it was listed, which is what makes a mixed catalog such as
+  // OpenRouter's workable), else the single catalog protocol. Without one it is
+  // skipped.
+  const liveById = new Map<string, LiveModel>()
+  if (configured.length === 0 && defaults.size > 0) {
+    for (const live of request.live ?? []) {
+      if (live.id.length === 0 || defaults.has(live.id) || liveById.has(live.id)) continue
+      if ((request.api ?? live.api ?? routeApi) !== undefined) liveById.set(live.id, live)
+    }
+  }
   const entries: readonly PiAiModelProfile[] = configured.length > 0
     ? configured
-    : [...defaults.values()].map(model => ({ id: model.id, ...overrides[model.id] }))
+    : [...defaults.values(), ...liveById.values()].map(model => ({ id: model.id, ...overrides[model.id] }))
   if (entries.length === 0) {
     invalid(provider, 'resolves no models; the installed catalog does not describe this route, so its models'
       + ' must be listed in configuration')
   }
-  const routeApi = sharedCatalogApi(defaults)
   // Vocabulary before protocols: a withheld or undeclared switch is refused
   // wherever it is written, so it cannot look applied on a route whose models
   // never reach the protocol that would have taken it.
@@ -914,7 +951,7 @@ export function resolveRouteModels(
     if (seen.has(entry.id)) invalid(provider, `lists model "${entry.id}" more than once`)
     seen.add(entry.id)
     const base = defaults.get(entry.id)
-    const api = request.api ?? base?.api ?? routeApi
+    const api = request.api ?? base?.api ?? liveById.get(entry.id)?.api ?? routeApi
     if (api === undefined) {
       invalid(provider, `model "${entry.id}" needs an api; the installed catalog does not describe it, so set the`
         + ' route\'s api to the wire protocol its endpoint speaks')
@@ -927,11 +964,13 @@ export function resolveRouteModels(
     // discloses nothing but ids still yields a serviceable route. The fallback
     // is a guess by construction, which is why it is a configurable route field
     // rather than a constant buried here.
-    const contextWindow = entry.contextWindow ?? base?.contextWindow ?? request.defaultContextWindow
+    const live = liveById.get(entry.id)
+    const contextWindow = entry.contextWindow ?? base?.contextWindow ?? live?.contextWindow
+      ?? request.defaultContextWindow
     if (!Number.isInteger(contextWindow) || contextWindow <= 0) {
       invalid(provider, `model "${entry.id}" contextWindow must be a positive integer`)
     }
-    const maxTokens = entry.maxTokens ?? base?.maxTokens ?? request.defaultMaxTokens
+    const maxTokens = entry.maxTokens ?? base?.maxTokens ?? live?.maxTokens ?? request.defaultMaxTokens
     if (!Number.isInteger(maxTokens) || maxTokens <= 0) {
       invalid(provider, `model "${entry.id}" maxTokens must be a positive integer`)
     }
@@ -946,7 +985,7 @@ export function resolveRouteModels(
       // never enumerate.
       ...base,
       id: entry.id,
-      name: entry.name ?? base?.name ?? entry.id,
+      name: entry.name ?? base?.name ?? live?.name ?? entry.id,
       api,
       provider,
       baseUrl,
@@ -954,7 +993,11 @@ export function resolveRouteModels(
       cost: base?.cost ?? NO_COST,
       contextWindow,
       maxTokens,
-      ...resolveModelReasoning(provider, entry, base),
+      // A bare flag, no level map: the listing says the model reasons, not how
+      // the wire spells its levels, so the map stays pi-ai's own default.
+      ...live?.reasoning === true && entry.reasoningEfforts === undefined
+        ? { reasoning: true }
+        : resolveModelReasoning(provider, entry, base),
       ...resolveModelCompat(provider, entry, request.compat, base, api),
     }
   }

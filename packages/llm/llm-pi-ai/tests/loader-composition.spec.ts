@@ -134,7 +134,7 @@ describe('llm-pi-ai real dormant composition', () => {
 
   it('uses settings-only route headers for model discovery', async () => {
     vi.stubEnv('PI_COMPOSITION_KEY', '')
-    const server = await mockServer([{ body: JSON.stringify({ data: [{ id: 'acme-private' }] }) }])
+    const server = await mockServer([{ body: JSON.stringify({ data: [{ id: 'acme-private' }] }) }], { scriptedListing: true })
     const { ctx, settingsPath } = await loadComposition()
 
     await writeFile(settingsPath, [
