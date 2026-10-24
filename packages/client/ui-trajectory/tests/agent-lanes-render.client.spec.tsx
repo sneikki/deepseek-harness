@@ -190,6 +190,6 @@ describe('subagent lanes in the virtual ledger', () => {
     expect(row(11).textContent).toContain('+1')
     expect(row(12).textContent).toContain('+2')
     // Six lanes plus the chip slot widen the zone.
-    expect(view.container.querySelector<HTMLElement>('table')?.style.getPropertyValue('--trajectory-lane-zone')).toBe('105px')
+    expect(view.container.querySelector<HTMLElement>('table')?.style.getPropertyValue('--trajectory-lane-zone')).toBe('145px')
   })
 })

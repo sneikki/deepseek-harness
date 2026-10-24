@@ -101,6 +101,7 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               data-status={lane.status}
               data-idle={idle}
               data-lane-selected={lane.id === selectedLaneId || undefined}
+              data-lane-dim={selectedLaneId !== null && lane.id !== selectedLaneId || undefined}
               data-lane-row={lane.rowId}
               data-lane-id={lane.id}
               style={{

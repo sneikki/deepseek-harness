@@ -235,7 +235,7 @@ export function agentLaneCells(
 /** Lane geometry, px. Lanes sit right of the card column; x runs from the cards' right edge. */
 export const LANE_STROKE = 5
 /** Centre-to-centre distance of neighbouring slots. */
-export const LANE_PITCH = 10
+export const LANE_PITCH = 18
 /** Card edge to the centre of slot 0. */
 export const LANE_ORIGIN = 22
 /** Corner radius of a bend (stroke centre line). */

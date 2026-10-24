@@ -31,11 +31,16 @@ tr[data-collapsed-summary] .lanes {
   --draw: var(--lane);
 }
 
-/* The selected agent's lane: full colour and a glow, so the whole run reads as one thing. */
+/* The selected agent's lane: full colour and a glow, so the whole run reads as one thing; the others step back. */
 .lane[data-lane-selected] {
   --draw: var(--lane);
 
-  filter: drop-shadow(0 0 3px var(--lane));
+  z-index: 1;
+  filter: drop-shadow(0 0 4px var(--lane)) drop-shadow(0 0 1px var(--lane));
+}
+
+.lane[data-lane-dim] {
+  opacity: 0.25;
 }
 
 .line {
