@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readlinkSync, rmSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
@@ -35,6 +35,17 @@ async function tempDir(base: string): Promise<string> {
   const dir = await mkdtemp(join(base, 'dsh-bwrap-e2e-'))
   tempDirs.push(dir)
   return dir
+}
+
+/** True when signal 0 can reach `pid`; ESRCH means it has exited. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    // ESRCH: the process is gone.
+    return !(error instanceof Error && 'code' in error && error.code === 'ESRCH')
+  }
 }
 
 async function provider(): Promise<LocalSandboxProvider> {
@@ -79,21 +90,19 @@ describe.skipIf(!bwrapUsable)('sandbox-local: real bwrap confinement', () => {
   })
 
   it.each(['read-only', 'workspace-write'] as const)(
-    '%s runs in a private PID namespace and blocks writes through procfs root magic links',
+    '%s shares the host PID namespace and blocks writes through procfs root magic links',
     async (mode) => {
       const workdir = await tempDir(homedir())
       const outside = await tempDir(homedir())
       const target = join(outside, 'escaped.txt')
       const sandbox = await provider()
-      // Compare PID-namespace identity, not PID numbers: numeric /proc entries
-      // recur inside a private namespace, and the /proc/1/root write below is
-      // denied even in a shared namespace (host init is root-owned), so this
-      // comparison is the assertion that fails when --unshare-pid is lost.
+      // Host processes stay visible and signalable by design: the command must
+      // share the host PID namespace. Write confinement is what must hold: the
+      // /proc/1/root and parent-pid root magic-link writes below are denied.
       const hostPidNamespace = readlinkSync('/proc/self/ns/pid')
       const visibility = await runConfined(sandbox, 'readlink /proc/self/ns/pid', { mode, workspaceRoot: workdir })
       expect(visibility.result.status).toBe(0)
-      expect(visibility.result.stdout.trim()).not.toBe('')
-      expect(visibility.result.stdout.trim()).not.toBe(hostPidNamespace)
+      expect(visibility.result.stdout.trim()).toBe(hostPidNamespace)
 
       const escape = await runConfined(
         sandbox,
@@ -102,10 +111,26 @@ describe.skipIf(!bwrapUsable)('sandbox-local: real bwrap confinement', () => {
       )
       expect(escape.result.status).not.toBe(0)
       expect(existsSync(target)).toBe(false)
+
+      const parentTarget = join(outside, 'escaped-parent.txt')
+      const parentEscape = await runConfined(
+        sandbox,
+        'printf escaped > /proc/$PPID/root' + parentTarget,
+        { mode, workspaceRoot: workdir },
+      )
+      expect(parentEscape.result.status).not.toBe(0)
+      expect(existsSync(parentTarget)).toBe(false)
+
+      // Visibility and signals are shared with the host; reading or writing another
+      // process's memory, environment or ptrace state stays denied.
+      for (const probe of ['cat /proc/$PPID/environ', 'head -c1 /proc/$PPID/mem', 'cat /proc/1/environ']) {
+        const denied = await runConfined(sandbox, probe, { mode, workspaceRoot: workdir })
+        expect(denied.result.status).not.toBe(0)
+      }
     },
   )
 
-  it('keeps descendants observable and controllable inside the private PID namespace', async () => {
+  it('keeps descendants observable and controllable in the shared host PID namespace', async () => {
     const workdir = await tempDir(homedir())
     const sandbox = await provider()
     const { result } = await runConfined(
@@ -114,6 +139,29 @@ describe.skipIf(!bwrapUsable)('sandbox-local: real bwrap confinement', () => {
       { mode: 'read-only', workspaceRoot: workdir },
     )
     expect(result.status).toBe(0)
+  })
+
+  it('pins that --die-with-parent reaches only the confined command: a background descendant outlives its SIGKILL', async () => {
+    const workdir = await tempDir(homedir())
+    const sandbox = await provider()
+    const confined = await sandbox.confine(['bash', '-c', 'sleep 60 & echo $!; wait'], { mode: 'read-only', workspaceRoot: workdir })
+    const child = spawn(confined.argv[0] as string, confined.argv.slice(1), { stdio: ['ignore', 'pipe', 'ignore'] })
+    let descendant: number | undefined
+    try {
+      descendant = await new Promise<number>((resolve, reject) => {
+        child.stdout.once('data', (chunk: Buffer) => {
+          resolve(Number(chunk.toString().trim()))
+        })
+        child.once('error', reject)
+      })
+      child.kill('SIGKILL')
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 300)
+      })
+      expect(isAlive(descendant)).toBe(true)
+    } finally {
+      if (descendant !== undefined && isAlive(descendant)) process.kill(descendant, 'SIGKILL')
+    }
   })
 
   it('workspace-write lands a write inside the workspace root and still denies one beside it', async () => {
