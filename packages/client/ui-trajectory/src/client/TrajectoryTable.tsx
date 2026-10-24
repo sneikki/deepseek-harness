@@ -47,7 +47,7 @@ import { subagentBadges, subagentNoticeText } from './TrajectorySubagentBadges.t
 import { trajectorySubagentLifecycles } from './trajectory-subagent.ts'
 import { TrajectoryAgentLanes } from './TrajectoryAgentLanes.tsx'
 import {
-  AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, agentLaneCells, laneZoneWidth, type AgentLaneModel,
+  AGENT_LANE_COLORS, AGENT_LANE_MAX_VISIBLE, agentLaneCells, laneZoneWidth, type AgentLane, type AgentLaneModel,
 } from './trajectory-agent-lanes.ts'
 import {
   CARD_BODY_LINES, CARD_COMPACT_HEIGHT, CARD_COMPACT_ROW_HEIGHT, CARD_GAP, CARD_HEAD_GAP, CARD_HEAD_HEIGHT, CARD_HEIGHT, CARD_INDENT,
@@ -2405,6 +2405,18 @@ export function TrajectoryTable({
   useEffect(() => {
     onSelectedIndexChange?.(selectedIndex)
   }, [onSelectedIndexChange, selectedIndex])
+  // Selecting any record of an agent (spawn, message, report, end) marks the whole agent: its rows and its lane.
+  const selectedAgent = useMemo(() => {
+    if (selectedIndex === null) return null
+    // An inferred end row (no settle record) is some other record: it neither selects nor joins the agent.
+    const indexesOf = (lane: AgentLane) => [
+      lane.startIndex, ...lane.endIsRecord === true ? [lane.endIndex] : [], ...lane.events.map(event => event.index),
+    ]
+    const lane = laneModel.lanes.find(candidate => candidate.startIndex === selectedIndex)
+      ?? laneModel.lanes.find(candidate => indexesOf(candidate).includes(selectedIndex))
+    if (lane === undefined) return null
+    return { id: lane.id, indexes: new Set(indexesOf(lane)) }
+  }, [laneModel, selectedIndex])
   const requestGroups = useMemo(() => new Set(
     (sessionRequestNumbers ?? []).map(request => requestKey(request.turn, request.group)),
   ), [sessionRequestNumbers])
@@ -3067,6 +3079,8 @@ export function TrajectoryTable({
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}
                       data-selected={!isCollapsedSummary && rowSelected || undefined}
+                      data-agent-selected={!isCollapsedSummary && !rowSelected
+                        && selectedAgent?.indexes.has(record.cell.index) === true || undefined}
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
                         : timelineFocusIndexes.has((ownerRecord(recordById, record) ?? record).cell.index) ? 'inside' : 'outside'}
@@ -3161,6 +3175,7 @@ export function TrajectoryTable({
                           <TrajectoryAgentLanes
                             t={t}
                             cells={laneCells}
+                            selectedLaneId={selectedAgent?.id ?? null}
                             onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
                             onSelect={selectRecord}
                           />

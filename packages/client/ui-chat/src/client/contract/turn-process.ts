@@ -31,7 +31,8 @@ export function turnActivityOf(name: string): TurnActivity {
   if (['write', 'edit', 'apply_patch'].includes(name)) return 'code'
   if (['read', 'read_image', 'grep', 'glob', 'web_search', 'web_fetch'].includes(name) || name.endsWith('_inspect')) return 'review'
   if (['bash', 'pwsh', 'exec_command', 'write_stdin', 'run_code'].includes(name) || name.startsWith('terminal_')) return 'deploy'
-  if (name === 'subagent' || name.startsWith('subagent_')) return 'proof'
+  // Messages and interrupts to an agent are agent work too, not a generic tool.
+  if (name === 'subagent' || name.startsWith('subagent_') || name === 'send_message' || name === 'interrupt_agent') return 'proof'
   if (isMcpReadTool(name)) return 'review'
   return 'other'
 }

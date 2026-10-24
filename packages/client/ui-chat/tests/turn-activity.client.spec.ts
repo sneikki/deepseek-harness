@@ -9,6 +9,8 @@ describe('turnActivityOf', () => {
     ['bash', 'deploy'],
     ['read', 'review'],
     ['subagent_fork', 'proof'],
+    ['send_message', 'proof'],
+    ['interrupt_agent', 'proof'],
     ['todo_write', 'other'],
     ['mcp__moonshine__search', 'review'],
     ['mcp__moonshine__recall', 'review'],

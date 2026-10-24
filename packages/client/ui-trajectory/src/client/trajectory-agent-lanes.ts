@@ -47,6 +47,8 @@ export interface AgentLane {
   startIndex: number
   /** Index of the record the lane ends on; `Infinity` while running. */
   endIndex: number
+  /** The end row is the agent's own settle record, not a row inferred from its end time. */
+  endIsRecord?: true
   /** Packed track; slots at or above {@link AGENT_LANE_MAX_VISIBLE} are not drawn. */
   slot: number
   /** Ascending by index. */
@@ -161,6 +163,7 @@ export function deriveAgentLanes(
       status,
       startIndex: lifecycle.startIndex,
       endIndex: Math.max(endIndex, lifecycle.startIndex),
+      ...lifecycle.endIndex === null ? {} : { endIsRecord: true as const },
       events,
       ...row?.turns === undefined ? {} : { turns: row.turns },
     }
