@@ -165,6 +165,46 @@ describe('hooks-claude-code bridge — UserPromptSubmit', () => {
   })
 })
 
+describe('hooks-claude-code bridge — UserPromptSubmit fires only for user prompts', () => {
+  /** Hook that logs each payload's prompt text, one per line. */
+  function logger(): { dir: string; log: string } {
+    const dir = mkdtempSync(join(tmpdir(), 'dsh-hooks-claude-'))
+    dirs.push(dir)
+    const log = join(dir, 'log.txt')
+    const script = join(dir, 'log.sh')
+    writeFileSync(script, `#!/usr/bin/env bash\ncat | jq -r .prompt >> ${log}\n`)
+    chmodSync(script, 0o755)
+    writeFileSync(join(dir, 'hooks.json'), JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: script }] }] } }))
+    return { dir, log }
+  }
+  const text = (t: string, kind: string) => createUserMessage({ content: [{ type: 'text', text: t }], source: { kind } as never })
+  const fired = (log: string) => existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean) : []
+
+  it('a user prompt fires once; hook-context-only steps fire nothing', async () => {
+    const { dir, log } = logger()
+    const adapter = new MockAdapter([textResponse('a'), textResponse('b')])
+    const ctx = await harness(dir, adapter)
+    const agent = await ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
+    agent.followup(text('hello', 'user'))
+    await waitForIdle(ctx, agent)
+    expect(fired(log)).toEqual(['hello'])
+    agent.followup(text('inbox record', 'hooks-claude-code'))
+    await waitForIdle(ctx, agent)
+    expect(adapter.requests).toHaveLength(2)
+    expect(fired(log)).toEqual(['hello'])
+  })
+
+  it('a step mixing user text and injected context fires once with only the user text', async () => {
+    const { dir, log } = logger()
+    const ctx = await harness(dir, new MockAdapter([textResponse('a')]))
+    const agent = await ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
+    agent.steer(text('injected', 'hooks-claude-code'))
+    agent.followup(text('hello', 'user'))
+    await waitForIdle(ctx, agent)
+    expect(fired(log)).toEqual(['hello'])
+  })
+})
+
 describe('hooks-claude-code bridge — PreToolUse', () => {
   it('a matching PreToolUse hook that exits 2 denies the tool (isError result), tool never runs', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dsh-hooks-claude-'))
