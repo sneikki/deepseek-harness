@@ -308,6 +308,15 @@ describe('TrajectoryTable', () => {
     expect(screen.getByText('1,500 ms', { selector: 'dd' })).toBeTruthy()
   })
 
+  it('selects from the card only: a click beside it on the same row clears the selection', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const row = screen.getByRole('row', { name: /ASSISTANT/ })
+    fireEvent.click(row.querySelector('[data-card]')!)
+    expect(row.dataset.selected).toBe('true')
+    fireEvent.click(row.querySelector('td:last-child')!)
+    expect(row.dataset.selected).toBeUndefined()
+  })
+
   it('breaks output tokens into labeled reasoning and content rows', () => {
     render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
     fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))

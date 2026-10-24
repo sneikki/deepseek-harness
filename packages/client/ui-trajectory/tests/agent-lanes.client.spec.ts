@@ -93,13 +93,13 @@ describe('deriveAgentLanes', () => {
     ])
   })
 
-  it('marks an interrupt call', () => {
+  it('marks an interrupt call and leaves the lane open: no settle record, no end time, no invented end', () => {
     const { model, indexOf } = lanes([
       ...start(A, 'Alpha'),
       ...call('interrupt_agent', 'i1', { agent_id: A }, `interrupted agent ${A}`),
     ])
     expect(model.lanes[0]).toMatchObject({
-      status: 'interrupted', endIndex: indexOf(A, 'control'), events: [{ index: indexOf(A, 'control'), kind: 'interrupt' }],
+      status: 'interrupted', endIndex: Number.POSITIVE_INFINITY, events: [{ index: indexOf(A, 'control'), kind: 'interrupt' }],
     })
   })
 
@@ -115,6 +115,19 @@ describe('deriveAgentLanes', () => {
       row(A, { startIndex: cells[0]!.index, status: 'failed', endedAt: target.startedAt! - 1 }),
     ])
     expect(model.lanes[0]).toMatchObject({ status: 'failed', endIndex: target.index, rowId: A })
+  })
+
+  it('leaves an unsettled lane open when the agent ended after every loaded record', () => {
+    seq = 0
+    const turns = deriveTrajectoryLayout({
+      nodes: [...start(A, 'Alpha'), notice('agent-message', B, 'x')] as unknown as Nodes,
+      partial: null, runningCalls: [],
+    }, t)
+    const cells = turns.flatMap(x => x.groups.flatMap(g => g.cells)).sort((a, b) => a.index - b.index)
+    const model = deriveAgentLanes(turns, trajectorySubagentLifecycles(turns), [
+      row(A, { startIndex: cells[0]!.index, status: 'done', endedAt: cells.at(-1)!.startedAt! + 1 }),
+    ])
+    expect(model.lanes[0]).toMatchObject({ status: 'done', endIndex: Number.POSITIVE_INFINITY })
   })
 
   it('reuses a slot once a lane ended', () => {
@@ -203,16 +216,21 @@ describe('agentLaneCells idle', () => {
     id: 'a', rowId: 'a', label: 'a', shortId: 'a', status: 'running' as const, startIndex: 0,
     endIndex: Number.POSITIVE_INFINITY, slot: 0, events: [], ...(turns === undefined ? {} : { turns }),
   })
-  const turns = [{ start: 0, end: 100, reason: null }, { start: 1000, end: null, reason: null }]
+  const MIN = 60_000
+  const turns = [{ start: 0, end: 100, reason: null }, { start: 100 + 5 * MIN, end: null, reason: null }]
   const idleAt = (l: ReturnType<typeof lane>, at: number) =>
     agentLaneCells({ lanes: [l], slots: 1, overflow: 0 }, at - 1, at + 1, at)[0]?.idle === true
   it('marks rows inside the gap, not inside turns', () => {
     const l = lane(turns)
-    expect([50, 500, 999, 1500].map(at => idleAt(l, at))).toEqual([false, true, true, false])
+    expect([50, 2 * MIN, 5 * MIN, 6 * MIN].map(at => idleAt(l, at))).toEqual([false, true, true, false])
   })
-  it('marks rows after the last closed turn: the agent waits', () => {
+  it('keeps a gap under a minute solid: the bar does not call it idle either', () => {
+    const l = lane([{ start: 0, end: 100, reason: null }, { start: 100 + 30_000, end: null, reason: null }])
+    expect(idleAt(l, 15_000)).toBe(false)
+  })
+  it('marks rows after the last closed turn once the agent has waited a minute', () => {
     const l = lane([{ start: 0, end: 100, reason: null }])
-    expect([50, 500].map(at => idleAt(l, at))).toEqual([false, true])
+    expect([50, 30_000, 2 * MIN].map(at => idleAt(l, at))).toEqual([false, false, true])
   })
   it('keeps the end bend solid: a finished agent is not waiting', () => {
     const l = { ...lane([{ start: 0, end: 100, reason: null }]), status: 'done' as const, endIndex: 10 }

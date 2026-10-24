@@ -6,6 +6,7 @@
  */
 
 import type { TrajectoryTurnModel } from './layout.ts'
+import { IDLE_NOTE_MS } from './trajectory-agent-bar.ts'
 import type { AgentTreeRow } from './trajectory-agent-tree.ts'
 import type { TrajectorySubagentLifecycle } from './trajectory-subagent.ts'
 import { packTimelineTracks } from './timeline.ts'
@@ -77,12 +78,16 @@ export interface AgentLaneCell {
   idle?: true
 }
 
-/** True when `at` (wall ms) lies after a closed turn and before the next one starts, if any. */
+/**
+ * True when `at` (wall ms) lies after a closed turn and before the next one starts, if any,
+ * in a gap of at least {@link IDLE_NOTE_MS}: the same idle the agent bar labels.
+ */
 function inIdleGap(turns: AgentLane['turns'], at: number | null): boolean {
   if (turns === undefined || at === null) return false
   return turns.some((turn, i) => {
     const next = turns[i + 1]
-    return turn.end !== null && at > turn.end && (next === undefined || at < next.start)
+    if (turn.end === null || at <= turn.end) return false
+    return next === undefined ? at - turn.end >= IDLE_NOTE_MS : at < next.start && next.start - turn.end >= IDLE_NOTE_MS
   })
 }
 
@@ -105,7 +110,6 @@ export function deriveAgentLanes(
   if (lifecycles.length === 0) return { lanes: [], slots: 0, overflow: 0 }
   const cells = turns.flatMap(turn => turn.groups.flatMap(group => group.cells))
     .sort((left, right) => left.index - right.index)
-  const lastIndex = cells.at(-1)?.index ?? 0
   const eventsById = new Map<string, AgentLaneEvent[]>()
   const finishById = new Map<string, number[]>()
   const push = (id: string, event: AgentLaneEvent) => {
@@ -143,11 +147,13 @@ export function deriveAgentLanes(
     let endIndex = Number.POSITIVE_INFINITY
     if (status !== 'running') {
       const endedAt = lifecycle.endedAt ?? row?.endedAt ?? null
+      // Without a settle record the lane ends at the first record after the agent's end time; with no end time,
+      // or an end after every loaded record, the end is not on screen and the lane stays open (no end marker).
       endIndex = lifecycle.endIndex
         ?? (endedAt === null
-          // No settle record and no end time: an interrupted agent ended at the last interrupt call.
-          ? (eventsById.get(lifecycle.id) ?? []).findLast(event => event.kind === 'interrupt')?.index ?? lastIndex
-          : cells.find(cell => cell.startedAt != null && cell.startedAt >= endedAt)?.index ?? lastIndex)
+          ? undefined
+          : cells.find(cell => cell.startedAt != null && cell.startedAt >= endedAt)?.index)
+        ?? Number.POSITIVE_INFINITY
     }
     const finishes = (finishById.get(lifecycle.id) ?? []).filter(index => index !== endIndex)
     const events = [
@@ -229,7 +235,7 @@ export function agentLaneCells(
 /** Lane geometry, px. Lanes sit right of the card column; x runs from the cards' right edge. */
 export const LANE_STROKE = 5
 /** Centre-to-centre distance of neighbouring slots. */
-export const LANE_PITCH = 10
+export const LANE_PITCH = 18
 /** Card edge to the centre of slot 0. */
 export const LANE_ORIGIN = 22
 /** Corner radius of a bend (stroke centre line). */
