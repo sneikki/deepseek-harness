@@ -207,4 +207,39 @@ describe('live listing in a mounted plugin', () => {
     expect((await ctx.llm.listModels('zai')).map(model => model.id)).toHaveLength(1)
     await ctx.fiber.dispose()
   })
+
+  it.each([
+    ['a network error carrying the URL and a cause', () => {
+      vi.stubGlobal('fetch', (url: string) => Promise.reject(
+        new TypeError(`fetch failed for ${url}`, { cause: new Error(`connect ECONNREFUSED ${url}`) }),
+      ))
+    }, 'LlmError|DISCOVERY_FAILED'],
+    ['an HTTP failure whose body echoes the key', () => {
+      vi.stubGlobal('fetch', () => Promise.resolve(new Response('bad key SECRET-KEY-123', { status: 403 })))
+    }, '403'],
+  ])('never logs a key from %s', async (_label, stub, expected) => {
+    vi.stubEnv('LIVE_KEY', 'SECRET-KEY-123')
+    stub()
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    const logged: string[] = []
+    for (const level of ['warn', 'error', 'info', 'debug'] as const) {
+      vi.spyOn(ctx.logger, level).mockImplementation((...args: unknown[]) => {
+        logged.push(args.map(arg => (arg instanceof Error ? `${arg.message} ${String(arg.cause)}` : String(arg))).join(' '))
+      })
+    }
+    await ctx.plugin(LlmPiAi, { providers: { zai: {
+      apiKeyEnv: 'LIVE_KEY',
+      baseURL: 'https://user:SECRET-KEY-123@gateway.example/v1?key=SECRET-KEY-123',
+    } } })
+    await vi.waitFor(() => { expect(logged.some(line => line.includes('live model listing'))).toBe(true) })
+
+    const text = logged.join('\n')
+    expect(text).not.toContain('SECRET-KEY-123')
+    expect(text).not.toContain('user:')
+    expect(text).toContain('zai')
+    expect(text).toContain('https://gateway.example')
+    expect(new RegExp(expected).test(text)).toBe(true)
+    await ctx.fiber.dispose()
+  })
 })

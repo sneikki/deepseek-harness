@@ -90,8 +90,27 @@ export interface LiveCatalogHost {
   apiKey: (provider: string) => Promise<string | undefined>
   /** A new listing was stored; the host swaps in a fresh snapshot. */
   changed: () => void
-  /** Logged once per route per failure streak. */
-  warn: (message: string, error: unknown) => void
+  /** Logged once per route per failure streak; the message is already scrubbed of URLs, keys and causes. */
+  warn: (message: string) => void
+}
+
+/**
+ * What of a listing failure may be logged: the error's code or name, an HTTP
+ * status when the failure names one, and the endpoint's origin. Never the
+ * message, `cause` or response body, which can carry the request URL with a
+ * key in its query or userinfo.
+ * @param error - whatever the listing threw.
+ * @param baseURL - the route's configured endpoint.
+ * @returns a log-safe description.
+ */
+function describeFailure(error: unknown, baseURL: string | undefined): string {
+  const code = (error as { code?: unknown } | null)?.code
+  const name = (error as { name?: unknown } | null)?.name
+  const kind = typeof code === 'string' ? code : typeof name === 'string' ? name : 'error'
+  const status = error instanceof Error ? /answered (\d{3})\b/.exec(error.message)?.[1] : undefined
+  let origin = 'unknown endpoint'
+  try { if (baseURL !== undefined) origin = new URL(baseURL).origin } catch { /* an unparsable base is reported as unknown */ }
+  return `${kind}${status === undefined ? '' : ` ${status}`} from ${origin}`
 }
 
 /** The read side and refresh of the live catalog. */
@@ -142,7 +161,10 @@ export function createLiveCatalog(host: LiveCatalogHost): LiveCatalog {
     } catch (error) {
       if (signal?.aborted === true || failing.has(provider)) return
       failing.add(provider)
-      host.warn(`llm-pi-ai: live model listing for route "${provider}" failed; keeping the last known models`, error)
+      host.warn(
+        `llm-pi-ai: live model listing for route "${provider}" failed (${describeFailure(error, target.baseURL)});`
+        + ' keeping the last known models',
+      )
     }
   }
 
@@ -184,7 +206,9 @@ export function createLiveCatalog(host: LiveCatalogHost): LiveCatalog {
     },
     /** List every eligible route now; calls overlapping a running one share it. Never rejects. */
     refresh(signal?: AbortSignal): Promise<void> {
-      running ??= run(signal).catch((error: unknown) => { host.warn('llm-pi-ai: live model refresh failed', error) })
+      running ??= run(signal).catch((error: unknown) => {
+        host.warn(`llm-pi-ai: live model refresh failed (${describeFailure(error, undefined)})`)
+      })
         .finally(() => { running = undefined })
       return running
     },

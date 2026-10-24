@@ -182,7 +182,7 @@ export function apply(ctx: Context, config: Config): void {
         ctx.logger.error(error)
       }
     },
-    warn: (message, error) => { ctx.logger.warn(message); ctx.logger.warn(error) },
+    warn: (message) => { ctx.logger.warn(message) },
   })
   let memoized: ReadonlyMap<string, ResolvedPiAiProviderProfile> | undefined
   /**
