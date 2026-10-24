@@ -5,8 +5,8 @@ import { formatBoxDuration, formatTurnDuration } from './trajectory-record.ts'
 import { reasonStatus, type AgentTreeRow, type AgentTreeStatus } from './trajectory-agent-tree.ts'
 import type { TrajectorySubagentLifecycle } from './trajectory-subagent.ts'
 
-/** Idle below this is not worth a "work · wall" label. */
-const IDLE_NOTE_MS = 60_000
+/** Idle shorter than this is not idle: no "work · wall" label, no dashed lane. */
+export const IDLE_NOTE_MS = 60_000
 
 export const STATUS_KEY = {
   running: 'timeline.subagentRunning',

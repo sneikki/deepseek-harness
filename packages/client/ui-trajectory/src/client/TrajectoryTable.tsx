@@ -2456,6 +2456,14 @@ export function TrajectoryTable({
       return below
     })
   }, [records])
+  // Wall time each row stands at for the lanes: a row without its own (thinking) keeps the last time above it.
+  const laneTimes = useMemo(() => {
+    let last: number | null = null
+    return records.map((record) => {
+      last = record.cell.startedAt ?? last
+      return last
+    })
+  }, [records])
   // The request label lands on the first row actually shown for its step,
   // which is the fold summary when the step's assistant row is hidden.
   const requestBoundaries = useMemo(
@@ -3028,7 +3036,7 @@ export function TrajectoryTable({
                   // Hidden rows between this and the previous shown row fold into this row's lane states.
                   const laneCells = laneModel.lanes.length === 0
                     ? []
-                    : agentLaneCells(laneModel, laneLowIndex[position] ?? null, record.cell.index, record.cell.startedAt ?? null)
+                    : agentLaneCells(laneModel, laneLowIndex[position] ?? null, record.cell.index, laneTimes[position] ?? null)
                   const spawnLane = laneCells.find(cell =>
                     cell.lane.startIndex === record.cell.index && cell.lane.slot < AGENT_LANE_MAX_VISIBLE)?.lane
                   return (
