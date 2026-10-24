@@ -654,6 +654,8 @@ export type PiAiModelOverride = Omit<PiAiModelProfile, 'id'>
  */
 export interface LiveModel {
   id: string
+  /** Protocol of the endpoint that listed the id; served over it at the route's endpoint. */
+  api?: string | undefined
   name?: string | undefined
   contextWindow?: number | undefined
   maxTokens?: number | undefined
@@ -918,13 +920,16 @@ export function resolveRouteModels(
   // the same path with the same diagnostics and request-default semantics.
   const routeApi = sharedCatalogApi(defaults)
   // Live ids are appended after the installed catalog and only while the route
-  // serves it (no `models` list). An id needs a protocol to be servable, and
-  // only a route-level api or a single-protocol catalog supplies one; a mixed
-  // catalog gives no honest answer for an id it has not described.
+  // serves it (no `models` list). An id needs a protocol to be servable: the
+  // route's api, else the protocol of the endpoint that listed it (a fact about
+  // where it was listed, which is what makes a mixed catalog such as
+  // OpenRouter's workable), else the single catalog protocol. Without one it is
+  // skipped.
   const liveById = new Map<string, LiveModel>()
-  if (configured.length === 0 && defaults.size > 0 && (request.api !== undefined || routeApi !== undefined)) {
+  if (configured.length === 0 && defaults.size > 0) {
     for (const live of request.live ?? []) {
-      if (live.id.length > 0 && !defaults.has(live.id) && !liveById.has(live.id)) liveById.set(live.id, live)
+      if (live.id.length === 0 || defaults.has(live.id) || liveById.has(live.id)) continue
+      if ((request.api ?? live.api ?? routeApi) !== undefined) liveById.set(live.id, live)
     }
   }
   const entries: readonly PiAiModelProfile[] = configured.length > 0
@@ -946,7 +951,7 @@ export function resolveRouteModels(
     if (seen.has(entry.id)) invalid(provider, `lists model "${entry.id}" more than once`)
     seen.add(entry.id)
     const base = defaults.get(entry.id)
-    const api = request.api ?? base?.api ?? routeApi
+    const api = request.api ?? base?.api ?? liveById.get(entry.id)?.api ?? routeApi
     if (api === undefined) {
       invalid(provider, `model "${entry.id}" needs an api; the installed catalog does not describe it, so set the`
         + ' route\'s api to the wire protocol its endpoint speaks')

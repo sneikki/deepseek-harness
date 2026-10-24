@@ -54,8 +54,11 @@ export function liveTarget(provider: string, source: RawRoute | undefined): Live
   if (source?.apiKeyEnv === undefined || (source.models?.length ?? 0) > 0) return undefined
   const defaults = catalogModels(provider)
   if (defaults.size === 0) return undefined
-  const api = source.api ?? sharedCatalogApi(defaults)
   const baseURL = source.baseURL ?? catalogProvider(provider)?.baseUrl
+  // A mixed catalog lists at the endpoint the route addresses: the protocol of
+  // the installed models served from that very baseURL, when exactly one is.
+  const served = new Set([...defaults.values()].filter(model => model.baseUrl === baseURL).map(model => model.api))
+  const api = source.api ?? sharedCatalogApi(defaults) ?? (served.size === 1 ? [...served][0] : undefined)
   if (api === undefined || !isListableProtocol(api) || baseURL === undefined || !/^https?:\/\//.test(baseURL)) {
     return undefined
   }
@@ -69,11 +72,13 @@ export function liveTarget(provider: string, source: RawRoute | undefined): Live
 /**
  * Keep only what the listing stated.
  * @param listed - parsed endpoint listing.
+ * @param api - protocol of the endpoint that listed them.
  * @returns one row per listed model, without fallbacks filled in.
  */
-export function liveModels(listed: readonly ListedModel[]): LiveModel[] {
+export function liveModels(listed: readonly ListedModel[], api: string): LiveModel[] {
   return listed.map(({ id, name, contextWindow, maxTokens, reasoning }) => ({
     id,
+    api,
     // The discovery parser falls back to the id for a missing name; that is no statement.
     ...name === undefined || name === id ? {} : { name },
     ...contextWindow === undefined ? {} : { contextWindow },
@@ -153,7 +158,7 @@ export function createLiveCatalog(host: LiveCatalogHost): LiveCatalog {
       if (apiKey === undefined) return
       const listed = await fetchListing({ ...target, headers: source.headers, apiKey, signal })
       failing.delete(provider)
-      const models = liveModels(listed)
+      const models = liveModels(listed, target.api)
       const previous = listings.get(provider)
       if (previous?.fingerprint !== target.fingerprint || !deepEqualJson(previous.models, models)) {
         next.set(provider, { fingerprint: target.fingerprint, models })

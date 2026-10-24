@@ -70,16 +70,26 @@ describe('merging a live listing into a catalog route', () => {
     expect(after.models.some(model => model.id === '')).toBe(false)
   })
 
-  it('skips ids on a mixed-protocol catalog unless the route names its protocol', () => {
-    // OpenRouter ships both anthropic-messages and openai-completions entries,
-    // so an uncatalogued id has no protocol to be served over.
-    const live: LiveModel[] = [{ id: 'vendor/brand-new', contextWindow: 50_000 }]
-    expect(resolve({ provider: 'openrouter', live }).models.some(model => model.id === 'vendor/brand-new')).toBe(false)
-    const named = resolve({ provider: 'openrouter', api: 'openai-completions', live })
-    expect(named.models.find(model => model.id === 'vendor/brand-new')).toMatchObject({
+  it('serves an id on a mixed-protocol catalog over the protocol of the listing that returned it', () => {
+    // OpenRouter ships both anthropic-messages and openai-completions entries.
+    const before = resolve({ provider: 'openrouter' })
+    const after = resolve({
+      provider: 'openrouter',
+      live: [{ id: 'vendor/brand-new', api: 'openai-completions', contextWindow: 50_000 }],
+    })
+    expect(after.models.find(model => model.id === 'vendor/brand-new')).toMatchObject({
       api: 'openai-completions',
+      baseUrl: 'https://openrouter.ai/api/v1',
       contextWindow: 50_000,
     })
+    // Installed anthropic-messages entries keep their protocol and endpoint.
+    expect(after.models.slice(0, -1)).toEqual(before.models)
+    expect(after.models.filter(model => model.api === 'anthropic-messages')).toHaveLength(16)
+  })
+
+  it('skips an id that no protocol serves', () => {
+    const live: LiveModel[] = [{ id: 'vendor/brand-new' }]
+    expect(resolve({ provider: 'openrouter', live }).models.some(model => model.id === 'vendor/brand-new')).toBe(false)
   })
 
   it('takes a stated reasoning flag without inventing level spellings', () => {
@@ -99,11 +109,18 @@ describe('which routes list live', () => {
     })
   })
 
+  it('lists a mixed catalog at the endpoint its route addresses', () => {
+    expect(liveTarget('openrouter', { apiKeyEnv: 'K' })).toMatchObject({
+      api: 'openai-completions',
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+  })
+
   it.each([
     ['no credential', 'zai', {}],
     ['an explicit models list', 'zai', { apiKeyEnv: 'K', models: [{ id: 'x' }] }],
     ['a protocol with no readable listing', 'mistral', { apiKeyEnv: 'K' }],
-    ['a mixed-protocol catalog', 'openrouter', { apiKeyEnv: 'K' }],
+    ['a mixed catalog with no single protocol at its endpoint', 'github-copilot', { apiKeyEnv: 'K' }],
     ['a route the catalog does not ship', 'acme', { apiKeyEnv: 'K', api: 'openai-completions', baseURL: 'https://a.example/v1' }],
   ] as const)('does not list a route with %s', (_label, provider, source) => {
     expect(liveTarget(provider, source as LlmPiAi.PiAiProviderProfile)).toBeUndefined()
@@ -113,7 +130,10 @@ describe('which routes list live', () => {
     expect(liveModels([
       { id: 'a', name: 'a' },
       { id: 'b', name: 'B', contextWindow: 10, maxTokens: 5, reasoning: true },
-    ])).toEqual([{ id: 'a' }, { id: 'b', name: 'B', contextWindow: 10, maxTokens: 5, reasoning: true }])
+    ], 'openai-completions')).toEqual([
+      { id: 'a', api: 'openai-completions' },
+      { id: 'b', api: 'openai-completions', name: 'B', contextWindow: 10, maxTokens: 5, reasoning: true },
+    ])
   })
 })
 
@@ -200,7 +220,7 @@ describe('live listing in a mounted plugin', () => {
       zai: { apiKeyEnv: 'LIVE_KEY', models: [{ id: [...catalogModels('zai').keys()][0]! }] },
       'zai-coding-cn': { apiKeyEnv: 'LIVE_ABSENT' },
       mistral: { apiKeyEnv: 'LIVE_KEY' },
-      openrouter: { apiKeyEnv: 'LIVE_KEY' },
+      'github-copilot': { apiKeyEnv: 'LIVE_KEY' },
     })
     await new Promise(resolve => setTimeout(resolve, 20))
     expect(calls).toHaveLength(0)
