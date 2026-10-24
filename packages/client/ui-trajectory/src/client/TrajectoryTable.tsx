@@ -3100,7 +3100,13 @@ export function TrajectoryTable({
                               onToggleTurn(record.turn)
                             } else toggleFolded(record)
                           }
-                          : () => { selectRecord(record.cell.index) }}
+                          // Only the card selects; a click beside it in the row's cells clears the selection.
+                          // The row element itself (activated as a whole, like Enter) still selects.
+                          : (event) => {
+                            const target = event.target as Element
+                            if (target !== event.currentTarget && target.closest('[data-card]') === null) clearAllSelections()
+                            else selectRecord(record.cell.index)
+                          }}
                       onDoubleClick={(event) => {
                         if (isCollapsedSummary || isRequestOnly || singleToolNotice) return
                         if (record.turn !== null && collapsedTurns.has(record.turn)) {
