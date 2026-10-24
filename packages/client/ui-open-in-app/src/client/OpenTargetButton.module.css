@@ -48,12 +48,17 @@
   color: var(--amv-muted);
 }
 
-.main:hover:not(:disabled),
 .main:focus-visible,
-.chevron:hover:not(:disabled),
 .chevron:focus-visible {
   background: color-mix(in srgb, var(--amv-text) 8%, transparent);
   color: var(--amv-text);
+}
+
+@media (hover: hover) {
+  .main:hover:not(:disabled),
+  .chevron:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
 }
 
 /* Pending disables clicks without a restyle; only hover feedback pauses. */

@@ -35,10 +35,15 @@
   cursor: pointer;
 }
 
-.seat:not(:disabled):hover,
 .seat[aria-expanded='true'] {
   border-color: var(--amv-border-strong);
   background: var(--amv-raised);
+}
+
+@media (hover: hover) {
+  .seat:not(:disabled):hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
 }
 
 .seat:disabled {

@@ -206,9 +206,11 @@
   transition: color var(--amv-dur-1) var(--amv-ease);
 }
 
-.drill:hover {
-  background: color-mix(in srgb, var(--amv-text) 10%, transparent);
-  color: var(--amv-text);
+@media (hover: hover) {
+  .drill:hover {
+    background: color-mix(in srgb, var(--amv-text) 10%, transparent);
+    color: var(--amv-text);
+  }
 }
 
 /* Heading row above a source group: non-interactive section label, padding
@@ -282,16 +284,25 @@
   white-space: nowrap;
   transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
-.crumb:hover {
-  background: var(--amv-raised);
-  color: var(--amv-text);
+@media (hover: hover) {
+  .crumb:hover {
+    background: var(--amv-raised);
+    color: var(--amv-text);
+  }
 }
 /* The step the list is already showing reads as a label, not an action. */
-.crumbCurrent,
-.crumbCurrent:hover {
+.crumbCurrent {
   background: transparent;
   color: var(--amv-text);
   cursor: default;
+}
+
+@media (hover: hover) {
+  .crumbCurrent:hover {
+    background: transparent;
+    color: var(--dsw-alias-label-primary);
+    cursor: default;
+  }
 }
 .crumbSeparator {
   flex: none;

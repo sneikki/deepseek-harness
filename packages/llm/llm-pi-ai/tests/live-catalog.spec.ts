@@ -86,7 +86,9 @@ describe('merging a live listing into a catalog route', () => {
     })
     // Installed anthropic-messages entries keep their protocol and endpoint.
     expect(after.models.slice(0, -1)).toEqual(before.models)
-    expect(after.models.filter(model => model.api === 'anthropic-messages')).toHaveLength(16)
+    const installedAnthropic = before.models.filter(model => model.api === 'anthropic-messages')
+    expect(installedAnthropic.length).toBeGreaterThan(0)
+    expect(after.models.filter(model => model.api === 'anthropic-messages')).toEqual(installedAnthropic)
   })
 
   it('skips an id that no protocol serves', () => {

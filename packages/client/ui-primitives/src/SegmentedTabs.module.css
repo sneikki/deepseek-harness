@@ -1,7 +1,9 @@
 .tabs {
+  --segmented-tabs-inset: 4px;
+
   position: relative;
   display: grid;
-  padding: 4px;
+  padding: var(--segmented-tabs-inset);
   border-radius: 10px;
   border: 1px solid var(--amv-border);
   background: var(--amv-surface);
@@ -9,7 +11,7 @@
 
 .indicator {
   position: absolute;
-  inset: 4px auto 4px 4px;
+  inset: var(--segmented-tabs-inset) auto var(--segmented-tabs-inset) var(--segmented-tabs-inset);
   box-sizing: border-box;
   border-radius: 8px;
   background: var(--amv-raised);
@@ -30,13 +32,33 @@
   transition: color 180ms ease;
 }
 
-.tab:hover,
 .tab[aria-selected='true'] {
   background: transparent;
   color: var(--amv-text);
 }
 
+@media (hover: hover) {
+  .tab:hover {
+    background: transparent;
+    color: var(--dsw-alias-label-primary);
+  }
+}
+
 .tab[aria-selected='true'] {
+  font-weight: 500;
+}
+
+.tabs[data-size='sm'] {
+  --segmented-tabs-inset: 2px;
+
+  border-radius: calc(var(--dsw-radius-md) + var(--segmented-tabs-inset));
+}
+
+.tabs[data-size='sm'] .tab {
+  height: 30px;
+}
+
+.tabs[data-size='sm'] .tab[aria-selected='true'] {
   font-weight: 500;
 }
 

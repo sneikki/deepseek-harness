@@ -20,8 +20,10 @@
   transition: border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.trigger:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
+@media (hover: hover) {
+  .trigger:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
+  }
 }
 
 .trigger:focus-visible {

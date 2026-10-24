@@ -125,9 +125,11 @@
   transition: border-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.card:hover {
-  background: var(--amv-surface);
-  border-color: var(--amv-border-strong);
+@media (hover: hover) {
+  .card:hover {
+    background: var(--amv-surface);
+    border-color: var(--amv-border-strong);
+  }
 }
 
 .icon {
@@ -269,8 +271,10 @@
   cursor: pointer;
 }
 
-.crumb:hover {
-  color: var(--dsw-alias-label-primary);
+@media (hover: hover) {
+  .crumb:hover {
+    color: var(--dsw-alias-label-primary);
+  }
 }
 
 .crumb:focus-visible {
@@ -309,6 +313,14 @@
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
+}
+
+.detailDocument {
+  margin-top: 16px;
+}
+
+.detailDocument:empty {
+  display: none;
 }
 
 .sectionTitle {
@@ -470,8 +482,10 @@
   text-decoration: none;
 }
 
-.link:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .link:hover {
+    text-decoration: underline;
+  }
 }
 
 /* v2 canvas: label chips and version pills. The parent classes lift these above Tag.module.css. */

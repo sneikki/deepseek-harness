@@ -73,8 +73,34 @@
   transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
 
-.reject:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--amv-danger) 12%, transparent);
-  color: var(--amv-danger);
-  border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
+@media (hover: hover) {
+  .reject:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--amv-danger) 12%, transparent);
+    color: var(--amv-danger);
+    border-color: color-mix(in srgb, var(--amv-danger) 35%, transparent);
+    --dsh-button-outline-color: transparent;
+  }
 }
+
+.subject {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+}
+
+.subject img {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.description {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.withSubject .body { text-align: left; }
+.withSubject .actionRow { flex-wrap: wrap; }

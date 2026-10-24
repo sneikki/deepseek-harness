@@ -83,7 +83,15 @@
   flex: none;
 }
 
-.trigger:hover,
+.activitySlot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
 .trigger:focus-visible {
   color: var(--amv-text);
 }
@@ -93,14 +101,30 @@
   color: var(--amv-accent-text);
 }
 
-.switcherTrigger:hover,
+@media (hover: hover) {
+  .trigger:hover {
+    color: var(--amv-text);
+  }
+}
+
 .switcherTrigger:focus-visible {
   color: var(--dsw-alias-label-primary);
 }
 
-.ancestorSwitcherTrigger:hover,
+@media (hover: hover) {
+  .switcherTrigger:hover {
+    color: var(--dsw-alias-label-primary);
+  }
+}
+
 .ancestorSwitcherTrigger:focus-visible {
   color: var(--dsw-alias-label-tertiary);
+}
+
+@media (hover: hover) {
+  .ancestorSwitcherTrigger:hover {
+    color: var(--dsw-alias-label-tertiary);
+  }
 }
 
 .trigger svg,
@@ -186,7 +210,6 @@
   transition: background var(--amv-dur-1) var(--amv-ease), box-shadow var(--amv-dur-1) var(--amv-ease);
 }
 
-.row:hover > .clickarea,
 .row:focus-visible > .clickarea {
   background: var(--amv-raised);
 }
@@ -203,6 +226,12 @@
 
 .row[aria-current]:focus-visible > .clickarea {
   box-shadow: inset 0 0 0 2px var(--amv-accent);
+}
+
+@media (hover: hover) {
+  .row:hover > .clickarea {
+    background: var(--amv-raised);
+  }
 }
 
 .clickarea {
@@ -270,8 +299,10 @@
   height: 12px;
 }
 
-.disclosure:hover {
-  color: var(--amv-text);
+@media (hover: hover) {
+  .disclosure:hover {
+    color: var(--amv-text);
+  }
 }
 
 .disclosureOpen {
@@ -334,14 +365,19 @@
   grid-row: 2;
 }
 
-.sidebarButton {
-  display: inline-flex;
+.sidebarButton,
+.sidebarSpace {
+  box-sizing: border-box;
   flex: none;
-  align-items: center;
-  justify-content: center;
   width: 28px;
   height: 28px;
   margin: 4px 0;
+}
+
+.sidebarButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px;
   border: 0;
   border-radius: 8px;
@@ -358,10 +394,16 @@
   opacity: 1;
 }
 
-.sidebarButton:hover,
 .sidebarButton:focus-visible {
   background: var(--amv-border);
   color: var(--amv-text);
+}
+
+@media (hover: hover) {
+  .sidebarButton:hover {
+    background: var(--amv-border);
+    color: var(--amv-text);
+  }
 }
 
 .children {
@@ -441,8 +483,10 @@
   height: 12px;
 }
 
-.refresh:hover {
-  background: var(--amv-raised);
+@media (hover: hover) {
+  .refresh:hover {
+    background: var(--amv-raised);
+  }
 }
 
 /* No hover on touch: keep row controls visible so collapsed rows still hint at children. */

@@ -93,9 +93,11 @@
   color: var(--amv-muted);
 }
 
-.close:hover {
-  background: var(--amv-raised);
-  color: var(--amv-text);
+@media (hover: hover) {
+  .close:hover {
+    background: var(--amv-raised);
+    color: var(--amv-text);
+  }
 }
 
 /* Description and body share the 332px content column (24px side pads). */
