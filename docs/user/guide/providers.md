@@ -40,6 +40,8 @@ Discovery reads the listing formats common gateways publish, but not every endpo
 
 Configured providers appear in the model picker. Selecting a model also makes it the default for new sessions. A session that has already sent a request retains the model recorded in its own log.
 
+A built-in provider that has a stored key, serves its whole catalog, and speaks the OpenAI or Anthropic protocol also asks its endpoint for the current model list at startup and every hour, so a model released after your build appears in the picker without a restart. Providers that list their models in another format, and providers where you picked specific models, keep the installed catalog.
+
 If a saved default names a provider that was deleted, the composer displays **Select model** and blocks input until another model is selected.
 
 ## Advanced configuration
