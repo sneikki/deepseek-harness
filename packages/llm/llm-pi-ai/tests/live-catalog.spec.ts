@@ -5,6 +5,7 @@ import LlmRuntime from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { catalogModels, resolveRouteModels } from '../src/catalog.ts'
 import type { LiveModel, RouteCatalogRequest } from '../src/catalog.ts'
+import { fetchListing } from '../src/discovery.ts'
 import { liveModels, liveTarget } from '../src/live.ts'
 
 const HOUR = 60 * 60 * 1000
@@ -135,6 +136,94 @@ describe('which routes list live', () => {
       { id: 'a', api: 'openai-completions' },
       { id: 'b', api: 'openai-completions', name: 'B', contextWindow: 10, maxTokens: 5, reasoning: true },
     ])
+  })
+})
+
+describe('efforts a live listing states', () => {
+  /** Run a listing body through the real parser and the live row mapping. */
+  async function listed(body: unknown, baseURL: string, api: string): Promise<LiveModel[]> {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify(body)))))
+    return liveModels(await fetchListing({ baseURL, api, apiKey: 'k' }), api)
+  }
+  const levelOf = (model: { thinkingLevelMap?: Record<string, string | null> | undefined }) =>
+    Object.entries(model.thinkingLevelMap ?? {}).filter(([, wire]) => wire !== null).map(([level]) => level)
+
+  it('makes a kimi-coding id selectable low/high/max from reasoning.effort.valid', async () => {
+    const live = await listed({
+      data: [{
+        id: 'k3.1-pro',
+        display_name: 'K3.1 Pro',
+        context_length: 262_144,
+        supports_reasoning: true,
+        reasoning: { type: 'only', effort: { valid: ['low', 'high', 'max'], default: 'high' } },
+      }],
+    }, 'https://api.kimi.com/coding', 'anthropic-messages')
+    const model = resolve({ provider: 'kimi-coding', live }).models.find(entry => entry.id === 'k3.1-pro')!
+    expect(model.reasoning).toBe(true)
+    expect(model.thinkingLevelMap).toMatchObject({ low: 'low', high: 'high', max: 'max', off: null, medium: null })
+    expect(model.compat).toEqual({ allowEmptySignature: true, forceAdaptiveThinking: true })
+  })
+
+  it('makes an OpenRouter id selectable with off from supported_efforts', async () => {
+    const live = await listed({
+      data: [{
+        id: 'vendor/new',
+        supported_parameters: ['reasoning', 'reasoning_effort'],
+        reasoning: { mandatory: false, default_enabled: true, supported_efforts: ['max', 'high', 'low', 'none'], default_effort: 'max' },
+      }],
+    }, 'https://openrouter.ai/api/v1', 'openai-completions')
+    const model = resolve({ provider: 'openrouter', live }).models.find(entry => entry.id === 'vendor/new')!
+    expect(model.reasoning).toBe(true)
+    expect(model.thinkingLevelMap).toMatchObject({ off: 'none', low: 'low', high: 'high', max: 'max', medium: null })
+    expect(levelOf(model)).toEqual(['off', 'low', 'high', 'max'])
+    expect(model.compat).toEqual({ thinkingFormat: 'openrouter' })
+  })
+
+  it('gives zai and minimax ids that list only ids no effort', async () => {
+    const body = { data: [{ id: 'glm-99', object: 'model', created: 1, owned_by: 'z' }] }
+    const zai = await listed(body, 'https://api.z.ai/api/coding/paas/v4', 'openai-completions')
+    const minimax = await listed(body, 'https://api.minimax.io/anthropic', 'anthropic-messages')
+    for (const [provider, live] of [['zai', zai], ['minimax', minimax]] as const) {
+      const model = resolve({ provider, live }).models.find(entry => entry.id === 'glm-99')!
+      expect(model.reasoning).toBe(false)
+      expect(model.thinkingLevelMap).toBeUndefined()
+    }
+  })
+
+  it('gives a listing without reasoning fields no effort', () => {
+    expect(liveModels([{ id: 'plain' }], 'openai-completions')).toEqual([{ id: 'plain', api: 'openai-completions' }])
+  })
+
+  it('drops names that are no level and offers nothing when only off or unknown names remain', () => {
+    expect(liveModels([
+      { id: 'a', efforts: ['none'] },
+      { id: 'b', efforts: ['turbo'] },
+      { id: 'c', efforts: ['turbo', 'medium'] },
+    ], 'openai-completions')).toEqual([
+      { id: 'a', api: 'openai-completions' },
+      { id: 'b', api: 'openai-completions' },
+      { id: 'c', api: 'openai-completions', efforts: { medium: 'medium' } },
+    ])
+  })
+
+  it('adds no compat on a route with no declared thinking compat, nor without stated efforts', () => {
+    const efforts = { high: 'high' }
+    const undeclared = resolve({ provider: 'groq', live: [{ id: 'g-new', api: 'openai-completions', efforts }] })
+      .models.find(entry => entry.id === 'g-new')!
+    expect(undeclared.thinkingLevelMap).toMatchObject({ high: 'high' })
+    expect(undeclared.compat).toBeUndefined()
+    // A declared route borrows nothing for a model whose listing states no effort.
+    const plain = resolve({ provider: 'kimi-coding', live: [{ id: 'k-plain', api: 'anthropic-messages' }] })
+      .models.find(entry => entry.id === 'k-plain')!
+    expect(plain.compat).toBeUndefined()
+  })
+
+  it('applies the declared endpoint compat only for the declared protocol', () => {
+    const efforts = { high: 'high' }
+    expect(resolve({ provider: 'openrouter', live: [{ id: 'v/a', api: 'openai-completions', efforts }] })
+      .models.find(entry => entry.id === 'v/a')!.compat).toEqual({ thinkingFormat: 'openrouter' })
+    expect(resolve({ provider: 'openrouter', live: [{ id: 'v/b', api: 'anthropic-messages', efforts }] })
+      .models.find(entry => entry.id === 'v/b')!.compat).toBeUndefined()
   })
 })
 
