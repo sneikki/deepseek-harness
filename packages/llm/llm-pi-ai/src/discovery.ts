@@ -87,6 +87,15 @@ interface ListingEntry {
   top_provider?: ListingTopProvider | null
   /** OpenRouter lists `reasoning` here for a model that accepts it. */
   supported_parameters?: unknown
+  /** Kimi lists `effort.valid`, OpenRouter `supported_efforts`: the effort names its endpoint accepts. */
+  reasoning?: { effort?: { valid?: unknown } | null; supported_efforts?: unknown } | null
+}
+
+/** The effort names a listing entry states, or `undefined` when it states none. */
+function statedEfforts(entry: ListingEntry | null): readonly string[] | undefined {
+  const stated = entry?.reasoning?.effort?.valid ?? entry?.reasoning?.supported_efforts
+  const names = Array.isArray(stated) ? stated.filter((name): name is string => typeof name === 'string') : []
+  return names.length === 0 ? undefined : names
 }
 
 /** A positive integer field of a listing entry, or `undefined` when absent or unusable. */
@@ -221,9 +230,11 @@ function readListing(body: unknown): ListedModel[] {
       entry?.limit?.output,
       entry?.top_provider?.max_completion_tokens,
     )
+    const efforts = statedEfforts(entry)
     models.push({
       id,
       name,
+      ...efforts === undefined ? {} : { efforts },
       ...contextWindow === undefined ? {} : { contextWindow },
       ...maxTokens === undefined ? {} : { maxTokens },
       ...Array.isArray(entry?.supported_parameters) && entry.supported_parameters.includes('reasoning')
@@ -324,7 +335,7 @@ export async function discoverModels(
     apiKey,
     signal: request.signal,
   })
-  return listed.map(({ reasoning: _reasoning, ...model }) => model)
+  return listed.map(({ reasoning: _reasoning, efforts: _efforts, ...model }) => model)
 }
 
 /** One model-listing request: a supported protocol, an already usable key, and the route's headers. */
@@ -342,6 +353,8 @@ export interface ListingRequest {
 export interface ListedModel extends LlmDiscoveredModel {
   /** `true` only when the listing states the model reasons (OpenRouter `supported_parameters`). */
   reasoning?: true
+  /** The effort names the listing states, verbatim; they are the wire values. */
+  efforts?: readonly string[]
 }
 
 /**

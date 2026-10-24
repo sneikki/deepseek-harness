@@ -9,8 +9,8 @@
  */
 
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
-import { catalogModels, catalogProvider, sharedCatalogApi } from './catalog.ts'
-import type { LiveModel } from './catalog.ts'
+import { catalogModels, catalogProvider, sharedCatalogApi, THINKING_LEVELS } from './catalog.ts'
+import type { LiveModel, PiAiReasoningEfforts } from './catalog.ts'
 import { fetchListing, isListableProtocol } from './discovery.ts'
 import type { ListedModel } from './discovery.ts'
 
@@ -76,15 +76,36 @@ export function liveTarget(provider: string, source: RawRoute | undefined): Live
  * @returns one row per listed model, without fallbacks filled in.
  */
 export function liveModels(listed: readonly ListedModel[], api: string): LiveModel[] {
-  return listed.map(({ id, name, contextWindow, maxTokens, reasoning }) => ({
-    id,
-    api,
-    // The discovery parser falls back to the id for a missing name; that is no statement.
-    ...name === undefined || name === id ? {} : { name },
-    ...contextWindow === undefined ? {} : { contextWindow },
-    ...maxTokens === undefined ? {} : { maxTokens },
-    ...reasoning === undefined ? {} : { reasoning },
-  }))
+  return listed.map(({ id, name, contextWindow, maxTokens, reasoning, efforts }) => {
+    const levels = statedLevels(efforts)
+    return {
+      id,
+      api,
+      // The discovery parser falls back to the id for a missing name; that is no statement.
+      ...name === undefined || name === id ? {} : { name },
+      ...contextWindow === undefined ? {} : { contextWindow },
+      ...maxTokens === undefined ? {} : { maxTokens },
+      ...reasoning === undefined ? {} : { reasoning },
+      ...levels === undefined ? {} : { efforts: levels },
+    }
+  })
+}
+
+/**
+ * The selectable levels a listing's effort names state. A stated name is the
+ * wire value and names the pi-ai level of the same spelling; `none` is the
+ * wire value of `off`. A name that is no pi-ai level cannot be selected and is
+ * dropped. Nothing is inferred beyond the names.
+ * @param names - effort names the listing stated.
+ * @returns the levels with their wire values, or `undefined` when none beyond `off` is selectable.
+ */
+function statedLevels(names: readonly string[] | undefined): PiAiReasoningEfforts | undefined {
+  const levels: Record<string, string> = {}
+  for (const name of names ?? []) {
+    if (name === 'none') levels.off = name
+    else if ((THINKING_LEVELS as readonly string[]).includes(name)) levels[name] = name
+  }
+  return Object.keys(levels).some(level => level !== 'off') ? levels : undefined
 }
 
 /** What the live catalog needs from the plugin. */

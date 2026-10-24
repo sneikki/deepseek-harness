@@ -661,6 +661,11 @@ export interface LiveModel {
   maxTokens?: number | undefined
   /** The listing states the model reasons; says nothing about level spellings. */
   reasoning?: true | undefined
+  /**
+   * Levels the listing itself states, with the wire values it named. Makes the
+   * model selectable per level; never inferred from an id or a sibling.
+   */
+  efforts?: PiAiReasoningEfforts | undefined
 }
 
 /** The route-level facts model materialization reads. */
@@ -815,6 +820,7 @@ type ModelCompat = OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMe
  * @param route - the route-level switches, when any.
  * @param base - the installed catalog entry of the same id, when one exists.
  * @param api - the model's resolved wire protocol.
+ * @param liveCompat - for a live-listed model with stated efforts, the route's declared thinking compat.
  * @returns a `compat` field to spread into the model, or nothing.
  */
 function resolveModelCompat(
@@ -823,6 +829,7 @@ function resolveModelCompat(
   route: PiAiCompatProfile | undefined,
   base: Model<Api> | undefined,
   api: string,
+  liveCompat?: ModelCompat,
 ): { compat: ModelCompat } | Record<string, never> {
   const gate = compatGate(api)
   const configured: Record<string, unknown> = {}
@@ -839,15 +846,35 @@ function resolveModelCompat(
     }
     configured[field] = value
   }
-  if (Object.keys(configured).length === 0) return {}
+  if (Object.keys(configured).length === 0) return liveCompat === undefined ? {} : { compat: liveCompat }
   // The installed entry's compat matches the entry's OWN api — a route-level
   // `api` repoint (an anthropic catalog served through an OpenAI-compatible
   // gateway) leaves `base.compat` in the other protocol's shape, so it is
   // inherited only while the resolved api still is the entry's. A repointed
   // model starts from pi-ai's baseURL-derived detection instead, which is
   // what a protocol change means for every other compat field too.
-  const inherited = base?.api === api ? base.compat : undefined
+  const inherited = base?.api === api ? base.compat : liveCompat
   return { compat: { ...inherited, ...configured } as ModelCompat }
+}
+
+/**
+ * The compat an endpoint's thinking wire contract needs, declared per route
+ * and protocol: what pi-ai must know to dispatch the levels a live listing
+ * states. These are facts about the endpoint, not read off installed siblings.
+ * A route without an entry here gets listed efforts and no compat. Only
+ * thinking fields belong here (no replay, caching or strictness switches).
+ * - kimi-coding / anthropic-messages: `forceAdaptiveThinking` sends effort as
+ *   adaptive thinking, `allowEmptySignature` accepts thinking blocks replayed
+ *   without a signature; both are what the k3 entries carry.
+ * - openrouter / openai-completions: `thinkingFormat: 'openrouter'` is the
+ *   field pi-ai stamps on every installed openrouter completions entry and the
+ *   one that spells reasoning as OpenRouter's `reasoning` object; the other
+ *   fields stamped there (`supportsStrictMode`, `sendSessionAffinityHeaders`)
+ *   do not affect thinking.
+ */
+const LIVE_THINKING_COMPAT: Readonly<Record<string, Readonly<Record<string, ModelCompat>>>> = {
+  'kimi-coding': { 'anthropic-messages': { allowEmptySignature: true, forceAdaptiveThinking: true } },
+  'openrouter': { 'openai-completions': { thinkingFormat: 'openrouter' } },
 }
 
 /** One route's materialized catalog, plus the request caps its profile chose. */
@@ -965,6 +992,7 @@ export function resolveRouteModels(
     // is a guess by construction, which is why it is a configurable route field
     // rather than a constant buried here.
     const live = liveById.get(entry.id)
+    const liveEfforts = entry.reasoningEfforts === undefined ? live?.efforts : undefined
     const contextWindow = entry.contextWindow ?? base?.contextWindow ?? live?.contextWindow
       ?? request.defaultContextWindow
     if (!Number.isInteger(contextWindow) || contextWindow <= 0) {
@@ -993,12 +1021,22 @@ export function resolveRouteModels(
       cost: base?.cost ?? NO_COST,
       contextWindow,
       maxTokens,
-      // A bare flag, no level map: the listing says the model reasons, not how
-      // the wire spells its levels, so the map stays pi-ai's own default.
-      ...live?.reasoning === true && entry.reasoningEfforts === undefined
-        ? { reasoning: true }
-        : resolveModelReasoning(provider, entry, base),
-      ...resolveModelCompat(provider, entry, request.compat, base, api),
+      // Levels only when the listing named them (their wire values are what it
+      // stated). Otherwise a bare flag, no level map: the listing says the model
+      // reasons, not how the wire spells its levels.
+      ...liveEfforts !== undefined
+        ? resolveModelReasoning(provider, { ...entry, reasoningEfforts: liveEfforts }, base)
+        : live?.reasoning === true && entry.reasoningEfforts === undefined
+          ? { reasoning: true }
+          : resolveModelReasoning(provider, entry, base),
+      ...resolveModelCompat(
+        provider,
+        entry,
+        request.compat,
+        base,
+        api,
+        liveEfforts === undefined ? undefined : LIVE_THINKING_COMPAT[provider]?.[api],
+      ),
     }
   }
   const models: Model<Api>[] = []
