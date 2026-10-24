@@ -1,8 +1,7 @@
 /** Standard ACP session configuration over one Agent's model selection. */
 
-import type { Context } from '@deepseek-ai/cordis'
 import type { SessionConfigOption, SessionConfigValueId } from '@agentclientprotocol/sdk'
-import { installModelSelection, type ModelSelection, type ModelSelectionRef } from '@deepseek-ai/dsh-agent'
+import { type Model, type ModelSelection } from '@deepseek-ai/dsh-agent'
 import { ReasoningEffortId, type LlmCallConfig, type LlmRuntime } from '@deepseek-ai/dsh-llm'
 
 const MODEL_CONFIG_ID = 'model'
@@ -28,65 +27,20 @@ export class AcpModelConfigError extends Error {
   }
 }
 
-/** Project and mutate one Agent's provider/model/reasoning selection through ACP config options. */
+/**
+ * Project and mutate one Agent's provider/model/reasoning selection through ACP
+ * config options. The Session's recorded model selection is the only state; a
+ * change applies from the Agent's next model step.
+ */
 export class AcpModelControl {
-  /** Scoped selection reference consumed by Agent request assembly. */
-  readonly selection: ModelSelectionRef
   private tail = Promise.resolve()
-  // Settles after the latest received set(); unlike `tail`, option reads do not extend it.
-  private changes = Promise.resolve()
-  private selected: ModelSelection | undefined
-  private turnSelection: { turn: number; selection: ModelSelection } | undefined
+  private lastSet = Promise.resolve()
   private hasResolvedState = false
 
   constructor(
     private readonly llm: LlmRuntime,
-    initial: ModelSelection | undefined,
-  ) {
-    this.selected = initial
-    const getCurrent = (): ModelSelection | undefined => this.turnSelection?.selection ?? this.selected
-    const setCurrent = (value: ModelSelection | undefined): void => { this.selected = value }
-    this.selection = {
-      get current() { return getCurrent() },
-      set current(value) { setCurrent(value) },
-      assembled: undefined,
-    }
-  }
-
-  /**
-   * Install request/prompt consistency listeners in the unpublished Agent scope.
-   * @param agentCtx - Agent scope that consumes this selection.
-   */
-  install(agentCtx: Context): void {
-    installModelSelection(agentCtx, this.selection)
-  }
-
-  /**
-   * Snapshot the selection attached to the next accepted ACP prompt, once every
-   * config change received before it has settled.
-   * @returns a detached future selection, or undefined when listeners supply the route.
-   */
-  async snapshot(): Promise<ModelSelection | undefined> {
-    await this.changes
-    return this.selected === undefined ? undefined : { ...this.selected }
-  }
-
-  /**
-   * Pin one admitted ACP message's selection for every step in its turn.
-   * @param turn - admitted Agent turn.
-   * @param selection - exact prompt-admission selection.
-   */
-  pinTurn(turn: number, selection: ModelSelection): void {
-    this.turnSelection = { turn, selection: { ...selection } }
-  }
-
-  /**
-   * Release only the exact completed turn's routing override.
-   * @param turn - completed Agent turn.
-   */
-  releaseTurn(turn: number): void {
-    if (this.turnSelection?.turn === turn) this.turnSelection = undefined
-  }
+    private readonly model: Model,
+  ) {}
 
   /**
    * Return the complete standard config-option state after prior mutations settle.
@@ -107,14 +61,14 @@ export class AcpModelControl {
   set(configId: string, value: unknown, signal?: AbortSignal): Promise<SessionConfigOption[]> {
     const result = this.serialize(async () => {
       if (typeof value !== 'string') throw new AcpModelConfigError(`${configId} requires a select value`)
-      const current = this.selected
+      const current = this.model.current()
       if (current === undefined) throw new AcpModelConfigError('this session has no model selection')
       if (configId === MODEL_CONFIG_ID) {
         const state = await this.state(signal)
         const selected = state.choices.get(value)
         if (selected === undefined) throw new AcpModelConfigError(`unknown model option: ${value}`)
         await this.resolveSelection(selected, signal)
-        this.selected = selected
+        this.model.select(selected)
       } else if (configId === REASONING_CONFIG_ID) {
         const info = await this.llm.resolveModelInfo(current.provider, current.model, signal)
         const providerDefault = value === PROVIDER_DEFAULT_REASONING_VALUE
@@ -125,18 +79,26 @@ export class AcpModelControl {
         ) {
           throw new AcpModelConfigError(`unknown reasoning effort for ${current.provider}/${current.model}: ${value}`)
         }
-        this.selected = await this.resolveSelection({
+        this.model.select(await this.resolveSelection({
           provider: current.provider,
           model: current.model,
           ...providerDefault ? {} : { reasoningEffort: ReasoningEffortId(value) },
-        }, signal)
+        }, signal))
       } else {
         throw new AcpModelConfigError(`unknown session config option: ${configId}`)
       }
       return (await this.state(signal)).options
     })
-    this.changes = result.then(() => undefined, () => undefined)
+    this.lastSet = result.then(() => undefined, () => undefined)
     return result
+  }
+
+  /**
+   * Settle once every `set` received so far has applied or failed. A prompt sent right
+   * after a model change awaits this so it routes to the changed model, not the old one.
+   */
+  setsSettled(): Promise<void> {
+    return this.lastSet
   }
 
   /** Keep concurrent client mutations in receive order without wedging after rejection. */
@@ -148,7 +110,7 @@ export class AcpModelControl {
 
   /** Build detached model choices and the dependent reasoning option. */
   private async state(signal?: AbortSignal): Promise<ConfigState> {
-    const selected = this.selected
+    const selected = this.model.current()
     if (selected === undefined) return { choices: new Map(), options: [] }
     let resolved: ModelSelection
     let routeAvailable = true

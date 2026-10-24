@@ -86,6 +86,12 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--amv-accent) 12%, transparent);
 }
 
+@media (pointer: coarse) {
+  .card {
+    font-size: max(16px, var(--dsh-content-font-size, 14px));
+  }
+}
+
 /* No-workspace trigger state: an inset 1px dashed outline marks the card as a
    workspace picker rather than a live composer. Keeping the complete stroke
    inside the rounded box prevents clipped corner pixels from reading heavier. */
@@ -100,8 +106,14 @@
   pointer-events: none;
 }
 
-.cardWorkspaceTrigger:hover {
-  border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border));
+@media (hover: hover) {
+  .cardWorkspaceTrigger:hover {
+    border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border));
+  }
+
+  .cardWorkspaceTrigger:hover::after {
+    color: var(--dsw-alias-state-business-primary);
+  }
 }
 
 .accessory {
@@ -326,9 +338,11 @@
   cursor: pointer;
 }
 
-.add:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
-  color: var(--amv-text);
+@media (hover: hover) {
+  .add:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
+    color: var(--amv-text);
+  }
 }
 
 .add:disabled {
@@ -360,8 +374,10 @@
   appearance: none;
 }
 
-.select:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
+@media (hover: hover) {
+  .select:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--amv-accent) 45%, var(--amv-border-strong));
+  }
 }
 
 .select:disabled {
@@ -392,8 +408,10 @@
   transform: translateY(-2px);
 }
 
-.primary:hover:not(:disabled) {
-  background: var(--amv-accent-hover);
+@media (hover: hover) {
+  .primary:hover:not(:disabled) {
+    background: var(--amv-accent-hover);
+  }
 }
 
 .primary:disabled {

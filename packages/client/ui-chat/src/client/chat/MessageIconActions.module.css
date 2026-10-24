@@ -87,9 +87,11 @@
   height: calc(17px + var(--dsh-content-font-delta, 0px));
 }
 
-.action:hover {
-  background: var(--amv-raised);
-  color: var(--amv-text);
+@media (hover: hover) {
+  .action:hover {
+    background: var(--amv-raised);
+    color: var(--amv-text);
+  }
 }
 
 /* Unavailable stays focusable and hoverable so Tooltip can explain why. */
@@ -98,9 +100,11 @@
   opacity: 0.4;
 }
 
-.action[data-unavailable]:hover {
-  background: transparent;
-  color: var(--amv-muted);
+@media (hover: hover) {
+  .action[data-unavailable]:hover {
+    background: transparent;
+    color: var(--amv-muted);
+  }
 }
 
 .visuallyHidden {

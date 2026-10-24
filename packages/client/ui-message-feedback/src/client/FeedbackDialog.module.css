@@ -29,10 +29,12 @@
   transition: background-color var(--amv-dur-1) var(--amv-ease), border-color var(--amv-dur-1) var(--amv-ease), color var(--amv-dur-1) var(--amv-ease);
 }
 
-.chip:hover:not(:disabled) {
-  border-color: var(--amv-faint);
-  background: var(--amv-raised);
-  color: var(--amv-text);
+@media (hover: hover) {
+  .chip:hover:not(:disabled) {
+    border-color: var(--amv-faint);
+    background: var(--amv-raised);
+    color: var(--amv-text);
+  }
 }
 
 .chip:disabled {
@@ -46,11 +48,18 @@
 }
 
 /* Selected category: teal fill, dark text. */
-.chipActive,
-.chipActive:hover:not(:disabled) {
+.chipActive {
   border-color: var(--amv-accent);
   background: var(--amv-accent);
   color: var(--amv-bg);
+}
+
+@media (hover: hover) {
+  .chipActive:hover:not(:disabled) {
+    border-color: var(--amv-accent);
+    background: var(--amv-accent);
+    color: var(--amv-bg);
+  }
 }
 
 /* The field starts at three short lines, grows with its text where supported,

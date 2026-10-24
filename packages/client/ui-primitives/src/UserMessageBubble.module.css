@@ -1,0 +1,13 @@
+.bubble {
+  max-width: 100%;
+  background: var(--amv-surface);
+  border: 1px solid var(--amv-border);
+  border-radius: 14px;
+  animation: amv-fade-up var(--amv-dur-2) var(--amv-ease) both;
+  padding: 10px 16px;
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: calc(22px + var(--dsh-content-font-delta, 0px));
+  color: var(--amv-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

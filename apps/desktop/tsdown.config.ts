@@ -54,9 +54,9 @@ export default defineConfig([
       await build({
         configFile: false,
         plugins: [{
-          name: 'desktop-brand-font',
+          name: 'desktop-shell-assets',
           async generateBundle() {
-            for (const name of ['brand-font.css', 'montserrat-regular.woff2', 'montserrat-light.woff2', 'montserrat-medium.woff2', 'Montserrat-OFL.txt', 'geist-variable.woff2', 'geist-mono-variable.woff2', 'Geist-OFL.txt']) {
+            for (const name of ['design-platform.css', 'brand-font.css', 'montserrat-regular.woff2', 'montserrat-light.woff2', 'montserrat-medium.woff2', 'Montserrat-OFL.txt', 'geist-variable.woff2', 'geist-mono-variable.woff2', 'Geist-OFL.txt']) {
               this.emitFile({
                 type: 'asset',
                 fileName: name,

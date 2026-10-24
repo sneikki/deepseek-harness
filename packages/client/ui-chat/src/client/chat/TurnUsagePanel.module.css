@@ -47,10 +47,16 @@
   flex: none;
 }
 
-.trigger:hover,
 .trigger[aria-expanded='true'] {
   background: var(--amv-raised);
   color: var(--amv-muted);
+}
+
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+    color: var(--dsw-alias-label-tertiary);
+  }
 }
 
 /* Narrow viewport: the pills collapse to bare icons with the sibling
