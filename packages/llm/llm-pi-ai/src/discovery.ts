@@ -347,10 +347,10 @@ export interface ListedModel extends LlmDiscoveredModel {
 /**
  * Whether {@link fetchListing} can read this protocol's model listing.
  * @param api - pi-ai protocol name.
- * @returns `true` for the OpenAI and Anthropic Messages protocols.
+ * @returns `true` for the OpenAI, Anthropic Messages and Google protocols.
  */
 export function isListableProtocol(api: string): boolean {
-  return LISTABLE_PROTOCOLS.has(api)
+  return LISTABLE_PROTOCOLS.has(api) || api === GOOGLE_API
 }
 
 /**
@@ -360,8 +360,68 @@ export function isListableProtocol(api: string): boolean {
  * @throws LlmError when the endpoint refuses or fails the request or the reply is not a model listing.
  */
 export async function fetchListing(request: ListingRequest): Promise<ListedModel[]> {
+  if (request.api === GOOGLE_API) return fetchGoogleListing(request)
+  return readListing(await getJson(listingUrl(request.baseURL, request.api), request))
+}
+
+/** Pi-ai's Google Generative AI protocol; listed only by the live catalog. */
+const GOOGLE_API = 'google-generative-ai'
+
+/** Page size Google accepts at most, and the page count after which a looping `nextPageToken` is abandoned. */
+const GOOGLE_PAGE_SIZE = 1000
+const GOOGLE_MAX_PAGES = 20
+
+/** One entry of Google's `models` array. */
+interface GoogleEntry {
+  name?: unknown
+  displayName?: unknown
+  inputTokenLimit?: unknown
+  outputTokenLimit?: unknown
+  supportedGenerationMethods?: unknown
+}
+
+/**
+ * Google's `GET {base}/models`: the key rides the `x-goog-api-key` header
+ * (never a `?key=` query, which would leak into URLs and logs), pages follow
+ * `nextPageToken`, and only models that support `generateContent` are chat
+ * candidates. Ids drop the `models/` prefix requests do not use.
+ */
+async function fetchGoogleListing(request: ListingRequest): Promise<ListedModel[]> {
+  const base = `${request.baseURL.replace(/\/+$/, '')}/models`
+  const models: ListedModel[] = []
+  let pageToken: string | undefined
+  for (let page = 0; page < GOOGLE_MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({ pageSize: String(GOOGLE_PAGE_SIZE) })
+    if (pageToken !== undefined) query.set('pageToken', pageToken)
+    const body = await getJson(`${base}?${query.toString()}`, request) as
+      { models?: unknown; nextPageToken?: unknown } | null
+    if (!Array.isArray(body?.models)) {
+      throw new LlmError('the endpoint\'s model listing has no "models" array', 'DISCOVERY_FAILED')
+    }
+    for (const raw of body.models as (GoogleEntry | null)[]) {
+      const methods = raw?.supportedGenerationMethods
+      if (!Array.isArray(methods) || !methods.includes('generateContent')) continue
+      const id = label(raw?.name)?.replace(/^models\//, '')
+      if (id === undefined || id.length === 0) continue
+      const name = label(raw?.displayName)
+      const contextWindow = capacity(raw?.inputTokenLimit)
+      const maxTokens = capacity(raw?.outputTokenLimit)
+      models.push({
+        id,
+        ...name === undefined ? {} : { name },
+        ...contextWindow === undefined ? {} : { contextWindow },
+        ...maxTokens === undefined ? {} : { maxTokens },
+      })
+    }
+    pageToken = label(body.nextPageToken)
+    if (pageToken === undefined) break
+  }
+  return models
+}
+
+/** GET one URL with the protocol's authentication, bounded and parsed as JSON. */
+async function getJson(url: string, request: ListingRequest): Promise<unknown> {
   const { api, apiKey } = request
-  const url = listingUrl(request.baseURL, api)
   let response: Response
   try {
     const headers = new Headers(request.headers === undefined ? undefined : Object.entries(request.headers))
@@ -369,6 +429,8 @@ export async function fetchListing(request: ListingRequest): Promise<ListedModel
     if (api === 'anthropic-messages') {
       headers.set('anthropic-version', ANTHROPIC_VERSION)
       if (apiKey !== undefined) headers.set('x-api-key', apiKey)
+    } else if (api === GOOGLE_API) {
+      if (apiKey !== undefined) headers.set('x-goog-api-key', apiKey)
     } else if (apiKey !== undefined) {
       headers.set('authorization', `Bearer ${apiKey}`)
     }
@@ -408,5 +470,5 @@ export async function fetchListing(request: ListingRequest): Promise<ListedModel
   } catch (error: unknown) {
     throw new LlmError(`${url} did not answer with JSON`, 'DISCOVERY_FAILED', { cause: error })
   }
-  return readListing(body)
+  return body
 }

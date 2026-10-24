@@ -102,7 +102,7 @@ describe('which routes list live', () => {
   it.each([
     ['no credential', 'zai', {}],
     ['an explicit models list', 'zai', { apiKeyEnv: 'K', models: [{ id: 'x' }] }],
-    ['a protocol with no readable listing', 'google', { apiKeyEnv: 'K' }],
+    ['a protocol with no readable listing', 'mistral', { apiKeyEnv: 'K' }],
     ['a mixed-protocol catalog', 'openrouter', { apiKeyEnv: 'K' }],
     ['a route the catalog does not ship', 'acme', { apiKeyEnv: 'K', api: 'openai-completions', baseURL: 'https://a.example/v1' }],
   ] as const)('does not list a route with %s', (_label, provider, source) => {
@@ -199,7 +199,7 @@ describe('live listing in a mounted plugin', () => {
     const ctx = await mount({
       zai: { apiKeyEnv: 'LIVE_KEY', models: [{ id: [...catalogModels('zai').keys()][0]! }] },
       'zai-coding-cn': { apiKeyEnv: 'LIVE_ABSENT' },
-      google: { apiKeyEnv: 'LIVE_KEY' },
+      mistral: { apiKeyEnv: 'LIVE_KEY' },
       openrouter: { apiKeyEnv: 'LIVE_KEY' },
     })
     await new Promise(resolve => setTimeout(resolve, 20))

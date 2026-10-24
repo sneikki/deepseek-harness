@@ -254,7 +254,7 @@ pi-ai 事件变成 harness 的推理、文本、工具调用、用量与 finish 
 - **`headers` 可以携带 redactor 永远看不到的凭据**——profile 解析会拒绝 Fetch 无法表示的名称与值，但该字典仍是纯字符串；以 `apiKeyEnv` 引用存储凭据。
 - **发现操作不更改已配置模型**——需显式将发现结果采纳到路由配置中。
 - **Anthropic 模型发现最多读取 1,000 个模型**——请求使用 API 的最大页大小，但不会遍历 `has_more`；第一页之外的条目需要手工添加。
-- **实时列表只覆盖部分路由**——路由需要 `apiKeyEnv`、没有 `models` 列表，并使用 OpenAI 兼容或 Anthropic Messages 协议。Google、Mistral、Bedrock 及其他原生协议不会被列出；已安装目录混用协议的路由（OpenRouter）在设置 `api` 之前不会新增 id，因为目录外的 id 没有可用于服务的协议。列表不会跨重启保留，实时新增的模型也没有推理档位写法或成本。
+- **实时列表只覆盖部分路由**——路由需要 `apiKeyEnv`、没有 `models` 列表，并使用 OpenAI 兼容、Anthropic Messages 或 Google Generative AI 协议。Google 保留支持 `generateContent` 的模型，其中也包含图像生成模型；Mistral、Bedrock 及其他原生协议不会被列出；已安装目录混用协议的路由（OpenRouter）在设置 `api` 之前不会新增 id，因为目录外的 id 没有可用于服务的协议。列表不会跨重启保留，实时新增的模型也没有推理档位写法或成本。
 - **目录外模型需要明确的协议**——目录路由保留每个模型的协议，包括 `azure` 下的两种 Azure API。混合协议目录中不存在的模型需要显式设置路由级 `api`；该设置覆盖路由上的所有模型，且必须属于受支持的自定义协议。Azure 部署名称应通过 `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` 设置，模型 ID 保持为目录中的 ID。
 - **模态声明不受校验**——声明 `image` 而其网关不支持的模型会在提示词准入后被提供方拒绝。持久图片仍留在历史中，同一误声明模型可能再次失败；切换到纯文本模型仍然可行，因为共享 LLM 运行时会针对该请求把图片引用投影为稳定文本。
 - **未认证路由取决于其协议**——不点名凭据的路由解析为已配置但无密钥，但 pi-ai 的 OpenAI 兼容实现仍要求 API 密钥或 `Authorization` 标头，因此无密钥本地服务器需要由 `apiKeyEnv` 引用或 `headers` 中的 `Authorization` 条目提供的占位凭据。
