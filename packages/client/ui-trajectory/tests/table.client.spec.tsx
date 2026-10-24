@@ -1735,8 +1735,9 @@ describe('ledger boxes: clipping, search, subagents', () => {
     render(<TrajectoryTable turns={turns} agentDurations={new Map([[1, '5 min 0 s work · 3 h 1 min']])} {...FOLD_PROPS} />)
 
     const head = rowOf(1)
-    // The pill is the agent's outcome, not the spawn call's.
-    expect(within(head).getByText('Agent finished')).toBeTruthy()
+    // The spawn card says the agent started; its outcome belongs to the end card.
+    expect(within(head).getByText('Started')).toBeTruthy()
+    expect(within(head).queryByText(/finished/i)).toBeNull()
     expect(within(head).getByText('5 min 0 s work · 3 h 1 min')).toBeTruthy()
     expect(within(head).getByText('1 report')).toBeTruthy()
     expect(within(head).getByText('2c619f73')).toBeTruthy()

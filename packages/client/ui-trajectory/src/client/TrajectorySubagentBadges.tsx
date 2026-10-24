@@ -6,13 +6,6 @@ import type { TrajectoryCellProps } from './trajectory-record.ts'
 import type { TrajectorySubagentLifecycle, TrajectorySubagentStatus } from './trajectory-subagent.ts'
 import css from './TrajectoryTable.module.css'
 
-const STATUS_KEY = {
-  running: 'card.agentRunning',
-  finished: 'card.agentFinished',
-  failed: 'card.agentFailed',
-  interrupted: 'card.agentInterrupted',
-} as const satisfies Record<TrajectorySubagentStatus, string>
-
 const SETTLED_KEY = {
   running: 'card.subagentReportFrom',
   finished: 'card.subagentFinished',
@@ -39,7 +32,8 @@ export function subagentNoticeText(
 
 /**
  * Header badges of a box that belongs to a subagent lifecycle: the start call
- * shows status, duration and report count; every other record shows the agent id.
+ * shows "Started" (the outcome belongs to the end card), duration and report count;
+ * every other record shows the agent id.
  * @param cell - Record carrying `subagent` info.
  * @param lifecycle - The agent's lifecycle when `cell` is its start call.
  * @param t - Trajectory locale translator.
@@ -58,9 +52,9 @@ export function subagentBadges(
   if (subagent.phase !== 'start' || lifecycle === undefined) return chip
   return (
     <>
-      <span className={css.subagentPill} data-status={lifecycle.status}>
+      <span className={css.subagentPill}>
         <span className={css.subagentDot} aria-hidden="true" />
-        {t(STATUS_KEY[lifecycle.status])}
+        {t('card.agentStarted')}
       </span>
       {duration != null && <span className={css.subagentChip}>{duration}</span>}
       {lifecycle.reportCount > 0 && (

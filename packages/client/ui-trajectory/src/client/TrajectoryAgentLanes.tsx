@@ -67,6 +67,8 @@ export interface TrajectoryAgentLanesProps {
   t: TrajectoryTranslate
   /** Active lanes on this row, from `agentLaneCells`. */
   cells: readonly AgentLaneCell[]
+  /** Lane of the agent the selected record belongs to: drawn at full strength. */
+  selectedLaneId?: string | null
   onHover: (rowId: string | null) => void
   onSelect: (index: number) => void
 }
@@ -75,7 +77,7 @@ const endMarker = (lane: AgentLane): 'done' | 'failed' => lane.status === 'done'
 
 /** Lanes of one row; renders nothing for a row no lane crosses. */
 export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
-  t, cells, onHover, onSelect,
+  t, cells, selectedLaneId = null, onHover, onSelect,
 }: TrajectoryAgentLanesProps) {
   if (cells.length === 0) return null
   // Outer slots first: inner lanes paint over the connectors that cross them.
@@ -98,6 +100,7 @@ export const TrajectoryAgentLanes = memo(function TrajectoryAgentLanes({
               data-state={state}
               data-status={lane.status}
               data-idle={idle}
+              data-lane-selected={lane.id === selectedLaneId || undefined}
               data-lane-row={lane.rowId}
               data-lane-id={lane.id}
               style={{

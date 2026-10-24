@@ -31,6 +31,13 @@ tr[data-collapsed-summary] .lanes {
   --draw: var(--lane);
 }
 
+/* The selected agent's lane: full colour and a glow, so the whole run reads as one thing. */
+.lane[data-lane-selected] {
+  --draw: var(--lane);
+
+  filter: drop-shadow(0 0 3px var(--lane));
+}
+
 .line {
   position: absolute;
   left: -2.5px;
@@ -40,9 +47,11 @@ tr[data-collapsed-summary] .lanes {
   transition: background-color var(--amv-dur-1) var(--amv-ease);
 }
 
-/* Idle gap between the agent's turns: the straight segments turn into dashes (bends and markers stay). */
+/* Idle (between turns or waiting): the straight segments turn into a thin, sparse dash (bends and markers stay). */
 .lane[data-idle] .line {
-  background: repeating-linear-gradient(to bottom, var(--draw) 0 5px, transparent 5px 9px);
+  left: -1px;
+  width: 2px;
+  background: repeating-linear-gradient(to bottom, var(--lane) 0 8px, transparent 8px 16px);
 }
 
 /* A wider hit area than the 5 px stroke. */

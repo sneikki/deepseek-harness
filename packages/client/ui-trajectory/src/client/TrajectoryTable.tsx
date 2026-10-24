@@ -2405,6 +2405,15 @@ export function TrajectoryTable({
   useEffect(() => {
     onSelectedIndexChange?.(selectedIndex)
   }, [onSelectedIndexChange, selectedIndex])
+  // Selecting any record of an agent (spawn, message, report, end) marks the whole agent: its rows and its lane.
+  const selectedAgent = useMemo(() => {
+    if (selectedIndex === null) return null
+    const lane = laneModel.lanes.find(candidate => candidate.startIndex === selectedIndex)
+      ?? laneModel.lanes.find(candidate => candidate.endIndex === selectedIndex
+        || candidate.events.some(event => event.index === selectedIndex))
+    if (lane === undefined) return null
+    return { id: lane.id, indexes: new Set([lane.startIndex, lane.endIndex, ...lane.events.map(event => event.index)]) }
+  }, [laneModel, selectedIndex])
   const requestGroups = useMemo(() => new Set(
     (sessionRequestNumbers ?? []).map(request => requestKey(request.turn, request.group)),
   ), [sessionRequestNumbers])
@@ -3067,6 +3076,8 @@ export function TrajectoryTable({
                       data-turn-end={record.turnEnd || undefined}
                       data-collapsed-summary={record.collapsedSummaryKind}
                       data-selected={!isCollapsedSummary && rowSelected || undefined}
+                      data-agent-selected={!isCollapsedSummary && !rowSelected
+                        && selectedAgent?.indexes.has(record.cell.index) === true || undefined}
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
                         : timelineFocusIndexes.has((ownerRecord(recordById, record) ?? record).cell.index) ? 'inside' : 'outside'}
@@ -3161,6 +3172,7 @@ export function TrajectoryTable({
                           <TrajectoryAgentLanes
                             t={t}
                             cells={laneCells}
+                            selectedLaneId={selectedAgent?.id ?? null}
                             onHover={onAgentLaneHover ?? NOOP_LANE_HOVER}
                             onSelect={selectRecord}
                           />

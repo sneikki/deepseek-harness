@@ -604,6 +604,12 @@
   box-shadow: inset 0 0 0 1px var(--amv-accent), inset 0 0 0 4px var(--amv-accent-tint);
 }
 
+/* The other records of the selected agent (spawn, messages, reports, end): the ring without the tint. */
+.table tbody tr[data-agent-selected='true'] .card {
+  border-color: var(--amv-accent);
+  box-shadow: inset 0 0 0 1px var(--amv-accent);
+}
+
 .table tbody tr[data-error='true'][data-selected='true'] .card {
   border-color: var(--amv-danger);
   box-shadow:
@@ -799,7 +805,7 @@
 }
 
 .subagentPill {
-  --subagent-tone: var(--amv-success);
+  --subagent-tone: var(--amv-accent-text);
 
   display: inline-flex;
   align-items: center;
@@ -815,37 +821,11 @@
   white-space: nowrap;
 }
 
-.subagentPill[data-status='running'] {
-  --subagent-tone: var(--amv-accent-text);
-}
-
-.subagentPill[data-status='failed'] {
-  --subagent-tone: var(--amv-danger);
-}
-
-.subagentPill[data-status='interrupted'] {
-  --subagent-tone: var(--amv-warning);
-}
-
 .subagentDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentcolor;
-}
-
-.subagentPill[data-status='running'] .subagentDot {
-  animation: subagent-dot-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes subagent-dot-pulse {
-  50% { opacity: 0.35; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .subagentPill[data-status='running'] .subagentDot {
-    animation: none;
-  }
 }
 
 .subagentChip {
