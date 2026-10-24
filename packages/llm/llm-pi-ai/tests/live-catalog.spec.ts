@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { catalogModels, resolveRouteModels } from '../src/catalog.ts'
@@ -209,6 +210,35 @@ describe('live listing in a mounted plugin', () => {
     await vi.advanceTimersByTimeAsync(HOUR)
     expect(calls).toHaveLength(5)
     expect(announced).toBe(0)
+    await ctx.fiber.dispose()
+  })
+
+  it('lists once the credentials service arrives after start, and again when a stored key changes', async () => {
+    Reflect.deleteProperty(process.env, 'LIVE_STORED')
+    const { script, calls } = listingFetch()
+    const ctx = await mount({ zai: { apiKeyEnv: 'LIVE_STORED' } })
+    // Start: no service and no environment key, so nothing is asked.
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(calls).toHaveLength(0)
+
+    // The key lives only in the store, which comes up after the plugin.
+    ctx.provide('credentials')
+    ctx.set('credentials', {
+      resolve: (ref: string) => Promise.resolve(ref === 'LIVE_STORED' ? { value: 'stored-key', source: 'file' } : undefined),
+    } as never)
+    await vi.waitFor(async () => {
+      expect((await ctx.llm.listModels('zai')).map(model => model.id)).toContain('glm-99')
+    })
+    expect(calls.at(-1)!.headers.get('authorization')).toBe('Bearer stored-key')
+
+    // A key stored through the UI lists again without waiting for the hour.
+    script.ids = ['glm-99', 'glm-100']
+    const before = calls.length
+    ctx.emit('credentials/reference-updated', credentialRef('LIVE_STORED'))
+    await vi.waitFor(async () => {
+      expect((await ctx.llm.listModels('zai')).map(model => model.id)).toContain('glm-100')
+    })
+    expect(calls.length).toBeGreaterThan(before)
     await ctx.fiber.dispose()
   })
 

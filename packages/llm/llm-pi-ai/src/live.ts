@@ -129,7 +129,7 @@ export interface LiveCatalog {
   applicable: (providers: Readonly<Record<string, RawRoute>>) => Map<string, readonly LiveModel[]>
   /** Whether some listable route has no listing for its current target. */
   stale: () => boolean
-  /** List every eligible route now; calls overlapping a running one share it. Never rejects. */
+  /** List every eligible route now; a call overlapping a running one shares it and queues one more pass. Never rejects. */
   refresh: (signal?: AbortSignal) => Promise<void>
 }
 
@@ -145,6 +145,7 @@ export function createLiveCatalog(host: LiveCatalogHost): LiveCatalog {
   let listings: ReadonlyMap<string, LiveListing> = new Map()
   const failing = new Set<string>()
   let running: Promise<void> | undefined
+  let again = false
 
   const refreshRoute = async (
     provider: string,
@@ -209,9 +210,20 @@ export function createLiveCatalog(host: LiveCatalogHost): LiveCatalog {
         return target !== undefined && listings.get(provider)?.fingerprint !== target.fingerprint
       })
     },
-    /** List every eligible route now; calls overlapping a running one share it. Never rejects. */
+    /** List every eligible route now; a call overlapping a running one shares it and queues one more pass. Never rejects. */
     refresh(signal?: AbortSignal): Promise<void> {
-      running ??= run(signal).catch((error: unknown) => {
+      if (running !== undefined) {
+        // The running pass may have read an older key or setting.
+        again = true
+        return running
+      }
+      running = (async () => {
+        do {
+          again = false
+          await run(signal)
+        // `again` is set by calls that arrive while `run` is awaited.
+        } while ((again as boolean) && signal?.aborted !== true)
+      })().catch((error: unknown) => {
         host.warn(`llm-pi-ai: live model refresh failed (${describeFailure(error, undefined)})`)
       })
         .finally(() => { running = undefined })

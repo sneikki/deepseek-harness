@@ -362,4 +362,8 @@ export function apply(ctx: Context, config: Config): void {
     void live.refresh(abort.signal)
     return () => { clearInterval(timer); abort.abort() }
   }, 'llm-pi-ai: live model listing')
+  // The start listing can run before the credentials service exists and then
+  // resolve no key; list again once it does, and whenever a stored key changes.
+  ctx.inject(['credentials'], () => { void live.refresh(abort.signal) })
+  ctx.on('credentials/reference-updated', () => { void live.refresh(abort.signal) })
 }
